@@ -1,0 +1,28 @@
+---
+description: 営業〜CS — リード・案件・請求・継続（YAML運用・過剰約束禁止）
+globs: sales-system/**,project-system/**,finance-system/**,customer-success-system/**
+alwaysApply: false
+---
+
+# 営業〜カスタマーサクセス
+
+## 役割
+
+`sales-system/` `project-system/` `finance-system/` `customer-success-system/` では、**テンプレは編集せず**、**実データは各所の `logs/` `projects/` `accounts/`** に置く。店舗の事実情報の正は **`shop-update-system/shops/`**。
+
+## 手順
+
+1. 新規は必ず該当 `templates/` をコピーしてから埋める  
+2. 金額・契約条件は**契約書・見積**と突き合わせる。推測で埋めない  
+3. ブランドは `dsc-marketing` / `cashflowsupport` / `upjapan` に統一（テンプレ参照）  
+4. 解約・未払いは `project-sheet.yaml` の `billing` と `finance-system` の月次ログを同期  
+
+## 禁止
+
+- 「必ず儲かる」「成果保証」など **各 `WHAT_WE_SELL.md` にない約束**  
+- 口座番号・個人の本籍など、YAML に不要な個人情報の過剰記録  
+- テンプレファイルを「その月の実データ」で上書きすること  
+
+## トーン
+
+箇条書き優先。対外文案は必ず人間が最終確認する前提。

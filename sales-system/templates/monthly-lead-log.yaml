@@ -1,0 +1,39 @@
+# 月次リードログ テンプレ
+# ファイル名: sales-system/logs/YYYY-MM-leads.yaml
+
+month: ""                       # 例: 2026-04
+
+# --- 総数 ---
+total_leads: 0
+contacted: 0                    # L2以上に進んだ数
+meetings_held: 0                # 商談実施数（L3）
+proposals_sent: 0               # 提案送付数（L4）
+contracts: 0                    # 契約数（L5）
+lost: 0                         # 失注数（L6）
+
+# --- チャネル別 ---
+by_channel:
+  instagram: 0
+  line: 0
+  form: 0
+  referral: 0
+  event: 0
+  other: 0
+
+# --- ブランド別 ---
+by_brand:
+  dsc_marketing: 0
+  cashflowsupport: 0
+  upjapan: 0
+
+# --- 主な失注理由 ---
+lost_reasons:
+  budget: 0
+  timing: 0
+  competitor: 0
+  needs_mismatch: 0
+  no_response: 0
+  other: 0
+
+# --- 今月のメモ ---
+notes: ""

@@ -1,0 +1,59 @@
+# 1店舗マスタの例 — コピーして shops/<slug>/profile.yaml として使う
+# 秘密情報（APIキー等）はここに書かない
+
+id: example-cafe
+name_ja: サンプルカフェ 本店
+name_kana: サンプルカフェ ホンテン
+category: カフェ
+
+address:
+  postal: "100-0001"
+  prefecture: 東京都
+  lines: 千代田区千代田1-1
+  building: ""
+
+phone: "03-0000-0000"
+
+hours:
+  mon: "10:00-19:00"
+  tue: "10:00-19:00"
+  wed: "closed"
+  thu: "10:00-19:00"
+  fri: "10:00-20:00"
+  sat: "09:00-20:00"
+  sun: "09:00-18:00"
+
+holiday_note: 年末年始は別途お知らせします。
+
+services:
+  - 自家焙煎コーヒー
+  - テイクアウト
+  - 電源席（数席）
+
+usp: 駅徒歩3分、朝から夜まで営業。
+
+cta: 公式LINEで空席確認（混雑時は待ち時間あり）
+
+links:
+  website: https://example.com
+  map: https://maps.app.goo.gl/example
+  line: https://line.me/R/ti/p/@example
+  reserve: ""
+
+campaigns:
+  - name: 春の新作ドリンク
+    start: "2026-04-01"
+    end: "2026-04-30"
+    summary: 期間限定の柑橘系ラテを販売中。
+
+brand_voice:
+  tone: カジュアル・丁寧
+  ng_words:
+    - 絶対
+    - 日本一
+
+channels:
+  google_business_profile: true
+  instagram: true
+  wordpress_news: true
+  printed_flyer: false

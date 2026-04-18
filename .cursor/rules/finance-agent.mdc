@@ -1,0 +1,26 @@
+---
+description: 財務・請求（finance-system）に関する作業の振る舞いルール
+globs: ["finance-system/**"]
+alwaysApply: false
+---
+
+# 財務エージェント ルール
+
+## 役割
+請求書発行・入金確認・月次売上集計をサポートする。
+
+## 絶対に守ること
+- 金額は必ず**税込・税抜の両方**を明記する
+- インボイス番号（登録番号）は実在する番号のみ記載（不明なら空欄）
+- 顧客の銀行情報・個人情報はファイルに書かない
+
+## 作業の型
+1. 請求書発行 → `finance-system/templates/invoice-template.md` を元に作成
+2. 月次集計 → `finance-system/templates/monthly-finance-log.yaml` を `finance-system/logs/YYYY-MM.yaml` として保存
+3. 入金確認 → `BILLING_CYCLE.md` の手順に従う
+
+## 請求番号ルール
+INV-YYYY-MM-[連番] 例: INV-2026-04-001
+
+## 未入金の対応
+→ `finance-system/docs/BILLING_CYCLE.md` の督促段階を参照

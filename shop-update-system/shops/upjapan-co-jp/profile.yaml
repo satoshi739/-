@@ -1,0 +1,75 @@
+# コーポレート（親会社サイト）プロファイル
+# 正の情報は https://upjapan.co.jp/ の最新表記で確認すること
+
+id: upjapan-co-jp
+name_ja: 株式会社ユニバースプラネットジャパン
+name_kana: ユニバースプラネットジャパン
+brand_line: Universal Planet Japan | UPJ
+
+category: 事業設計・コンサルティング・マーケティング統合
+
+legal_entity: 株式会社ユニバースプラネットジャパン
+representatives: 代表取締役 平 聖志、取締役 増田 愛希
+founded: "2018-05"
+capital_jpy: 10000000
+
+address:
+  postal: "104-0061"
+  prefecture: 東京都
+  lines: 中央区銀座7丁目13番21号
+  building: Ginza Rokushuビル2階
+
+# コーポレートサイト本文に直結の記載なし。グループサイト表記との照合用
+phone: "+81-50-6871-8255"
+
+hours:
+  mon: "10:00-17:00"
+  tue: "10:00-17:00"
+  wed: "10:00-17:00"
+  thu: "10:00-17:00"
+  fri: "10:00-17:00"
+  sat: "closed"
+  sun: "closed"
+
+holiday_note: 受付時間は [DSc Marketing サイト](https://dsc-marketing.com/) の平日表記と整合。祝日は公式要確認。
+
+vision: 可能性を、正しい軌道へ導く。
+
+services:
+  - BusinessArchitecture（事業構想設計・収益モデル再設計）
+  - Global Strategy（国際展開・クロスボーダー・市場選定）
+  - MarketingIntegration（SNS・Web・LINE・ブランド導線の統合設計）
+  - マーケティング戦略（集客〜リピートの導線）
+  - 事業コンサルティング（戦略設計と実行支援）
+
+usp: 理念・収益構造・導線・資本・ブランドなど「事業の重力」を設計し、単体施策ではなく構造として集客を組み立てる。
+
+cta: サイト内の会社概要・各サービス導線に準拠（要確認）
+
+links:
+  website: https://upjapan.co.jp/
+  map: ""
+  line: ""
+  reserve: ""
+  contact_form: https://upjapan.co.jp/
+
+group_brands_note: |
+  同一グループの公開サイト例：DSc Marketing（dsc-marketing.com）、
+  cashflowsupport（cashflowsupport.jp）。表記は各サイトで要確認。
+
+campaigns: []
+
+brand_voice:
+  tone: 設計・軌道・構造など比喩を用いた前向きで落ち着いたトーン
+  ng_words:
+    - 確実に儲かる
+    - 誰でも成功
+
+channels:
+  google_business_profile: false
+  instagram: false
+  wordpress_news: false
+  printed_flyer: false
+
+compliance_note: |
+  コーポレート向け。数値実績や事例は各事業ブランドサイトの表記に従う。

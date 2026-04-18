@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}写真インボックス — UPJ Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  .inbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .file-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .file-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: var(--radius-sm);
+    background: var(--s2); border: 1px solid var(--border);
+    font-size: 13px; transition: border-color .15s;
+  }
+  .file-row:hover { border-color: var(--border2); }
+  .file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+  .file-size { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .empty-inbox {
+    text-align: center; padding: 40px 20px;
+    color: var(--muted); font-size: 13px;
+  }
+  .empty-inbox .drop-icon { font-size: 36px; margin-bottom: 12px; opacity: .4; }
+  .path-box {
+    font-family: 'SF Mono', Menlo, monospace; font-size: 11px;
+    color: var(--muted); background: var(--s2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 7px 11px; margin-top: 10px;
+    overflow-x: auto; white-space: nowrap;
+  }
+  .processed-meta { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+</style>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">📥 写真インボックス</div>
+    <div class="page-sub">ブランドごとのメディアファイルを確認・処理します</div>
+  </div>
+</div>
+
+{% if not ai %}
+<div class="alert alert-warn">
+  ⚠️ ANTHROPIC_API_KEY が未設定です。インボックス処理は可能ですが、キャプションの自動生成はできません。
+  <a href="/settings">設定ページ</a> からAPIキーを設定してください。
+</div>
+{% endif %}
+
+{% if not inbox_data %}
+<div class="card">
+  <div class="empty-inbox">
+    <div class="drop-icon">📭</div>
+    ブランド設定がありません。<code>config/brands.yaml</code> を確認してください。
+  </div>
+</div>
+{% else %}
+<div class="inbox-grid">
+  {% for bid, data in inbox_data.items() %}
+  {% set brand = brands.get(bid, {}) %}
+  <div class="card" style="margin-bottom:0;">
+    <div class="card-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="width:9px;height:9px;border-radius:50%;background:{{ brand.get('color','#6366f1') }};display:inline-block;box-shadow:0 0 6px {{ brand.get('color','#6366f1') }};"></span>
+        <span class="card-title">{{ brand.get('name_short', bid) }}</span>
+      </div>
+      <div style="display:flex;gap:7px;align-items:center;">
+        <span class="badge {% if data.files|length > 0 %}badge-warn{% else %}badge-l1{% endif %}">
+          {{ data.files|length }} ファイル
+        </span>
+        <button class="btn btn-sm btn-primary" onclick="processInbox('{{ bid }}', this)">
+          今すぐ処理
+        </button>
+      </div>
+    </div>
+
+    {% if data.files %}
+    <div class="file-list">
+      {% for f in data.files %}
+      <div class="file-row">
+        <span style="font-size:15px;">{{ '🎬' if f.is_video else '🖼' }}</span>
+        <span class="file-name" title="{{ f.name }}">{{ f.name }}</span>
+        <span class="file-size">{{ f.size }} KB</span>
+        <span class="badge {% if f.is_video %}badge-purple{% else %}badge-l2{% endif %}">
+          {{ 'VIDEO' if f.is_video else 'IMAGE' }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-inbox" style="padding:24px 0 8px;">
+      <div class="drop-icon">📂</div>
+      <div>ファイルをドロップしてください</div>
+    </div>
+    {% endif %}
+
+    <div class="path-box" title="Finderで開く場合はこのパスを使用">{{ data.path }}</div>
+    <div class="processed-meta">処理済み: {{ data.processed_count }} ファイル</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script>
+async function processInbox(brand, btn) {
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '処理中…';
+  try {
+    const res = await fetch('/api/inbox/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brand: brand, dry_run: false })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      toast(`✅ ${brand}: ${d.processed} 件処理しました`, 'ok');
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      toast(`エラー: ${d.error}`, 'err');
+    }
+  } catch (e) {
+    toast(`通信エラー: ${e}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+</script>
+{% endblock %}

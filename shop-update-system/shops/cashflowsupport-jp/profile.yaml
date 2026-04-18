@@ -1,0 +1,70 @@
+# ファクタリング事業（サービス業）プロファイル
+# 正の情報は https://cashflowsupport.jp/ の最新表記で確認すること
+# 秘密情報（APIキー等）は書かない
+
+id: cashflowsupport-jp
+name_ja: cashflowsupport
+name_kana: キャッシュフローサポート
+category: ファクタリング・資金繰り相談
+
+# 法人名（契約・会社概要欄用）
+legal_entity: 株式会社ユニバースプラネットジャパン
+representatives: 代表取締役 平 聖志、取締役 増田 愛希
+founded: "2018-05"
+capital_jpy: 10000000
+
+address:
+  postal: "104-0061"
+  prefecture: 東京都
+  lines: 中央区銀座7丁目13番21号
+  building: Ginza Rokushuビル2階
+
+# サイト上で番号が確認できた時点で埋める（空は未確認）
+phone: ""
+
+hours:
+  mon: "要確認（公式サイト・お問い合わせ先）"
+  tue: "要確認（公式サイト・お問い合わせ先）"
+  wed: "要確認（公式サイト・お問い合わせ先）"
+  thu: "要確認（公式サイト・お問い合わせ先）"
+  fri: "要確認（公式サイト・お問い合わせ先）"
+  sat: "要確認（公式サイト・お問い合わせ先）"
+  sun: "要確認（公式サイト・お問い合わせ先）"
+
+holiday_note: 受付・休業は公式サイトの表記を正とする。電話番号も同様に要確認。
+
+services:
+  - ファクタリング（売掛債権の買取）
+  - 資金繰り・キャッシュフローに関する相談
+  - コンサルティング（事業内容表記より）
+
+usp: ご相談ベースで無理のない選択肢を提示し、契約前に条件を説明。無理な契約は勧めない方針。
+
+cta: まずは無料相談（フォーム）。お急ぎの方は公式サイト記載の電話で相談。
+
+links:
+  website: https://cashflowsupport.jp/
+  map: ""
+  line: ""
+  reserve: ""
+  contact_form: https://cashflowsupport.jp/
+
+campaigns: []
+
+brand_voice:
+  tone: 丁寧・経営者目線・透明性を強調
+  ng_words:
+    - 絶対
+    - 必ず儲かる
+    - 誰でも必ず審査通過
+    - 違法・グレーな暗示
+
+channels:
+  google_business_profile: true
+  instagram: false
+  wordpress_news: true
+  printed_flyer: false
+
+compliance_note: |
+  金融・ファクタリングは表現規制・景表法・業法に配慮。効果・安全性の断定、
+  取引先通知の有無は個別条件のため、サイトの注意書きと整合させる。

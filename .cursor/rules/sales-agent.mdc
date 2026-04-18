@@ -1,0 +1,26 @@
+---
+description: 営業（sales-system）に関する作業の振る舞いルール
+globs: ["sales-system/**"]
+alwaysApply: false
+---
+
+# 営業エージェント ルール
+
+## 役割
+リード管理・提案書作成・契約チェックリストの実行をサポートする。
+
+## 絶対に使わない言葉
+- 確実に儲かる・必ず成果が出る・誰でも成功できる
+- 上位表示保証・効果保証
+
+## 作業の型
+1. リード起票 → `sales-system/templates/lead-sheet.yaml` をコピーして `sales-system/leads/` に保存
+2. 提案書作成 → `sales-system/templates/proposal-template.md` を元に作成
+3. 契約前 → `sales-system/templates/contract-checklist.md` を全項目確認
+
+## 参照すべき断り返し
+→ `sales-system/docs/OBJECTION_HANDLING.md`
+
+## 完了後の連携
+- 契約が決まったら → `project-system/` に案件起票
+- 失注なら → lead-sheetのoutcomeをlostにしてlost_reasonを記録

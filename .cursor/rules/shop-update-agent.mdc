@@ -1,0 +1,28 @@
+---
+description: 店舗更新 — マスタYAML・チェックリスト・チャネル別文案（v1）
+globs: shop-update-system/**
+alwaysApply: false
+---
+
+# 店舗更新エージェント
+
+## 役割
+
+`shop-update-system/` では **店舗マスタ（YAML）を単一の正** とし、更新時に **チェックリスト** と **チャネル別コピペ文案** を出す。API 無人投稿は v1 の必須ではない。
+
+## 手順
+
+1. `docs/PRODUCT_SPEC.md` の v1 範囲を超えて約束しない  
+2. `templates/shop-profile.schema.yaml` に合わせて店舗ファイルを編集・生成する  
+3. 変更内容に応じて `templates/update-run-checklist.md` の該当項目を明示する  
+4. 出力：Google用短文、Instagramプロフィール用、WPお知らせ草案、監査ログ1行  
+
+## 禁止
+
+- YAML に API キー・パスワードを書く  
+- 順位・売上の保証  
+- 未確認の営業時間・電話を捏造する  
+
+## トーン
+
+箇条書きと表。店名・電話・住所はマスタと一字一句合わせる。

@@ -1,0 +1,1025 @@
+{% extends "base.html" %}
+{% block title %}{{ brand.name_short }} — UPJ Dashboard{% endblock %}
+{% block content %}
+
+{% set active_platform = request.args.get('platform', '') %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title" style="display:flex;align-items:center;gap:10px;">
+      <span style="width:12px;height:12px;border-radius:50%;background:{{ brand.color }};display:inline-block;"></span>
+      {{ brand.name }}
+    </div>
+    <div class="page-sub">
+      <a href="{{ brand.url }}" target="_blank" style="color:var(--muted);">{{ brand.url }}</a>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button onclick="openBulkModal()" class="btn btn-purple">✨ 一括生成・一括更新</button>
+    <a href="/settings/{{ brand_id }}" class="btn btn-ghost">⚙️ API設定</a>
+    <a href="/queue/add?brand={{ brand_id }}" class="btn btn-primary">＋ 投稿追加</a>
+    <a href="/brands" class="btn btn-ghost">← 一覧</a>
+  </div>
+</div>
+
+<!-- ══════════ AI コンテンツスタジオ ══════════ -->
+<div id="bulk-modal" style="display:none;position:fixed;inset:0;background:rgba(2,4,15,.88);backdrop-filter:blur(8px);z-index:9999;overflow-y:auto;padding:24px 16px;">
+  <div id="studio-wrap" style="max-width:980px;margin:0 auto;background:var(--s1);border-radius:20px;border:1px solid var(--border2);overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.7);">
+
+    <!-- ── ヘッダー ── -->
+    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(139,92,246,.04));">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 4px 14px rgba(99,102,241,.4);">✦</div>
+        <div>
+          <div style="font-size:16px;font-weight:700;letter-spacing:-.3px;">AI コンテンツスタジオ</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px;">Claude が全プラットフォームのコンテンツを同時生成します</div>
+        </div>
+      </div>
+      <button onclick="closeBulkModal()" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:6px 14px;color:var(--muted2);cursor:pointer;font-size:13px;transition:all .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted2)'">✕ 閉じる</button>
+    </div>
+
+    <!-- ── STEP 1: 入力 ── -->
+    <div id="bulk-step-input" style="padding:28px;">
+
+      <!-- トピック入力 -->
+      <div style="margin-bottom:22px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">01 — テーマ・トピック</div>
+        <input type="text" id="bulk-topic" class="form-input"
+               placeholder="例：SNS集客を3倍にする方法、資金繰りの改善策..."
+               style="font-size:16px;padding:14px 16px;border-radius:12px;"
+               onkeydown="if(event.key==='Enter') startBulkGenerate()">
+
+        <!-- サンプル + AI提案 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          {% set sample_topics = {
+            'upjapan': ['事業設計で売上が変わる3つの視点','海外展開を成功させる最初のステップ','収益モデルを見直して利益を最大化する方法'],
+            'dsc-marketing': ['SNS集客を3倍にする導線設計の基本','Instagram運用で結果を出す5つの習慣','LINE配信の反応率を上げる文章術'],
+            'cashflowsupport': ['資金繰りを改善する3つの具体的なステップ','ファクタリングを正しく活用する方法','資金調達で失敗しないためのポイント']
+          } %}
+          {% for topic in sample_topics.get(brand_id, sample_topics['dsc-marketing']) %}
+          <button type="button" onclick="setTopic(this.dataset.topic)" data-topic="{{ topic }}"
+            style="background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:11.5px;color:var(--muted2);cursor:pointer;transition:all .18s;white-space:nowrap;"
+            onmouseover="this.style.borderColor='{{ brand.color }}50';this.style.color='var(--text)'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted2)'">{{ topic }}</button>
+          {% endfor %}
+          <button id="btn-ai-suggest" onclick="aiSuggestTopics()"
+            style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:20px;padding:5px 13px;font-size:11.5px;color:var(--purple2);cursor:pointer;transition:all .18s;white-space:nowrap;font-weight:500;"
+            onmouseover="this.style.background='rgba(139,92,246,.2)'" onmouseout="this.style.background='rgba(139,92,246,.1)'">
+            ✦ AIが今日の提案
+          </button>
+        </div>
+        <div id="ai-topic-suggestions" style="display:none;margin-top:10px;padding:12px;background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.2);border-radius:10px;">
+          <div style="font-size:10px;color:var(--purple2);font-weight:700;margin-bottom:8px;letter-spacing:.5px;">✦ AIの今日の提案</div>
+          <div id="ai-topics-list" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
+        </div>
+      </div>
+
+      <!-- トーン選択 -->
+      <div style="margin-bottom:22px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">02 — トーン・スタイル</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;" id="tone-grid">
+          {% for tone, icon, desc in [('実務的・わかりやすい','◎','シンプルで要点重視'),('フレンドリー・親しみやすい','☺','温かく身近な語り口'),('教育系・深堀り','◈','知識・事例を詳しく'),('インパクト重視','⚡','強いCTA・行動促進')] %}
+          <button type="button" onclick="selectTone(this,'{{ tone }}')" data-tone="{{ tone }}"
+            class="tone-btn {% if loop.first %}tone-active{% endif %}"
+            style="background:var(--s2);border:1px solid {{ 'rgba(99,102,241,.5)' if loop.first else 'var(--border)' }};border-radius:10px;padding:12px 10px;text-align:left;cursor:pointer;transition:all .18s;">
+            <div style="font-size:18px;margin-bottom:6px;">{{ icon }}</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text);">{{ tone.split('・')[0] }}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ desc }}</div>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- 追加指示 -->
+      <div style="margin-bottom:22px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">03 — 追加の指示（任意）</div>
+        <input type="text" id="bulk-extra" class="form-input" placeholder="例：キャンペーン中なのでCTAを強調、春の季節感を出して">
+      </div>
+
+      <!-- プラットフォーム選択 -->
+      <div style="margin-bottom:28px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">04 — 生成するプラットフォーム</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          {% for p, info in platforms.items() %}
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:7px 14px;font-size:12.5px;font-weight:500;transition:all .15s;user-select:none;"
+                 onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+            <input type="checkbox" name="gen-platform" value="{{ p }}" checked style="accent-color:var(--accent);width:13px;height:13px;">
+            <span>{{ info.icon }}</span> {{ p }}
+          </label>
+          {% endfor %}
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:9px;padding:7px 14px;font-size:12.5px;font-weight:500;transition:all .15s;user-select:none;"
+                 onmouseover="this.style.borderColor='var(--purple2)'" onmouseout="this.style.borderColor='rgba(139,92,246,.3)'">
+            <input type="checkbox" name="gen-platform" value="reel" checked style="accent-color:var(--purple);width:13px;height:13px;">
+            <span>🎬</span> リール画像
+          </label>
+        </div>
+      </div>
+
+      <button onclick="startBulkGenerate()" id="btn-generate"
+        style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--purple),var(--accent));color:#fff;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:-.2px;box-shadow:0 8px 24px rgba(139,92,246,.4);transition:all .2s;font-family:inherit;"
+        onmouseover="this.style.boxShadow='0 12px 32px rgba(139,92,246,.6)';this.style.transform='translateY(-1px)'"
+        onmouseout="this.style.boxShadow='0 8px 24px rgba(139,92,246,.4)';this.style.transform=''">
+        ✦ &nbsp;すべて一括生成する
+      </button>
+    </div>
+
+    <!-- ── STEP 2: 生成中 ── -->
+    <div id="bulk-step-loading" style="display:none;padding:60px 28px;">
+      <!-- プログレスバー -->
+      <div style="height:2px;background:var(--border);border-radius:2px;margin-bottom:40px;overflow:hidden;">
+        <div id="progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:2px;transition:width .5s;"></div>
+      </div>
+      <div style="display:flex;gap:20px;align-items:flex-start;">
+        <!-- 左: アニメーション -->
+        <div style="flex-shrink:0;width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(139,92,246,.1));border:1px solid rgba(99,102,241,.2);display:flex;align-items:center;justify-content:center;">
+          <div id="loading-spinner" style="font-size:36px;animation:spin 3s linear infinite;">✦</div>
+        </div>
+        <!-- 右: テキスト + ステップ -->
+        <div style="flex:1;">
+          <div style="font-size:20px;font-weight:700;margin-bottom:6px;" id="loading-msg">Claude が生成中...</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="loading-sub">全プラットフォーム分を同時に生成しています</div>
+          <div id="loading-steps" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 3: プレビュー ── -->
+    <div id="bulk-step-preview" style="display:none;">
+
+      <!-- タブ -->
+      <div style="display:flex;border-bottom:1px solid var(--border);padding:0 8px;overflow-x:auto;">
+        <div id="preview-tabs" style="display:flex;gap:2px;"></div>
+        <div style="margin-left:auto;padding:8px 16px;display:flex;gap:8px;align-items:center;">
+          <span style="font-size:11px;color:var(--green2);font-weight:600;">✓ 生成完了</span>
+        </div>
+      </div>
+
+      <!-- プレビューエリア（左: モックアップ / 右: テキスト編集） -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;min-height:420px;">
+
+        <!-- 左: プラットフォームモックアップ -->
+        <div style="padding:24px;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:var(--bg);">
+          <div id="mockup-container" style="width:100%;max-width:320px;"></div>
+        </div>
+
+        <!-- 右: 編集エリア -->
+        <div style="padding:24px;display:flex;flex-direction:column;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">内容を編集</div>
+          <div id="edit-area" contenteditable="true"
+            style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap;min-height:200px;outline:none;transition:border-color .15s;"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+            oninput="syncEditArea()"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+            <span id="char-counter" style="font-size:11px;color:var(--muted);"></span>
+            <button onclick="copyCurrentPlatform()" style="font-size:11px;background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:4px 12px;color:var(--muted2);cursor:pointer;transition:all .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted2)'">📋 コピー</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- リール -->
+      <div id="reel-preview" style="display:none;padding:16px 24px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🎬 リールスライド</div>
+        <div id="reel-slides-container" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;"></div>
+      </div>
+
+      <!-- アクションバー -->
+      <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;background:var(--s2);">
+        <button onclick="saveAllToQueue()" id="btn-save"
+          style="flex:1;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--green),#059669);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(16,185,129,.3);transition:all .2s;"
+          onmouseover="this.style.boxShadow='0 6px 20px rgba(16,185,129,.5)'" onmouseout="this.style.boxShadow='0 4px 14px rgba(16,185,129,.3)'">
+          ✓ &nbsp;全プラットフォームをキューに追加
+        </button>
+        <button onclick="resetBulkModal()" class="btn btn-ghost" style="padding:13px 20px;">↩ やり直す</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 4: 完了 ── -->
+    <div id="bulk-step-done" style="display:none;padding:64px 28px;text-align:center;">
+      <div style="width:72px;height:72px;border-radius:20px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px;">✓</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:8px;letter-spacing:-.4px;">キューに追加完了</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:28px;" id="saved-summary">明朝の自動投稿で一斉配信されます</div>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <a href="/queue" class="btn btn-ghost">キューを確認 →</a>
+        <button onclick="closeBulkModal()" class="btn btn-primary">閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes typewriter { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+.tone-active { background:rgba(99,102,241,.1)!important; border-color:rgba(99,102,241,.5)!important; }
+</style>
+
+<script>
+const BRAND_ID_CURRENT = "{{ brand_id }}";
+const BRAND_COLOR       = "{{ brand.color }}";
+const BRAND_SHORT       = "{{ brand.name_short }}";
+let generatedContent = null, reelData = null, currentPlatform = null;
+let currentTone = '実務的・わかりやすい';
+
+/* ── モーダル制御 ── */
+function openBulkModal() {
+  document.getElementById('bulk-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('bulk-topic').focus(), 100);
+}
+function closeBulkModal() {
+  document.getElementById('bulk-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+function showStep(name) {
+  ['input','loading','preview','done'].forEach(s =>
+    document.getElementById('bulk-step-'+s).style.display = s===name ? '' : 'none');
+}
+function resetBulkModal() { showStep('input'); }
+function setTopic(t) { document.getElementById('bulk-topic').value = t; document.getElementById('bulk-topic').focus(); }
+function selectTone(el, tone) {
+  currentTone = tone;
+  document.querySelectorAll('.tone-btn').forEach(b => {
+    b.classList.remove('tone-active');
+    b.style.borderColor = 'var(--border)';
+  });
+  el.classList.add('tone-active');
+  el.style.borderColor = 'rgba(99,102,241,.5)';
+}
+
+/* ── AI トピック提案 ── */
+async function aiSuggestTopics() {
+  const btn = document.getElementById('btn-ai-suggest');
+  btn.textContent = '⏳ 提案中...'; btn.disabled = true;
+  try {
+    const r = await fetch(`/api/ai/suggest_topics/${BRAND_ID_CURRENT}`, {method:'POST'});
+    const d = await r.json();
+    if (d.topics) {
+      const box  = document.getElementById('ai-topic-suggestions');
+      const list = document.getElementById('ai-topics-list');
+      list.innerHTML = '';
+      d.topics.forEach(t => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = t; b.onclick = () => setTopic(t);
+        b.style = 'background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:20px;padding:5px 13px;font-size:11.5px;color:var(--purple2);cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;';
+        list.appendChild(b);
+      });
+      box.style.display = '';
+    }
+  } catch(e) {}
+  btn.textContent = '✦ AIが今日の提案'; btn.disabled = false;
+}
+
+/* ── 一括生成 ── */
+async function startBulkGenerate() {
+  const topic = document.getElementById('bulk-topic').value.trim();
+  if (!topic) { if(typeof toast!=='undefined') toast('トピックを入力してください','warn'); return; }
+  const extra    = document.getElementById('bulk-extra').value.trim();
+  const genReel  = [...document.querySelectorAll('[name=gen-platform]:checked')].some(c => c.value==='reel');
+
+  showStep('loading');
+  const platforms_gen = [
+    {key:'instagram', label:'📷 Instagram'},
+    {key:'threads',   label:'🧵 Threads'},
+    {key:'facebook',  label:'📘 Facebook'},
+    {key:'twitter',   label:'𝕏 Twitter/X'},
+    {key:'line',      label:'📱 LINE'},
+    {key:'wordpress', label:'🌐 WordPress'},
+  ];
+  const stepsEl = document.getElementById('loading-steps');
+  stepsEl.innerHTML = platforms_gen.map(p =>
+    `<span id="ls-${p.key}" style="background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--muted);transition:all .3s;">${p.label}</span>`
+  ).join('');
+
+  let progress = 10;
+  const progBar = document.getElementById('progress-bar');
+  progBar.style.width = progress + '%';
+
+  const tick = setInterval(() => {
+    progress = Math.min(progress + 3, 85);
+    progBar.style.width = progress + '%';
+    const active = platforms_gen[Math.floor((progress-10)/12)];
+    if (active) {
+      document.getElementById('ls-' + active.key)?.setAttribute('style',
+        'background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--accent2);transition:all .3s;');
+    }
+  }, 400);
+
+  try {
+    const r = await fetch(`/api/ai/generate_all/${BRAND_ID_CURRENT}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({topic, extra, tone: currentTone})
+    });
+    generatedContent = await r.json();
+    if (generatedContent.error) throw new Error(generatedContent.error);
+
+    clearInterval(tick); progBar.style.width = '90%';
+
+    if (genReel && generatedContent.reel) {
+      document.getElementById('loading-msg').textContent = '🎬 リールスライドを生成中...';
+      const rr = await fetch(`/api/ai/generate_reel/${BRAND_ID_CURRENT}`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({topic, reel: generatedContent.reel})
+      });
+      reelData = await rr.json();
+    }
+
+    progBar.style.width = '100%';
+    await new Promise(r => setTimeout(r, 400));
+    buildPreview(generatedContent, reelData);
+    showStep('preview');
+
+  } catch(e) {
+    clearInterval(tick);
+    document.getElementById('loading-msg').textContent = '生成に失敗しました';
+    document.getElementById('loading-sub').textContent = e.message;
+    if (typeof toast !== 'undefined') toast('エラー: ' + e.message, 'err');
+    setTimeout(() => showStep('input'), 3000);
+  }
+}
+
+/* ── プレビュー構築 ── */
+const PLATFORM_META = {
+  instagram: { label:'Instagram', icon:'📷', color:'#e1306c', limit:2200 },
+  threads:   { label:'Threads',   icon:'🧵', color:'#000',   limit:500  },
+  facebook:  { label:'Facebook',  icon:'📘', color:'#1877f2', limit:63206},
+  twitter:   { label:'Twitter/X', icon:'𝕏',  color:'#1da1f2', limit:280  },
+  line:      { label:'LINE',      icon:'📱', color:'#06c755', limit:500  },
+  wordpress: { label:'WordPress', icon:'🌐', color:'#21759b', limit:null  },
+};
+
+function getContent(platform, d) {
+  if (platform==='instagram') return (d.caption||'') + '\n\n' + (d.hashtags||'');
+  if (platform==='threads')   return d.text || '';
+  if (platform==='facebook')  return d.text || '';
+  if (platform==='twitter')   return d.text || '';
+  if (platform==='line')      return d.message || '';
+  if (platform==='wordpress') return (d.title||'') + '\n\n' + (d.content||'').replace(/<[^>]+>/g,'');
+  return '';
+}
+
+function buildPreview(content, reel) {
+  const tabs = document.getElementById('preview-tabs');
+  tabs.innerHTML = '';
+  const available = Object.entries(PLATFORM_META).filter(([p]) => content[p]);
+
+  available.forEach(([p, meta], i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.platform = p;
+    btn.style = `display:flex;align-items:center;gap:6px;padding:12px 16px;border:none;border-bottom:2px solid ${i===0?meta.color:'transparent'};background:none;color:${i===0?'var(--text)':'var(--muted)'};font-size:12.5px;font-weight:${i===0?'600':'400'};cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;`;
+    btn.innerHTML = `<span style="font-size:14px;">${meta.icon}</span>${meta.label}`;
+    btn.onclick = () => switchTab(p);
+    tabs.appendChild(btn);
+  });
+
+  if (available.length) switchTab(available[0][0]);
+
+  // リールスライド
+  const reelDiv = document.getElementById('reel-preview');
+  if (reel?.slides?.length) {
+    reelDiv.style.display = '';
+    const sc = document.getElementById('reel-slides-container');
+    sc.innerHTML = '';
+    reel.slides.forEach((path, i) => {
+      const wrap = document.createElement('div');
+      wrap.style = 'position:relative;flex-shrink:0;';
+      const img = document.createElement('img');
+      img.src = `/media/${path.split('generated_media/')[1]}`;
+      img.style = 'width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--border);display:block;';
+      const label = document.createElement('div');
+      label.style = 'position:absolute;bottom:5px;left:5px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;border-radius:4px;padding:2px 6px;';
+      label.textContent = ['タイトル','ポイント1','ポイント2','ポイント3','CTA'][i] || `${i+1}`;
+      wrap.appendChild(img); wrap.appendChild(label); sc.appendChild(wrap);
+    });
+  } else { reelDiv.style.display = 'none'; }
+}
+
+function switchTab(platform) {
+  currentPlatform = platform;
+  const meta    = PLATFORM_META[platform];
+  const content = generatedContent[platform];
+  const text    = getContent(platform, content);
+
+  // タブ更新
+  document.querySelectorAll('#preview-tabs button').forEach(btn => {
+    const p = btn.dataset.platform;
+    const m = PLATFORM_META[p];
+    btn.style.borderBottomColor = p===platform ? m.color : 'transparent';
+    btn.style.color = p===platform ? 'var(--text)' : 'var(--muted)';
+    btn.style.fontWeight = p===platform ? '600' : '400';
+  });
+
+  // 編集エリア
+  const editArea = document.getElementById('edit-area');
+  editArea.textContent = '';
+  typewriterEffect(editArea, text);
+  updateCharCounter(text, meta.limit);
+
+  // モックアップ
+  renderMockup(platform, content, meta);
+}
+
+function typewriterEffect(el, text) {
+  el.textContent = '';
+  let i = 0;
+  const speed = Math.max(5, Math.min(20, Math.floor(10000 / text.length)));
+  function next() {
+    if (i < text.length) { el.textContent += text[i++]; el.scrollTop = el.scrollHeight; setTimeout(next, speed); }
+  }
+  next();
+}
+
+function syncEditArea() {
+  const text = document.getElementById('edit-area').textContent;
+  const meta = PLATFORM_META[currentPlatform];
+  updateCharCounter(text, meta?.limit);
+  renderMockup(currentPlatform, null, meta);
+}
+
+function updateCharCounter(text, limit) {
+  const el = document.getElementById('char-counter');
+  const len = text.length;
+  if (limit) {
+    el.textContent = `${len} / ${limit} 文字`;
+    el.style.color = len > limit ? 'var(--red)' : 'var(--muted)';
+  } else { el.textContent = `${len} 文字`; }
+}
+
+function renderMockup(platform, content, meta) {
+  const c  = document.getElementById('mockup-container');
+  const tx = document.getElementById('edit-area').textContent.trim();
+
+  if (platform === 'instagram') {
+    c.innerHTML = `
+    <div style="background:#000;border-radius:16px;border:1px solid #333;overflow:hidden;font-family:-apple-system,sans-serif;max-width:300px;margin:0 auto;">
+      <div style="padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #222;">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,${BRAND_COLOR},#a855f7);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;">${BRAND_SHORT[0]}</div>
+        <div><div style="font-size:12px;font-weight:700;color:#fff;">${BRAND_SHORT.toLowerCase().replace(' ','_')}</div></div>
+        <div style="margin-left:auto;font-size:18px;color:#fff;">···</div>
+      </div>
+      <div style="aspect-ratio:1;background:linear-gradient(135deg,${BRAND_COLOR}22,${BRAND_COLOR}44);display:flex;align-items:center;justify-content:center;">
+        <div style="font-size:36px;opacity:.4;">📷</div>
+      </div>
+      <div style="padding:10px 12px;">
+        <div style="display:flex;gap:12px;margin-bottom:8px;font-size:20px;">
+          <span>♡</span><span>💬</span><span>↗</span><span style="margin-left:auto;">⊓</span>
+        </div>
+        <div style="font-size:11.5px;color:#fff;line-height:1.5;max-height:80px;overflow:hidden;">${escHtml(tx.slice(0,140))}${tx.length>140?'…':''}</div>
+      </div>
+    </div>`;
+
+  } else if (platform === 'twitter') {
+    c.innerHTML = `
+    <div style="background:#000;border-radius:16px;border:1px solid #2f3336;padding:16px;max-width:300px;margin:0 auto;font-family:-apple-system,sans-serif;">
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,${BRAND_COLOR},#4f46e5);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px;">${BRAND_SHORT[0]}</div>
+        <div><div style="font-size:13px;font-weight:700;color:#fff;">${BRAND_SHORT}</div><div style="font-size:12px;color:#71767b;">@${BRAND_SHORT.toLowerCase().replace(/\s/g,'_')}</div></div>
+        <div style="margin-left:auto;color:#71767b;font-size:18px;font-weight:800;">𝕏</div>
+      </div>
+      <div style="font-size:13px;color:#fff;line-height:1.7;margin-bottom:12px;">${escHtml(tx.slice(0,280))}${tx.length>280?'…':''}</div>
+      <div style="display:flex;justify-content:space-between;color:#71767b;font-size:12px;">
+        <span>💬 0</span><span>↺ 0</span><span>♡ 0</span><span>↗</span>
+      </div>
+    </div>`;
+
+  } else if (platform === 'line') {
+    c.innerHTML = `
+    <div style="background:#1a1a2e;border-radius:16px;border:1px solid #2a2a4a;padding:16px;max-width:300px;margin:0 auto;font-family:-apple-system,sans-serif;">
+      <div style="font-size:10px;color:#888;text-align:center;margin-bottom:12px;">📱 LINE 配信プレビュー</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#06c755;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;">${BRAND_SHORT[0]}</div>
+        <div style="background:#fff;border-radius:12px 12px 12px 0;padding:12px 14px;max-width:220px;">
+          <div style="font-size:12px;line-height:1.7;color:#333;white-space:pre-wrap;">${escHtml(tx.slice(0,200))}${tx.length>200?'…':''}</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#666;text-align:right;margin-top:5px;">14:30 ✓✓</div>
+    </div>`;
+
+  } else if (platform === 'wordpress') {
+    const lines = tx.split('\n').filter(l=>l.trim());
+    const title = lines[0] || 'タイトル未設定';
+    const body  = lines.slice(1).join(' ').slice(0,120);
+    c.innerHTML = `
+    <div style="background:#fff;border-radius:16px;border:1px solid #e5e7eb;padding:20px;max-width:300px;margin:0 auto;font-family:Georgia,serif;">
+      <div style="font-size:9px;color:#21759b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">WordPress</div>
+      <div style="font-size:15px;font-weight:700;color:#111;line-height:1.4;margin-bottom:10px;">${escHtml(title.slice(0,60))}</div>
+      <div style="height:1px;background:#e5e7eb;margin-bottom:10px;"></div>
+      <div style="font-size:12px;color:#4b5563;line-height:1.7;">${escHtml(body)}${body.length>=120?'…':''}</div>
+      <div style="margin-top:12px;font-size:11px;color:#21759b;font-weight:600;">続きを読む →</div>
+    </div>`;
+
+  } else {
+    c.innerHTML = `
+    <div style="background:var(--s2);border-radius:16px;border:1px solid var(--border);padding:20px;max-width:300px;margin:0 auto;text-align:center;">
+      <div style="font-size:32px;margin-bottom:12px;">${meta?.icon||'📝'}</div>
+      <div style="font-size:13px;color:var(--muted2);line-height:1.7;">${escHtml(tx.slice(0,150))}${tx.length>150?'…':''}</div>
+    </div>`;
+  }
+}
+
+/* ── コピー ── */
+function copyCurrentPlatform() {
+  const text = document.getElementById('edit-area').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    if (typeof toast !== 'undefined') toast('クリップボードにコピーしました', 'ok');
+  });
+}
+
+/* ── 全プラットフォーム保存 ── */
+async function saveAllToQueue() {
+  const btn = document.getElementById('btn-save');
+  btn.textContent = '⏳ 保存中...'; btn.disabled = true;
+
+  // 編集中の内容をgeneratedContentに反映
+  if (currentPlatform && generatedContent[currentPlatform]) {
+    const edited = document.getElementById('edit-area').textContent;
+    if (currentPlatform === 'instagram') generatedContent[currentPlatform].caption = edited;
+    else if (currentPlatform === 'line')  generatedContent[currentPlatform].message = edited;
+    else if (currentPlatform === 'wordpress') generatedContent[currentPlatform].content = edited;
+    else generatedContent[currentPlatform].text = edited;
+  }
+
+  const r = await fetch(`/api/queue/save_all/${BRAND_ID_CURRENT}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({content: generatedContent})
+  });
+  const result = await r.json();
+
+  if (result.ok) {
+    const saved = result.saved || [];
+    const icons = {'instagram':'📷','threads':'🧵','facebook':'📘','twitter':'𝕏','line':'📱','wordpress':'🌐'};
+    document.getElementById('saved-summary').textContent =
+      saved.map(p => (icons[p]||'') + ' ' + (PLATFORM_META[p]?.label||p)).join('  ·  ') + ' をキューに追加しました';
+    showStep('done');
+    if (typeof toast !== 'undefined') toast(`✓ ${saved.length}プラットフォームに追加完了`, 'ok');
+  } else {
+    if (typeof toast !== 'undefined') toast('保存失敗: ' + (result.error||''), 'err');
+    btn.textContent = '✓ 全プラットフォームをキューに追加'; btn.disabled = false;
+  }
+}
+
+function escHtml(t) {
+  return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+// モーダル外クリックで閉じる
+document.getElementById('bulk-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeBulkModal();
+});
+</script>
+
+<!-- プラットフォームタブ -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+  <a href="/brands/{{ brand_id }}"
+     class="platform-pill {{ 'active' if not active_platform else '' }}">
+    🏠 概要
+  </a>
+  {% for p, info in platforms.items() %}
+  <a href="/brands/{{ brand_id }}?platform={{ p }}"
+     class="platform-pill {{ 'active' if active_platform==p else '' }}"
+     style="{{ 'border-color:'+brand.color+';color:'+brand.color if active_platform==p else '' }}">
+    {{ info.icon }} {{ p }}
+    {% if info.pending_count > 0 %}
+    <span style="background:var(--yellow);color:#000;border-radius:10px;padding:0 5px;font-size:10px;">
+      {{ info.pending_count }}
+    </span>
+    {% endif %}
+  </a>
+  {% endfor %}
+  <a href="/brands/{{ brand_id }}?platform=analytics"
+     class="platform-pill {{ 'active' if active_platform=='analytics' else '' }}">
+    📊 Analytics
+  </a>
+  <a href="/brands/{{ brand_id }}?platform=search"
+     class="platform-pill {{ 'active' if active_platform=='search' else '' }}">
+    🔍 Search Console
+  </a>
+  {% if wp_drafts is defined and wp_drafts %}
+  <a href="/brands/{{ brand_id }}?platform=wordpress"
+     class="platform-pill {{ 'active' if active_platform=='wordpress' else '' }}">
+    🌐 WordPress
+    <span style="background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:10px;">
+      {{ wp_drafts|length }}件
+    </span>
+  </a>
+  {% endif %}
+</div>
+
+<!-- ═══════════════════ 概要タブ ═══════════════════ -->
+{% if not active_platform %}
+<div class="stats-grid">
+  {% set total_pending = namespace(n=0) %}
+  {% for p, info in platforms.items() %}{% set total_pending.n = total_pending.n + info.pending_count %}{% endfor %}
+  <div class="stat-card">
+    <div class="stat-label">📅 投稿待ち合計</div>
+    <div class="stat-value {% if total_pending.n > 0 %}yellow{% else %}green{% endif %}">{{ total_pending.n }}</div>
+    <div class="stat-meta">全プラットフォーム</div>
+  </div>
+  {% if ga_data and not ga_data.get('error') %}
+  <div class="stat-card green-top">
+    <div class="stat-label">📊 セッション（28日）</div>
+    <div class="stat-value green">{{ "{:,}".format(ga_data.overview.sessions|default(0)) }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">👥 ユーザー（28日）</div>
+    <div class="stat-value blue">{{ "{:,}".format(ga_data.overview.users|default(0)) }}</div>
+  </div>
+  {% endif %}
+  {% if gsc_data and not gsc_data.get('error') %}
+  <div class="stat-card">
+    <div class="stat-label">🔍 クリック（28日）</div>
+    <div class="stat-value blue">{{ "{:,}".format(gsc_data.overview.clicks|default(0)) }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── プラットフォームビルカード ── -->
+<style>
+  .plt-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  .plt-building {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px 10px 4px 4px;
+    background: linear-gradient(180deg, #03050e 0%, #060b18 50%, #080e1e 100%);
+    border: 1px solid rgba(255,255,255,.07);
+    transition: transform .26s cubic-bezier(.22,1,.36,1), box-shadow .26s, border-color .26s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    min-height: 220px;
+    text-decoration: none;
+  }
+  .plt-building:hover {
+    transform: translateY(-6px) scale(1.005);
+    border-color: rgba(255,255,255,.14);
+  }
+  /* 星空 */
+  .plt-building::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 45% 0;
+    background-image:
+      radial-gradient(1px 1px at 15% 20%, rgba(255,255,255,.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 72% 10%, rgba(255,255,255,.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 44%  6%, rgba(255,255,255,.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 88% 18%, rgba(255,255,255,.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 58% 25%, rgba(255,255,255,.35)0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* 地面グロー */
+  .plt-building::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 8%; right: 8%;
+    height: 40px;
+    background: radial-gradient(ellipse at center bottom, var(--pc, rgba(99,102,241,.3)) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .plt-sky {
+    height: 28px;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .plt-antenna {
+    width: 2px; height: 18px;
+    border-radius: 2px;
+    position: relative;
+  }
+  .plt-antenna-tip {
+    position: absolute;
+    top: -3px; left: 50%;
+    transform: translateX(-50%);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    animation: plt-ant 2.8s ease-in-out infinite;
+  }
+  @keyframes plt-ant {
+    0%,85%,100% { opacity:1; box-shadow:0 0 6px 2px currentColor; }
+    90%          { opacity:.1; box-shadow:none; }
+    95%          { opacity:.7; box-shadow:0 0 3px 1px currentColor; }
+  }
+  .plt-body {
+    position: relative;
+    z-index: 2;
+    padding: 6px 14px 4px;
+  }
+  .plt-win-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+  }
+  .plt-win {
+    width: 100%;
+    height: 14px;
+    border-radius: 2px;
+  }
+  .plt-win.lit {
+    animation: plt-flicker var(--fd,5s) ease-in-out infinite var(--fo,0s);
+  }
+  .plt-win.dark { opacity:.06; }
+  @keyframes plt-flicker {
+    0%,89%,100% { opacity:.88; }
+    91%          { opacity:.2; }
+    94%          { opacity:.7; }
+    97%          { opacity:.4; }
+  }
+  .plt-lobby {
+    position: relative;
+    z-index: 2;
+    padding: 9px 14px 12px;
+    border-top: 1px solid rgba(255,255,255,.06);
+    background: linear-gradient(0deg, rgba(0,0,0,.5) 0%, transparent 100%);
+    margin-top: auto;
+  }
+  .plt-lobby-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+  }
+</style>
+
+<div class="plt-grid">
+  {% for p, info in platforms.items() %}
+  {% set pidx = loop.index0 %}
+  <a href="/brands/{{ brand_id }}?platform={{ p }}" class="plt-building"
+     style="--pc:{{ brand.color }}44;"
+     onmouseover="this.style.boxShadow='0 20px 60px rgba(0,0,0,.7), 0 0 40px {{ brand.color }}1a'"
+     onmouseout="this.style.boxShadow=''">
+
+    <!-- 空・アンテナ -->
+    <div class="plt-sky">
+      <div class="plt-antenna" style="background:linear-gradient(to bottom, {{ brand.color }}, rgba(255,255,255,.06));">
+        <div class="plt-antenna-tip" style="background:{{ brand.color }};color:{{ brand.color }};animation-delay:{{ pidx * 0.4 }}s;"></div>
+      </div>
+    </div>
+
+    <!-- 窓グリッド（8列×4行=32窓） -->
+    <div class="plt-body">
+      <div class="plt-win-grid">
+        {% for i in range(32) %}
+        {% set is_lit = ((i * 7 + pidx * 11 + i // 8 * 5) % 10) >= 3 %}
+        <div class="plt-win {{ 'lit' if is_lit else 'dark' }}"
+          style="background:{{ brand.color }};
+                 {% if is_lit %}
+                   box-shadow:0 0 4px {{ brand.color }}, 0 0 8px {{ brand.color }}55;
+                   --fd:{{ 4 + (i * 13 % 6) }}s;
+                   --fo:{{ ((i * 7 + pidx * 4) % 9) * 0.3 }}s;
+                 {% endif %}">
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ロビー -->
+    <div class="plt-lobby">
+      <div class="plt-lobby-header">
+        <span style="font-size:13px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:7px;">
+          <span>{{ info.icon }}</span>
+          <span style="text-transform:uppercase;font-size:11.5px;letter-spacing:.8px;">{{ p }}</span>
+        </span>
+        {% if info.pending_count > 0 %}
+        <span class="badge badge-warn">{{ info.pending_count }}件待機</span>
+        {% else %}
+        <span class="badge badge-ok">✅ 空</span>
+        {% endif %}
+      </div>
+      {% if info.posts %}
+      <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:7px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">
+        {{ (info.posts[0].caption or info.posts[0].text or info.posts[0].title or info.posts[0].message or '')[:60] }}…
+      </div>
+      {% else %}
+      <div style="font-size:11px;color:var(--muted);margin-bottom:7px;">投稿なし</div>
+      {% endif %}
+      <span class="btn btn-ghost btn-sm">管理する →</span>
+    </div>
+
+  </a>
+  {% endfor %}
+</div>
+
+<!-- ═══════════════════ 各プラットフォームタブ ═══════════════════ -->
+{% elif active_platform in platforms %}
+{% set pdata = platforms[active_platform] %}
+<div class="page-header" style="margin-bottom:16px;">
+  <div>
+    <div style="font-size:18px;font-weight:700;">{{ pdata.icon }} {{ active_platform }}</div>
+  </div>
+  <a href="/queue/add?brand={{ brand_id }}&channel={{ active_platform }}" class="btn btn-primary btn-sm">
+    ＋ 投稿追加
+  </a>
+</div>
+
+{% if pdata.posts %}
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead><tr>
+      <th>内容</th><th>ステータス</th><th>ファイル</th>
+    </tr></thead>
+    <tbody>
+    {% for item in pdata.posts %}
+    <tr>
+      <td style="max-width:400px;">
+        <div style="font-size:13px;line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden;">
+          {{ item.caption or item.text or item.title or item.message or '（内容なし）' }}
+        </div>
+        {% if item.image_url or item.video_url %}
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+          🔗 {{ (item.image_url or item.video_url or '')[:60] }}
+        </div>
+        {% endif %}
+      </td>
+      <td>
+        {% if item.posted %}<span class="badge badge-ok">✅ 投稿済</span>
+        {% else %}<span class="badge badge-warn">待機中</span>{% endif %}
+      </td>
+      <td style="font-size:11px;color:var(--muted);">{{ item._file }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div style="text-align:center;padding:60px;color:var(--muted);">
+  <div style="font-size:36px;margin-bottom:12px;">{{ pdata.icon }}</div>
+  <div>{{ active_platform }} のキューは空です</div>
+  <a href="/queue/add?brand={{ brand_id }}&channel={{ active_platform }}" class="btn btn-primary" style="margin-top:16px;">
+    ＋ 最初の投稿を追加
+  </a>
+</div>
+{% endif %}
+
+<!-- ═══════════════════ Google Analytics タブ ═══════════════════ -->
+{% elif active_platform == 'analytics' %}
+{% if ga_data and not ga_data.get('error') %}
+{% set ov = ga_data.overview %}
+<div class="stats-grid">
+  {% for label, val, unit, cls in [
+    ('セッション', ov.sessions|default(0), '', 'blue'),
+    ('ページビュー', ov.pageviews|default(0), '', 'blue'),
+    ('ユーザー数', ov.users|default(0), '', 'green'),
+    ('平均滞在時間', ov.avg_duration|default(0), '分', 'yellow'),
+    ('直帰率', ov.bounce_rate|default(0), '%', 'yellow'),
+  ] %}
+  <div class="stat-card">
+    <div class="stat-label">{{ label }}</div>
+    <div class="stat-value {{ cls }}">{{ val }}</div>
+    <div class="stat-meta">{{ unit }} 直近28日</div>
+  </div>
+  {% endfor %}
+</div>
+{% if ga_data.series.dates %}
+<div class="card">
+  <div class="card-header"><span class="card-title">日別セッション数</span></div>
+  <div style="height:200px;"><canvas id="gaChart"></canvas></div>
+</div>
+{% endif %}
+{% if ga_data.pages %}
+<div class="card">
+  <div class="card-header"><span class="card-title">人気ページ TOP10</span></div>
+  <table>
+    <thead><tr><th>ページ</th><th>PV</th><th>ユーザー</th></tr></thead>
+    <tbody>
+    {% for p in ga_data.pages %}
+    <tr>
+      <td style="font-size:12px;color:var(--muted);">{{ p.path }}</td>
+      <td>{{ "{:,}".format(p.views) }}</td>
+      <td>{{ "{:,}".format(p.users) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% else %}
+<div class="alert alert-info">
+  <span>📊</span>
+  <div>
+    <strong>Google Analytics の設定方法</strong><br>
+    1. <code>.env</code> に <code>{{ brand_id.upper().replace('-','_') }}_GA4_PROPERTY_ID=プロパティID</code> を追加<br>
+    2. <code>credentials.json</code>（サービスアカウント）を <code>automation-system/</code> に配置<br>
+    3. そのサービスアカウントを GA4 プロパティに「閲覧者」として追加<br>
+    4. ダッシュボードを再起動
+  </div>
+</div>
+{% if ga_data.get('error') %}
+<div class="alert alert-warn"><span>⚠️</span><div>{{ ga_data.error }}</div></div>
+{% endif %}
+{% endif %}
+
+<!-- ═══════════════════ Search Console タブ ═══════════════════ -->
+{% elif active_platform == 'search' %}
+{% if gsc_data and not gsc_data.get('error') %}
+{% set ov = gsc_data.overview %}
+<div class="stats-grid">
+  {% for label, val, unit in [
+    ('クリック数', ov.clicks|default(0), ''),
+    ('表示回数',   ov.impressions|default(0), ''),
+    ('CTR',        ov.ctr|default(0), '%'),
+    ('平均掲載順位', ov.position|default(0), '位'),
+  ] %}
+  <div class="stat-card green-top">
+    <div class="stat-label">{{ label }}</div>
+    <div class="stat-value green">{{ val }}</div>
+    <div class="stat-meta">{{ unit }} 直近28日</div>
+  </div>
+  {% endfor %}
+</div>
+{% if gsc_data.queries %}
+<div class="card">
+  <div class="card-header"><span class="card-title">検索キーワード TOP10</span></div>
+  <table>
+    <thead><tr><th>キーワード</th><th>クリック</th><th>表示</th><th>CTR</th><th>順位</th></tr></thead>
+    <tbody>
+    {% for q in gsc_data.queries %}
+    <tr>
+      <td style="font-weight:500;">{{ q.query }}</td>
+      <td>{{ q.clicks }}</td>
+      <td style="color:var(--muted);">{{ "{:,}".format(q.impressions) }}</td>
+      <td>{{ q.ctr }}%</td>
+      <td>{{ q.position }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% else %}
+<div class="alert alert-info">
+  <span>🔍</span>
+  <div>
+    <strong>Search Console の設定方法</strong><br>
+    1. <code>.env</code> に <code>{{ brand_id.upper().replace('-','_') }}_GSC_SITE_URL={{ brand.url }}</code> を追加<br>
+    2. <code>credentials.json</code> のサービスアカウントを Search Console で「所有者」または「制限付きユーザー」に追加<br>
+    3. ダッシュボードを再起動
+  </div>
+</div>
+{% endif %}
+
+<!-- ═══════════════════ WordPress 下書き タブ ═══════════════════ -->
+{% elif active_platform == 'wordpress' %}
+{% if wp_drafts %}
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">📝 WordPress 下書き（{{ wp_drafts|length }}件）</span>
+    <a href="{{ brand.url }}/wp-admin/post-new.php" target="_blank" class="btn btn-ghost btn-sm">
+      ＋ 新規作成
+    </a>
+  </div>
+  <table>
+    <thead><tr><th>タイトル</th><th>作成日</th><th>操作</th></tr></thead>
+    <tbody>
+    {% for post in wp_drafts %}
+    <tr>
+      <td style="font-weight:500;">{{ post.title.rendered if post.title is mapping else post.title }}</td>
+      <td style="font-size:12px;color:var(--muted);">{{ (post.date or '')[:10] }}</td>
+      <td style="display:flex;gap:8px;">
+        <form method="POST" action="/brands/{{ brand_id }}/publish_draft/{{ post.id }}">
+          <button class="btn btn-green btn-sm">📢 公開</button>
+        </form>
+        <a href="{{ post.link }}" target="_blank" class="btn btn-ghost btn-sm">👁 プレビュー</a>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+  <span>🌐</span>
+  <div>
+    <strong>WordPress の設定方法</strong><br>
+    1. WordPress管理画面 → ユーザー → プロフィール → アプリケーションパスワードを生成<br>
+    2. <code>.env</code> に以下を追加:<br>
+    &nbsp;&nbsp;<code>{{ brand_id.upper().replace('-','_') }}_WP_URL={{ brand.url }}</code><br>
+    &nbsp;&nbsp;<code>{{ brand_id.upper().replace('-','_') }}_WP_USER=ユーザー名</code><br>
+    &nbsp;&nbsp;<code>{{ brand_id.upper().replace('-','_') }}_WP_APP_PASSWORD=アプリパスワード</code>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+{% if ga_data and ga_data.get('series') and ga_data.series.dates and active_platform == 'analytics' %}
+<script>
+const s = {{ ga_data.series | tojson }};
+new Chart(document.getElementById('gaChart'), {
+  type:'line',
+  data:{labels:s.dates.map(d=>d.slice(5)),
+    datasets:[{data:s.sessions,borderColor:'rgba(91,138,245,1)',
+      backgroundColor:'rgba(91,138,245,.15)',fill:true,tension:.4,pointRadius:2}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#0c1228',borderColor:'rgba(99,102,241,.3)',borderWidth:1,titleColor:'#8892b0',bodyColor:'#e8eaf6',padding:10}},
+    scales:{x:{ticks:{color:'#5a6490',maxTicksLimit:10,font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}},
+            y:{ticks:{color:'#5a6490',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'},beginAtZero:true}}}
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}コンテンツカレンダー — UPJ Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">コンテンツカレンダー</div>
+    <div class="page-sub">全ブランドの投稿スケジュールを一覧表示</div>
+  </div>
+  <div class="header-actions">
+    <a href="/queue/add" class="btn btn-primary">+ 投稿追加</a>
+  </div>
+</div>
+
+<!-- 凡例 -->
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+  {% for bid, b in nav_brands.items() %}
+  <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted2);">
+    <span style="width:12px;height:12px;border-radius:3px;background:{{ b.color }};opacity:.85;"></span>
+    {{ b.name_short }}
+  </div>
+  {% endfor %}
+  <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted2);">
+    <span style="width:12px;height:12px;border-radius:3px;background:var(--green2);opacity:.7;"></span>
+    投稿済
+  </div>
+</div>
+
+<!-- カレンダー本体 -->
+<div class="card" style="padding:20px;">
+  <div id="calendar"></div>
+</div>
+
+<!-- イベント詳細ドロワー -->
+<div id="event-drawer" style="display:none;position:fixed;right:0;top:0;bottom:0;width:340px;background:var(--s1);border-left:1px solid var(--border);z-index:200;padding:24px;overflow-y:auto;transition:transform .25s;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <div style="font-size:15px;font-weight:700;" id="drawer-title">投稿詳細</div>
+    <button onclick="closeDrawer()" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--muted2);cursor:pointer;font-size:13px;">✕</button>
+  </div>
+  <div id="drawer-content"></div>
+</div>
+
+<script>
+const calendarEl = document.getElementById('calendar');
+const events     = {{ events | tojson }};
+const brandColors = {{ brand_colors | tojson }};
+
+const calendar = new FullCalendar.Calendar(calendarEl, {
+  initialView: 'dayGridMonth',
+  locale: 'ja',
+  headerToolbar: {
+    left:   'prev,next today',
+    center: 'title',
+    right:  'dayGridMonth,dayGridWeek,listWeek'
+  },
+  buttonText: { today:'今日', month:'月', week:'週', list:'リスト' },
+  events: events,
+  height: 680,
+  eventClick: function(info) {
+    showDrawer(info.event);
+  },
+  eventDidMount: function(info) {
+    info.el.style.cursor = 'pointer';
+  },
+  dayMaxEvents: 3,
+  moreLinkText: '件',
+});
+
+calendar.render();
+
+function showDrawer(event) {
+  const props = event.extendedProps;
+  document.getElementById('drawer-title').textContent = (props.platform_icon || '') + ' ' + (props.platform || '');
+
+  const statusBadge = props.posted
+    ? '<span style="background:rgba(16,185,129,.1);color:var(--green2);border:1px solid rgba(16,185,129,.2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;">✓ 投稿済</span>'
+    : '<span style="background:rgba(245,158,11,.1);color:var(--yellow2);border:1px solid rgba(245,158,11,.2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;">待機中</span>';
+
+  document.getElementById('drawer-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="width:8px;height:8px;border-radius:50%;background:${event.backgroundColor};"></span>
+      <span style="font-size:13px;font-weight:600;">${props.brand_name || ''}</span>
+      ${statusBadge}
+    </div>
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;margin-bottom:14px;">
+      ${escHtml(props.content || '（内容なし）')}
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">
+      ファイル: ${props.file || ''}
+    </div>
+    ${!props.posted ? `<form method="POST" action="/queue/delete/${props.brand_id}/${props.platform}/${props.file}">
+      <button class="btn btn-danger btn-sm" onclick="return confirm('削除しますか？')" style="width:100%;justify-content:center;">✕ 削除する</button>
+    </form>` : ''}
+  `;
+
+  document.getElementById('event-drawer').style.display = 'block';
+  document.getElementById('calendar').style.marginRight = '360px';
+  calendar.updateSize();
+}
+
+function closeDrawer() {
+  document.getElementById('event-drawer').style.display = 'none';
+  document.getElementById('calendar').style.marginRight = '';
+  calendar.updateSize();
+}
+
+function escHtml(t) {
+  return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+{% endblock %}

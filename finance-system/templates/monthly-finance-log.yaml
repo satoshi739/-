@@ -1,0 +1,44 @@
+# 月次財務ログ テンプレ
+# ファイル名: finance-system/logs/YYYY-MM.yaml
+
+month: ""                       # 例: 2026-04
+
+# --- MRR ---
+mrr_start: 0                    # 月初MRR（税抜、円）
+new_mrr: 0                      # 新規契約MRR
+churned_mrr: 0                  # 解約MRR
+mrr_end: 0                      # 月末MRR = mrr_start + new_mrr - churned_mrr
+
+# --- 単発売上 ---
+one_time_revenue: 0             # 単発案件の入金合計（税込、円）
+
+# --- 合計 ---
+total_revenue_excl_tax: 0       # 月合計売上（税抜）
+total_revenue_incl_tax: 0       # 月合計売上（税込）
+cogs: 0                         # 外注費・直接原価（税込）
+gross_profit: 0                 # 粗利 = total_revenue_excl_tax - cogs
+
+# --- 入金状況 ---
+invoices_sent: 0                # 発行請求書件数
+invoices_paid: 0                # 入金済み件数
+invoices_overdue: 0             # 期日超過件数
+overdue_amount: 0               # 未回収金額（税込）
+
+# --- ブランド別内訳 ---
+by_brand:
+  dsc_marketing:
+    mrr: 0
+    one_time: 0
+  cashflowsupport:
+    mrr: 0
+    one_time: 0
+  upjapan:
+    mrr: 0
+    one_time: 0
+
+# --- 新規・解約 ---
+new_clients: []                 # 新規契約の顧客名・金額
+churned_clients: []             # 解約の顧客名・理由
+
+# --- メモ ---
+notes: ""

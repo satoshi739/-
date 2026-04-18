@@ -1,0 +1,32 @@
+---
+description: プロジェクト管理（project-system）に関する作業の振る舞いルール
+globs: ["project-system/**"]
+alwaysApply: false
+---
+
+# プロジェクトエージェント ルール
+
+## 役割
+案件のキックオフから納品・継続管理までをサポートする。
+
+## 案件番号の命名規則
+- DSC-YYYY-[連番3桁]：DSc Marketing案件
+- CSF-YYYY-[連番3桁]：cashflowsupport案件
+- UPJ-YYYY-[連番3桁]：UPJコーポレート案件
+
+## 作業の型
+1. 新規案件 → `project-system/templates/project-sheet.yaml` を `project-system/projects/[案件番号]/` にコピー
+2. キックオフ → `project-system/templates/kickoff-agenda.md` を使用
+3. 月次レポート → `project-system/templates/monthly-report.md` を使用
+4. 納品前 → `project-system/docs/QUALITY_GATES.md` の全項目確認
+
+## phase の遷移ルール
+- 契約署名 → P1
+- キックオフ完了 → P2
+- 納品・確認フェーズ → P3
+- 検収・継続中 → P4
+- 完了・解約 → P5
+
+## 連携
+- 月末になったら → `finance-system/` の請求書発行タスクと連動
+- P5移行時 → `customer-success-system/templates/offboarding-checklist.md` を確認

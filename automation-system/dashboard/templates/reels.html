@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% block title %}リール作成 — UPJ Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-title">🎬 リール作成</div>
+    <div class="page-sub">AIがスライド台本・ナレーション・ハッシュタグを自動生成</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:420px 1fr;gap:20px;align-items:start;">
+
+  <!-- ── LEFT: 入力フォーム ── -->
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="margin-bottom:18px;">🎯 リール設定</div>
+
+      <!-- ブランド -->
+      <div class="form-group">
+        <label class="form-label">ブランド</label>
+        <select class="form-select" id="brand-sel">
+          {% for bid, b in brands.items() %}
+          {% if b.channels.get('instagram') %}
+          <option value="{{ bid }}" data-color="{{ b.color }}">{{ b.name_short }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- トピック -->
+      <div class="form-group">
+        <label class="form-label">トピック <span style="color:var(--red)">*</span></label>
+        <input type="text" class="form-input" id="topic-input"
+               placeholder="例: SNS集客で月10件リード獲得する方法">
+      </div>
+
+      <!-- スタイル -->
+      <div class="form-group">
+        <label class="form-label">スタイル</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="style-grid">
+          {% for s in ['教育系','体験談','比較','リスト系','問題解決'] %}
+          <label class="style-opt {{ 'selected' if loop.first else '' }}" data-val="{{ s }}">
+            <input type="radio" name="style" value="{{ s }}" {{ 'checked' if loop.first else '' }} style="display:none">
+            <span class="style-icon">{{ {'教育系':'📚','体験談':'💬','比較':'⚖️','リスト系':'📋','問題解決':'🔧'}[s] }}</span>
+            <span>{{ s }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- 尺 -->
+      <div class="form-group">
+        <label class="form-label">動画の尺</label>
+        <div style="display:flex;gap:8px;">
+          {% for d in [15, 30, 60, 90] %}
+          <label class="duration-opt {{ 'selected' if d==30 else '' }}" data-val="{{ d }}">
+            <input type="radio" name="duration" value="{{ d }}" {{ 'checked' if d==30 else '' }} style="display:none">
+            {{ d }}秒
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <button class="btn btn-accent" id="gen-btn" style="width:100%;" onclick="generate()"
+              {% if not ai %}disabled title="ANTHROPIC_API_KEY未設定"{% endif %}>
+        ✦ AIで台本を生成
+      </button>
+
+      {% if not ai %}
+      <div class="alert alert-warn" style="margin-top:12px;font-size:12px;">
+        ⚠️ ANTHROPIC_API_KEY が未設定です
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- 保存済みリール -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:14px;">📋 最近の下書き</div>
+      <div id="saved-list" style="font-size:12px;color:var(--muted);">
+        キューに保存したリールがここに表示されます
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: プレビュー ── -->
+  <div>
+    <!-- 生成中 -->
+    <div id="loading" style="display:none;" class="card">
+      <div style="text-align:center;padding:40px 0;">
+        <div class="spinner" style="margin:0 auto 16px;"></div>
+        <div style="color:var(--muted2);">AIが台本を生成中...</div>
+      </div>
+    </div>
+
+    <!-- 空状態 -->
+    <div id="empty-state" class="card" style="text-align:center;padding:60px 20px;">
+      <div style="font-size:48px;margin-bottom:16px;">🎬</div>
+      <div style="color:var(--muted2);font-size:14px;margin-bottom:8px;">台本がここに表示されます</div>
+      <div style="color:var(--muted);font-size:12px;">トピックを入力してAI生成ボタンを押してください</div>
+    </div>
+
+    <!-- 生成結果 -->
+    <div id="result" style="display:none;">
+
+      <!-- タイトル & アクション -->
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+          <div style="flex:1;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">タイトル</div>
+            <div id="res-title" style="font-size:18px;font-weight:700;line-height:1.4;"></div>
+            <div id="res-hook" style="font-size:12px;color:var(--accent2);margin-top:6px;"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            <button class="btn btn-ghost btn-sm" onclick="regenerate()">↺ 再生成</button>
+            <button class="btn btn-accent btn-sm" onclick="saveToQueue()">＋ キューに保存</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+        <!-- スライドプレビュー -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px;">📱 スライド構成</div>
+          <div id="slides-container"></div>
+        </div>
+
+        <!-- ナレーション & 詳細 -->
+        <div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-title" style="margin-bottom:10px;">🎙 ナレーション</div>
+            <div id="res-narration" style="font-size:12px;color:var(--muted2);line-height:1.75;background:var(--s2);border-radius:8px;padding:12px;"></div>
+          </div>
+          <div class="card" style="margin-bottom:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">BGMムード</div>
+                <div id="res-bgm" style="font-size:12px;color:var(--text);"></div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">サムネイル案</div>
+                <div id="res-thumb" style="font-size:12px;color:var(--text);"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:8px;">📝 キャプション</div>
+            <div id="res-caption" style="font-size:12px;color:var(--muted2);line-height:1.7;white-space:pre-wrap;"></div>
+            <div id="res-hashtags" style="font-size:11px;color:var(--accent2);margin-top:8px;line-height:1.8;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="card" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.06));border-color:rgba(99,102,241,.2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">CTA（最終フレーム）</div>
+            <div id="res-cta" style="font-size:15px;font-weight:700;color:var(--accent2);"></div>
+          </div>
+          <button class="btn btn-accent" onclick="saveToQueue()">＋ キューに保存して投稿準備</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .style-opt {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 12px; border-radius: 9px; cursor: pointer;
+    border: 1px solid var(--border); color: var(--muted2);
+    font-size: 12px; font-weight: 500; transition: all .15s;
+  }
+  .style-opt:hover { border-color: var(--border2); color: var(--text); }
+  .style-opt.selected {
+    background: rgba(99,102,241,.1); border-color: rgba(99,102,241,.4);
+    color: var(--accent2);
+  }
+  .style-icon { font-size: 14px; }
+
+  .duration-opt {
+    flex: 1; text-align: center;
+    padding: 7px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border); color: var(--muted2);
+    font-size: 12px; font-weight: 600; transition: all .15s;
+  }
+  .duration-opt:hover { border-color: var(--border2); color: var(--text); }
+  .duration-opt.selected {
+    background: rgba(99,102,241,.1); border-color: rgba(99,102,241,.4);
+    color: var(--accent2);
+  }
+
+  .slide-card {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .slide-card:last-child { border-bottom: none; }
+  .slide-no {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(99,102,241,.15); border: 1px solid rgba(99,102,241,.3);
+    color: var(--accent2); font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .slide-headline { font-size: 13px; font-weight: 600; color: var(--text); }
+  .slide-detail { font-size: 11px; color: var(--muted2); margin-top: 2px; }
+  .slide-dur {
+    margin-left: auto; font-size: 10px; color: var(--muted);
+    background: var(--s2); border-radius: 4px; padding: 2px 6px; flex-shrink: 0;
+  }
+
+  .spinner {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+let _currentBrand = '{{ brands.keys()|list|first if brands else "" }}';
+let _currentResult = null;
+
+// スタイル選択
+document.querySelectorAll('.style-opt').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.style-opt').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    el.querySelector('input').checked = true;
+  });
+});
+
+// 尺選択
+document.querySelectorAll('.duration-opt').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.duration-opt').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    el.querySelector('input').checked = true;
+  });
+});
+
+// ブランド色更新
+document.getElementById('brand-sel').addEventListener('change', function() {
+  _currentBrand = this.value;
+});
+
+function generate() {
+  const topic = document.getElementById('topic-input').value.trim();
+  if (!topic) {
+    Toastify({text:'トピックを入力してください', style:{background:'var(--red)'}}).showToast();
+    return;
+  }
+  const style    = document.querySelector('[name=style]:checked')?.value || '教育系';
+  const duration = document.querySelector('[name=duration]:checked')?.value || '30';
+  const brand    = document.getElementById('brand-sel').value;
+  _currentBrand  = brand;
+
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('result').style.display      = 'none';
+  document.getElementById('loading').style.display     = '';
+  document.getElementById('gen-btn').disabled = true;
+
+  fetch(`/api/ai/reel_v2/${brand}`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({topic, style, duration: parseInt(duration)})
+  })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('gen-btn').disabled = false;
+    if (data.error) {
+      Toastify({text: data.error, style:{background:'var(--red)'}}).showToast();
+      document.getElementById('empty-state').style.display = '';
+      return;
+    }
+    _currentResult = data;
+    renderResult(data, topic);
+  })
+  .catch(e => {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('gen-btn').disabled = false;
+    document.getElementById('empty-state').style.display = '';
+    Toastify({text: 'エラー: ' + e.message, style:{background:'var(--red)'}}).showToast();
+  });
+}
+
+function renderResult(d, topic) {
+  document.getElementById('result').style.display = '';
+  document.getElementById('res-title').textContent = d.title || '';
+  document.getElementById('res-hook').textContent  = d.hook ? '🎯 フック: ' + d.hook : '';
+  document.getElementById('res-cta').textContent   = d.cta  || '';
+  document.getElementById('res-narration').textContent = d.narration || '';
+  document.getElementById('res-bgm').textContent   = d.bgm_mood || '—';
+  document.getElementById('res-thumb').textContent = d.thumbnail_concept || '—';
+  document.getElementById('res-caption').textContent = d.caption || '';
+  document.getElementById('res-hashtags').textContent = d.hashtags || '';
+
+  // スライド
+  const slides = d.slides || [];
+  document.getElementById('slides-container').innerHTML = slides.map(s => `
+    <div class="slide-card">
+      <div class="slide-no">${s.no}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="slide-headline">${s.headline || ''}</div>
+        <div class="slide-detail">${s.detail || ''}</div>
+      </div>
+      <div class="slide-dur">${s.duration_sec || 5}s</div>
+    </div>
+  `).join('');
+}
+
+function regenerate() {
+  generate();
+}
+
+function saveToQueue() {
+  if (!_currentResult) return;
+  const topic = document.getElementById('topic-input').value.trim();
+  fetch(`/api/queue/save_reel/${_currentBrand}`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({reel: _currentResult, topic})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      Toastify({text:'✅ キューに保存しました', style:{background:'var(--green)'}}).showToast();
+    } else {
+      Toastify({text: data.error || 'エラー', style:{background:'var(--red)'}}).showToast();
+    }
+  });
+}
+
+// Enterキーで生成
+document.getElementById('topic-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') generate();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}AI生成 — UPJ Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">✨ AI コンテンツ生成</div>
+    <div class="page-sub">Claude AIがInstagram投稿文・LINE配信文を自動生成します</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+  <!-- Instagram 生成 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">📱 Instagram 投稿文</span></div>
+
+    <div class="form-group">
+      <label class="form-label">ブランド</label>
+      <select id="ig-brand" class="form-select">
+        <option value="dsc-marketing">DSc Marketing</option>
+        <option value="cashflowsupport">cashflowsupport</option>
+        <option value="upjapan">UPJ</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">トピック <span style="color:var(--red)">*</span></label>
+      <input id="ig-topic" class="form-input" placeholder="例: Instagramで問い合わせを増やす3つの方法">
+    </div>
+    <div class="form-group">
+      <label class="form-label">ターゲット</label>
+      <input id="ig-target" class="form-input" placeholder="例: 飲食店オーナー 30〜40代">
+    </div>
+    <div class="form-group">
+      <label class="form-label">トーン</label>
+      <select id="ig-tone" class="form-select">
+        <option>実務的・わかりやすい</option>
+        <option>カジュアル・親しみやすい</option>
+        <option>権威的・専門的</option>
+        <option>共感・感情に訴える</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">補足（任意）</label>
+      <input id="ig-extra" class="form-input" placeholder="例: 無料相談につなげる、実績数字を含める">
+    </div>
+
+    <button onclick="generateIG()" class="btn btn-primary" id="ig-btn" style="width:100%;justify-content:center;">
+      ✨ 生成する
+    </button>
+
+    <div id="ig-result" style="margin-top:18px;display:none;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">🪝 フック（冒頭1行）</div>
+      <div id="ig-hook" style="font-size:14px;font-weight:700;color:var(--yellow);padding:8px 0;"></div>
+
+      <div style="font-size:12px;color:var(--muted);margin:12px 0 6px;">📝 キャプション</div>
+      <div id="ig-caption" class="ai-output"></div>
+
+      <div style="font-size:12px;color:var(--muted);margin:12px 0 6px;">#️⃣ ハッシュタグ</div>
+      <div id="ig-hashtags" class="ai-output" style="min-height:40px;font-size:13px;color:var(--muted);"></div>
+
+      <div class="ai-output-actions">
+        <button onclick="addToQueue('instagram')" class="btn btn-primary btn-sm">📅 キューに追加</button>
+        <button onclick="copyIG()" class="btn btn-ghost btn-sm">📋 コピー</button>
+        <button onclick="document.getElementById('ig-result').style.display='none'" class="btn btn-ghost btn-sm">✕ クリア</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LINE 生成 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">📣 LINE 配信文</span></div>
+
+    <div class="form-group">
+      <label class="form-label">ブランド</label>
+      <select id="line-brand" class="form-select">
+        <option value="dsc-marketing">DSc Marketing</option>
+        <option value="cashflowsupport">cashflowsupport</option>
+        <option value="upjapan">UPJ</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">トピック <span style="color:var(--red)">*</span></label>
+      <input id="line-topic" class="form-input" placeholder="例: 今月のキャンペーン、役立ちコンテンツ">
+    </div>
+    <div class="form-group">
+      <label class="form-label">目的</label>
+      <select id="line-purpose" class="form-select">
+        <option>集客・認知</option>
+        <option>お役立ち情報（信頼構築）</option>
+        <option>キャンペーン・特典告知</option>
+        <option>無料相談への誘導</option>
+        <option>事例・実績の紹介</option>
+      </select>
+    </div>
+
+    <button onclick="generateLINE()" class="btn btn-green" id="line-btn" style="width:100%;justify-content:center;margin-top:8px;">
+      ✨ 生成する
+    </button>
+
+    <div id="line-result" style="margin-top:18px;display:none;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">📩 メッセージ</div>
+      <div id="line-message" class="ai-output"></div>
+      <div class="ai-output-actions">
+        <button onclick="addToQueue('line')" class="btn btn-green btn-sm">📅 キューに追加</button>
+        <button onclick="copyLINE()" class="btn btn-ghost btn-sm">📋 コピー</button>
+        <button onclick="document.getElementById('line-result').style.display='none'" class="btn btn-ghost btn-sm">✕ クリア</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- キューに追加モーダル -->
+<div id="queue-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center;">
+  <div class="card" style="width:500px;max-width:90vw;margin:0;">
+    <div class="card-header">
+      <span class="card-title">📅 投稿キューに追加</span>
+      <button onclick="document.getElementById('queue-modal').style.display='none'" class="btn btn-ghost btn-sm">✕</button>
+    </div>
+    <form id="queue-form">
+      <input type="hidden" id="qf-channel" name="channel">
+      <input type="hidden" id="qf-caption" name="caption">
+      <input type="hidden" id="qf-message" name="message">
+      <div class="form-group">
+        <label class="form-label">画像URL（任意）</label>
+        <input class="form-input" id="qf-image" name="image_url" placeholder="https://drive.google.com/...">
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">空欄でもキューに追加できます</div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">追加する</button>
+    </form>
+  </div>
+</div>
+
+<script>
+let _igData = {}, _lineMsg = '';
+
+async function generateIG() {
+  const topic = document.getElementById('ig-topic').value.trim();
+  if (!topic) { alert('トピックを入力してください'); return; }
+  const btn = document.getElementById('ig-btn');
+  btn.textContent = '⏳ 生成中...'; btn.disabled = true;
+
+  const resp = await fetch('/api/ai/generate_post', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      topic, brand: document.getElementById('ig-brand').value,
+      target: document.getElementById('ig-target').value,
+      tone:   document.getElementById('ig-tone').value,
+      extra:  document.getElementById('ig-extra').value,
+    })
+  });
+  btn.textContent = '✨ 生成する'; btn.disabled = false;
+
+  const d = await resp.json();
+  if (d.error) { alert('エラー: ' + d.error); return; }
+  _igData = d;
+  document.getElementById('ig-hook').textContent    = d.hook || '';
+  document.getElementById('ig-caption').textContent = d.caption || '';
+  document.getElementById('ig-hashtags').textContent= d.hashtags || '';
+  document.getElementById('ig-result').style.display = 'block';
+}
+
+async function generateLINE() {
+  const topic = document.getElementById('line-topic').value.trim();
+  if (!topic) { alert('トピックを入力してください'); return; }
+  const btn = document.getElementById('line-btn');
+  btn.textContent = '⏳ 生成中...'; btn.disabled = true;
+
+  const resp = await fetch('/api/ai/generate_line', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      topic, brand: document.getElementById('line-brand').value,
+      purpose: document.getElementById('line-purpose').value,
+    })
+  });
+  btn.textContent = '✨ 生成する'; btn.disabled = false;
+
+  const d = await resp.json();
+  if (d.error) { alert('エラー: ' + d.error); return; }
+  _lineMsg = d.message;
+  document.getElementById('line-message').textContent = d.message;
+  document.getElementById('line-result').style.display = 'block';
+}
+
+function addToQueue(channel) {
+  document.getElementById('qf-channel').value = channel;
+  if (channel === 'instagram') {
+    document.getElementById('qf-caption').value = (_igData.caption || '') + '\n\n' + (_igData.hashtags || '');
+    document.getElementById('qf-message').value = '';
+  } else {
+    document.getElementById('qf-message').value = _lineMsg;
+    document.getElementById('qf-caption').value = '';
+  }
+  const m = document.getElementById('queue-modal');
+  m.style.display = 'flex';
+}
+
+document.getElementById('queue-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  await fetch('/queue/add', { method: 'POST', body: fd });
+  document.getElementById('queue-modal').style.display = 'none';
+  alert('✅ キューに追加しました');
+});
+
+function copyIG() {
+  navigator.clipboard.writeText((_igData.caption||'') + '\n\n' + (_igData.hashtags||''));
+  alert('コピーしました');
+}
+function copyLINE() {
+  navigator.clipboard.writeText(_lineMsg);
+  alert('コピーしました');
+}
+</script>
+{% endblock %}

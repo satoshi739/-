@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI コンテンツスタジオ</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #080814;
+    color: #e2e2f0;
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  /* ===== CARD ===== */
+  .card {
+    background: #12121f;
+    border: 1px solid #2a2a45;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 900px;
+    overflow: hidden;
+    margin: auto;
+  }
+
+  /* ===== HEADER ===== */
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px; border-bottom: 1px solid #1e1e35;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, #6c63ff, #a78bfa);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: bold; color: #fff; flex-shrink: 0;
+  }
+  .header-title { font-size: 17px; font-weight: 700; color: #fff; }
+  .header-sub { font-size: 11px; color: #8880a8; margin-top: 2px; }
+  .close-btn {
+    background: #1e1e35; border: 1px solid #2a2a45;
+    color: #8880a8; border-radius: 8px;
+    padding: 6px 14px; font-size: 13px; cursor: pointer;
+  }
+  .close-btn:hover { background: #252540; }
+
+  /* ===== TAB NAV ===== */
+  .tab-nav {
+    display: flex; gap: 0;
+    border-bottom: 1px solid #1e1e35;
+    padding: 0 24px;
+  }
+  .tab-btn {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: #6b6890; font-size: 13px; font-weight: 600;
+    padding: 12px 18px; cursor: pointer; transition: all .15s;
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: #c4c0e8; }
+  .tab-btn.active { color: #a78bfa; border-bottom-color: #6c63ff; }
+
+  /* ===== BODY ===== */
+  .card-body { padding: 24px; display: flex; flex-direction: column; gap: 22px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: flex; flex-direction: column; gap: 22px; }
+
+  /* Section label */
+  .section-label {
+    font-size: 11px; font-weight: 600;
+    color: #7a76a0; letter-spacing: .06em; margin-bottom: 10px;
+  }
+
+  /* ===== TOPIC INPUT ===== */
+  .topic-input {
+    width: 100%; background: #0d0d1c;
+    border: 1.5px solid #3730a3; border-radius: 10px;
+    color: #e2e2f0; font-size: 15px;
+    padding: 13px 16px; outline: none; transition: border-color .2s;
+  }
+  .topic-input::placeholder { color: #4b4870; }
+  .topic-input:focus { border-color: #6c63ff; }
+
+  /* Chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip {
+    background: #1a1a2e; border: 1px solid #2a2a45;
+    border-radius: 20px; padding: 5px 12px;
+    font-size: 12px; color: #9490c0; cursor: pointer; transition: all .15s;
+    white-space: nowrap;
+  }
+  .chip:hover { background: #252545; color: #c4c0e8; border-color: #6c63ff; }
+  .chip.ai-chip {
+    background: linear-gradient(135deg, #1e1240, #2a1f5e);
+    border-color: #6c63ff; color: #a78bfa;
+  }
+  .chip.ai-chip:hover { background: linear-gradient(135deg, #2a1f5e, #3730a3); }
+
+  /* ===== TONE CARDS ===== */
+  .tone-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+  @media (max-width:560px) { .tone-grid { grid-template-columns: repeat(2,1fr); } }
+  .tone-card {
+    background: #0d0d1c; border: 1.5px solid #2a2a45;
+    border-radius: 10px; padding: 13px 12px; cursor: pointer; transition: all .15s;
+  }
+  .tone-card:hover { border-color: #5b52d0; background: #14142a; }
+  .tone-card.selected { border-color: #6c63ff; background: #15143a; }
+  .tone-icon { font-size: 17px; margin-bottom: 5px; }
+  .tone-name { font-size: 13px; font-weight: 600; color: #d0cce8; }
+  .tone-desc { font-size: 11px; color: #6b6890; margin-top: 2px; }
+
+  /* Extra input */
+  .extra-input {
+    width: 100%; background: #0d0d1c;
+    border: 1.5px solid #2a2a45; border-radius: 10px;
+    color: #e2e2f0; font-size: 14px;
+    padding: 11px 16px; outline: none; transition: border-color .2s;
+  }
+  .extra-input::placeholder { color: #4b4870; }
+  .extra-input:focus { border-color: #6c63ff; }
+
+  /* ===== PLATFORMS ===== */
+  .platform-list { display: flex; flex-wrap: wrap; gap: 9px; }
+  .platform-item {
+    display: flex; align-items: center; gap: 7px;
+    background: #0d0d1c; border: 1.5px solid #2a2a45;
+    border-radius: 10px; padding: 8px 13px;
+    cursor: pointer; transition: all .15s; user-select: none;
+  }
+  .platform-item:hover { border-color: #5b52d0; }
+  .platform-item.checked { border-color: #6c63ff; background: #15143a; }
+  .platform-item input[type=checkbox] { display: none; }
+  .custom-check {
+    width: 17px; height: 17px; border: 2px solid #4b4870; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s; flex-shrink: 0; font-size: 11px;
+  }
+  .platform-item.checked .custom-check { background: #6c63ff; border-color: #6c63ff; color: #fff; }
+  .platform-emoji { font-size: 15px; }
+  .platform-name { font-size: 13px; color: #c0bce0; }
+
+  /* ===== GENERATE BUTTON ===== */
+  .generate-btn {
+    background: linear-gradient(135deg, #5b4fd0, #7c3aed, #6c63ff);
+    border: none; border-radius: 12px;
+    color: #fff; font-size: 15px; font-weight: 700;
+    padding: 14px 24px; cursor: pointer;
+    transition: opacity .2s, transform .1s; letter-spacing: .02em;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .generate-btn:hover { opacity: .92; }
+  .generate-btn:active { transform: scale(.99); }
+  .generate-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ===== OUTPUT ===== */
+  #output { display: none; }
+  .output-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+  }
+  .output-title { font-size: 14px; font-weight: 700; color: #e2e2f0; }
+  .copy-all-btn {
+    background: #1e1e35; border: 1px solid #2a2a45;
+    color: #a78bfa; border-radius: 8px;
+    padding: 5px 13px; font-size: 12px; cursor: pointer;
+  }
+  .copy-all-btn:hover { background: #252545; }
+  .platform-output {
+    background: #0d0d1c; border: 1px solid #2a2a45;
+    border-radius: 10px; margin-bottom: 10px; overflow: hidden;
+  }
+  .platform-output-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 14px; border-bottom: 1px solid #1e1e35; background: #11112a;
+  }
+  .platform-output-name { font-size: 13px; font-weight: 600; color: #c0bce0; }
+  .copy-btn {
+    background: transparent; border: 1px solid #2a2a45;
+    color: #7a76a0; border-radius: 6px;
+    padding: 3px 10px; font-size: 11px; cursor: pointer;
+  }
+  .copy-btn:hover { color: #a78bfa; border-color: #6c63ff; }
+  .platform-output-body {
+    padding: 14px; font-size: 13px; line-height: 1.75;
+    color: #c4c0e8; white-space: pre-wrap; word-break: break-word; min-height: 56px;
+  }
+  .streaming-cursor::after { content: "▋"; animation: blink .6s step-end infinite; color: #6c63ff; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .loading-dots::after { content: "..."; animation: dots 1s steps(3,end) infinite; }
+  @keyframes dots { 0%{content:"."} 33%{content:".."} 66%{content:"..."} }
+
+  /* API notice */
+  .api-notice {
+    background: #1a1230; border: 1px solid #3730a3;
+    border-radius: 8px; padding: 12px 14px;
+    font-size: 12px; color: #a78bfa;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .api-key-row { display: flex; gap: 8px; margin-top: 8px; }
+  .api-key-input {
+    flex: 1; background: #0d0d1c; border: 1px solid #3730a3;
+    border-radius: 6px; color: #e2e2f0;
+    padding: 7px 10px; font-size: 12px; outline: none; font-family: monospace;
+  }
+  .api-key-input:focus { border-color: #6c63ff; }
+  .api-key-save {
+    background: #3730a3; border: none; color: #fff;
+    border-radius: 6px; padding: 7px 14px; font-size: 12px; cursor: pointer;
+  }
+
+  /* ===========================
+     ANALYTICS STYLES
+     =========================== */
+
+  /* Period selector */
+  .period-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .period-btns { display: flex; gap: 6px; }
+  .period-btn {
+    background: #1a1a2e; border: 1px solid #2a2a45;
+    color: #7a76a0; border-radius: 8px;
+    padding: 6px 14px; font-size: 12px; cursor: pointer; transition: all .15s;
+  }
+  .period-btn:hover { border-color: #5b52d0; color: #c4c0e8; }
+  .period-btn.active { background: #1e1a3a; border-color: #6c63ff; color: #a78bfa; }
+  .edit-data-btn {
+    background: #1e1e35; border: 1px solid #2a2a45;
+    color: #9490c0; border-radius: 8px;
+    padding: 6px 14px; font-size: 12px; cursor: pointer; transition: all .15s;
+  }
+  .edit-data-btn:hover { border-color: #6c63ff; color: #c4c0e8; }
+
+  /* KPI summary row */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 12px;
+  }
+  @media(max-width:600px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+  .kpi-card {
+    background: #0d0d1c; border: 1px solid #2a2a45;
+    border-radius: 12px; padding: 16px;
+  }
+  .kpi-label { font-size: 11px; color: #6b6890; margin-bottom: 6px; }
+  .kpi-value { font-size: 22px; font-weight: 700; color: #e2e2f0; letter-spacing: -.02em; }
+  .kpi-sub { font-size: 11px; margin-top: 4px; }
+  .kpi-up { color: #34d399; }
+  .kpi-down { color: #f87171; }
+
+  /* Platform analytics cards */
+  .platform-analytics-grid {
+    display: grid; grid-template-columns: repeat(2,1fr); gap: 12px;
+  }
+  @media(max-width:600px) { .platform-analytics-grid { grid-template-columns: 1fr; } }
+  .pa-card {
+    background: #0d0d1c; border: 1px solid #2a2a45;
+    border-radius: 12px; padding: 16px;
+  }
+  .pa-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+  }
+  .pa-name-row { display: flex; align-items: center; gap: 8px; }
+  .pa-emoji { font-size: 18px; }
+  .pa-name { font-size: 14px; font-weight: 700; color: #d0cce8; }
+  .pa-er {
+    font-size: 12px; font-weight: 700;
+    background: #1e1a3a; border-radius: 6px;
+    padding: 3px 8px; color: #a78bfa;
+  }
+  .pa-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .pa-metric { text-align: center; }
+  .pa-metric-val { font-size: 15px; font-weight: 700; color: #c4c0e8; }
+  .pa-metric-lbl { font-size: 10px; color: #5a5878; margin-top: 2px; }
+
+  /* Charts */
+  .charts-grid {
+    display: grid; grid-template-columns: 3fr 2fr; gap: 14px;
+  }
+  @media(max-width:650px) { .charts-grid { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: #0d0d1c; border: 1px solid #2a2a45;
+    border-radius: 12px; padding: 16px;
+  }
+  .chart-title { font-size: 12px; font-weight: 600; color: #7a76a0; margin-bottom: 14px; }
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* ===== DATA EDIT MODAL ===== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #12121f; border: 1px solid #2a2a45;
+    border-radius: 14px; width: 100%; max-width: 540px;
+    max-height: 80vh; overflow-y: auto; margin: 24px;
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid #1e1e35;
+    position: sticky; top: 0; background: #12121f; z-index: 1;
+  }
+  .modal-title { font-size: 15px; font-weight: 700; color: #e2e2f0; }
+  .modal-close {
+    background: none; border: none; color: #6b6890;
+    font-size: 20px; cursor: pointer; padding: 0 4px;
+  }
+  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+  .modal-platform { }
+  .modal-platform-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: #c0bce0;
+    margin-bottom: 10px;
+  }
+  .modal-fields { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .field-group label { font-size: 10px; color: #6b6890; display: block; margin-bottom: 4px; }
+  .field-group input {
+    width: 100%; background: #0d0d1c; border: 1px solid #2a2a45;
+    border-radius: 7px; color: #e2e2f0; font-size: 13px;
+    padding: 7px 9px; outline: none;
+  }
+  .field-group input:focus { border-color: #6c63ff; }
+  .modal-save {
+    background: linear-gradient(135deg, #5b4fd0, #6c63ff);
+    border: none; border-radius: 10px;
+    color: #fff; font-size: 14px; font-weight: 700;
+    padding: 12px; cursor: pointer; width: 100%;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- HEADER -->
+  <div class="card-header">
+    <div class="header-left">
+      <div class="header-icon">+</div>
+      <div>
+        <div class="header-title">AI コンテンツスタジオ</div>
+        <div class="header-sub">Claude が全プラットフォームのコンテンツを同時生成します</div>
+      </div>
+    </div>
+    <button class="close-btn" onclick="resetAll()">× 閉じる</button>
+  </div>
+
+  <!-- TAB NAV -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('studio')">✦ コンテンツ生成</button>
+    <button class="tab-btn" onclick="switchTab('analytics')">📊 アナリティクス</button>
+  </div>
+
+  <!-- BODY -->
+  <div class="card-body">
+
+    <!-- ==================== STUDIO TAB ==================== -->
+    <div class="tab-panel active" id="tab-studio">
+
+      <!-- API Key -->
+      <div id="apiKeySection">
+        <div class="api-notice">
+          <span>🔑</span>
+          <div style="flex:1">
+            <div>Anthropic API キーを入力してください（ローカル保存・外部送信なし）</div>
+            <div class="api-key-row">
+              <input type="password" class="api-key-input" id="apiKeyInput" placeholder="sk-ant-api03-..." />
+              <button class="api-key-save" onclick="saveKey()">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 01 TOPIC -->
+      <div>
+        <div class="section-label">01 — テーマ・トピック</div>
+        <input type="text" class="topic-input" id="topicInput"
+          placeholder="例：SNS集客を3倍にする方法、資金繰りの改善策..." />
+        <div class="chips">
+          <span class="chip" onclick="setTopic(this)">事業設計で売上が変わる3つの視点</span>
+          <span class="chip" onclick="setTopic(this)">海外展開を成功させる最初のステップ</span>
+          <span class="chip" onclick="setTopic(this)">収益モデルを見直して利益を最大化する方法</span>
+          <span class="chip ai-chip" onclick="suggestTopic()">✦ AIが今日の提案</span>
+        </div>
+      </div>
+
+      <!-- 02 TONE -->
+      <div>
+        <div class="section-label">02 — トーン・スタイル</div>
+        <div class="tone-grid">
+          <div class="tone-card selected" onclick="selectTone(this)" data-tone="実務的">
+            <div class="tone-icon">○</div>
+            <div class="tone-name">実務的</div>
+            <div class="tone-desc">シンプルで要点重視</div>
+          </div>
+          <div class="tone-card" onclick="selectTone(this)" data-tone="フレンドリー">
+            <div class="tone-icon">☺</div>
+            <div class="tone-name">フレンドリー</div>
+            <div class="tone-desc">温かく身近な語り口</div>
+          </div>
+          <div class="tone-card" onclick="selectTone(this)" data-tone="教育系">
+            <div class="tone-icon">✦</div>
+            <div class="tone-name">教育系</div>
+            <div class="tone-desc">知識・事例を詳しく</div>
+          </div>
+          <div class="tone-card" onclick="selectTone(this)" data-tone="インパクト重視">
+            <div class="tone-icon">⚡</div>
+            <div class="tone-name">インパクト重視</div>
+            <div class="tone-desc">強いCTA・行動促進</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 03 EXTRA -->
+      <div>
+        <div class="section-label">03 — 追加の指示（任意）</div>
+        <input type="text" class="extra-input" id="extraInput"
+          placeholder="例：キャンペーン中なのでCTAを強調、春の季節感を出して" />
+      </div>
+
+      <!-- 04 PLATFORMS + GENERATE -->
+      <div style="display:flex; gap:14px; align-items:flex-end;">
+        <div style="flex:1; min-width:0;">
+          <div class="section-label">04 — 生成するプラットフォーム</div>
+          <div class="platform-list">
+            <label class="platform-item checked" data-platform="instagram">
+              <input type="checkbox" checked>
+              <span class="custom-check">✓</span>
+              <span class="platform-emoji">📱</span>
+              <span class="platform-name">instagram</span>
+            </label>
+            <label class="platform-item checked" data-platform="threads">
+              <input type="checkbox" checked>
+              <span class="custom-check">✓</span>
+              <span class="platform-emoji">🧵</span>
+              <span class="platform-name">threads</span>
+            </label>
+            <label class="platform-item checked" data-platform="facebook">
+              <input type="checkbox" checked>
+              <span class="custom-check">✓</span>
+              <span class="platform-emoji">📘</span>
+              <span class="platform-name">facebook</span>
+            </label>
+            <label class="platform-item checked" data-platform="twitter">
+              <input type="checkbox" checked>
+              <span class="custom-check">✓</span>
+              <span class="platform-emoji">𝕏</span>
+              <span class="platform-name">twitter</span>
+            </label>
+            <label class="platform-item checked" data-platform="wordpress">
+              <input type="checkbox" checked>
+              <span class="custom-check">✓</span>
+              <span class="platform-emoji">🌐</span>
+              <span class="platform-name">wordpress</span>
+            </label>
+            <label class="platform-item checked" data-platform="reel">
+              <input type="checkbox" checked>
+              <span class="custom-check">✓</span>
+              <span class="platform-emoji">🎬</span>
+              <span class="platform-name">リール画像</span>
+            </label>
+          </div>
+        </div>
+        <button class="generate-btn" id="generateBtn" onclick="generateAll()">
+          ✦ 一括生成する
+        </button>
+      </div>
+
+      <!-- OUTPUT -->
+      <div id="output">
+        <div class="output-header">
+          <span class="output-title">生成結果</span>
+          <button class="copy-all-btn" onclick="copyAll()">すべてコピー</button>
+        </div>
+        <div id="outputContents"></div>
+      </div>
+
+    </div><!-- /tab-studio -->
+
+    <!-- ==================== ANALYTICS TAB ==================== -->
+    <div class="tab-panel" id="tab-analytics">
+
+      <!-- Period + edit button -->
+      <div class="period-row">
+        <div class="period-btns">
+          <button class="period-btn active" onclick="setPeriod(7,this)">7日</button>
+          <button class="period-btn" onclick="setPeriod(30,this)">30日</button>
+          <button class="period-btn" onclick="setPeriod(90,this)">90日</button>
+        </div>
+        <button class="edit-data-btn" onclick="openEditModal()">✎ データを編集</button>
+      </div>
+
+      <!-- KPI summary -->
+      <div>
+        <div class="section-label">全体サマリー</div>
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">総リーチ</div>
+            <div class="kpi-value" id="kpi-reach">—</div>
+            <div class="kpi-sub kpi-up" id="kpi-reach-delta"></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">総インプレッション</div>
+            <div class="kpi-value" id="kpi-imp">—</div>
+            <div class="kpi-sub kpi-up" id="kpi-imp-delta"></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">平均エンゲージメント率</div>
+            <div class="kpi-value" id="kpi-er">—</div>
+            <div class="kpi-sub" id="kpi-er-delta"></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">フォロワー合計</div>
+            <div class="kpi-value" id="kpi-followers">—</div>
+            <div class="kpi-sub kpi-up" id="kpi-followers-delta"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">リーチ推移（プラットフォーム別）</div>
+          <div class="chart-wrap" style="height:200px;">
+            <canvas id="chartReach"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">エンゲージメント率比較</div>
+          <div class="chart-wrap" style="height:200px;">
+            <canvas id="chartER"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Per-platform cards -->
+      <div>
+        <div class="section-label">プラットフォーム別詳細</div>
+        <div class="platform-analytics-grid" id="paGrid"></div>
+      </div>
+
+    </div><!-- /tab-analytics -->
+
+  </div><!-- /card-body -->
+</div><!-- /card -->
+
+<!-- DATA EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">アナリティクスデータを編集</span>
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ====================================================
+// STATE
+// ====================================================
+let selectedTone = "実務的";
+let apiKey = localStorage.getItem("anthropic_api_key") || "";
+let currentPeriod = 7;
+
+if (apiKey) document.getElementById("apiKeySection").style.display = "none";
+
+// ====================================================
+// DEFAULT ANALYTICS DATA (per platform, per period)
+// ====================================================
+const DEFAULT_DATA = {
+  7: {
+    instagram: { followers: 12400, reach: 18200, impressions: 34600, engagement: 4.2, likes: 763, comments: 94, shares: 61 },
+    threads:   { followers:  3200, reach:  4100, impressions:  7800, engagement: 3.1, likes: 127, comments: 41, shares: 19 },
+    facebook:  { followers:  8700, reach:  9800, impressions: 18200, engagement: 2.8, likes: 274, comments: 79, shares: 138 },
+    twitter:   { followers:  5600, reach: 13700, impressions: 25800, engagement: 1.9, likes: 489, comments: 138, shares: 261 },
+  },
+  30: {
+    instagram: { followers: 12400, reach: 45200, impressions: 89000, engagement: 4.2, likes: 1890, comments: 234, shares: 156 },
+    threads:   { followers:  3200, reach:  8900, impressions: 15600, engagement: 3.1, likes:  276, comments:  89, shares:  45 },
+    facebook:  { followers:  8700, reach: 22100, impressions: 41000, engagement: 2.8, likes:  619, comments: 178, shares: 312 },
+    twitter:   { followers:  5600, reach: 31000, impressions: 58000, engagement: 1.9, likes: 1178, comments: 312, shares: 589 },
+  },
+  90: {
+    instagram: { followers: 12400, reach: 124000, impressions: 251000, engagement: 4.1, likes: 5124, comments: 681, shares: 423 },
+    threads:   { followers:  3200, reach:  24500, impressions:  44200, engagement: 3.0, likes:  735, comments: 245, shares: 122 },
+    facebook:  { followers:  8700, reach:  61000, impressions: 118000, engagement: 2.7, likes: 1647, comments: 489, shares: 891 },
+    twitter:   { followers:  5600, reach:  87000, impressions: 163000, engagement: 1.8, likes: 2934, comments: 814, shares: 1567 },
+  }
+};
+
+// Load saved or use defaults
+function loadAnalyticsData() {
+  const saved = localStorage.getItem("analytics_data");
+  return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+function saveAnalyticsData(data) {
+  localStorage.setItem("analytics_data", JSON.stringify(data));
+}
+let analyticsData = loadAnalyticsData();
+
+// Platform meta
+const PLATFORMS_META = [
+  { key: "instagram", emoji: "📱", name: "Instagram", color: "#E1306C" },
+  { key: "threads",   emoji: "🧵", name: "Threads",   color: "#a78bfa" },
+  { key: "facebook",  emoji: "📘", name: "Facebook",  color: "#1877F2" },
+  { key: "twitter",   emoji: "𝕏",  name: "Twitter/X", color: "#1DA1F2" },
+];
+
+// ====================================================
+// TAB SWITCHING
+// ====================================================
+function switchTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add("active");
+  document.getElementById(`tab-${tab}`).classList.add("active");
+  if (tab === "analytics") renderAnalytics();
+}
+
+// ====================================================
+// PERIOD
+// ====================================================
+function setPeriod(days, btn) {
+  currentPeriod = days;
+  document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  renderAnalytics();
+}
+
+// ====================================================
+// RENDER ANALYTICS
+// ====================================================
+let chartReach = null, chartER = null;
+
+function fmt(n) {
+  if (n >= 10000) return (n/10000).toFixed(1) + "万";
+  if (n >= 1000)  return (n/1000).toFixed(1) + "k";
+  return String(n);
+}
+
+function renderAnalytics() {
+  const d = analyticsData[currentPeriod];
+
+  // KPIs
+  const totalReach = Object.values(d).reduce((s,p) => s + p.reach, 0);
+  const totalImp   = Object.values(d).reduce((s,p) => s + p.impressions, 0);
+  const avgER      = (Object.values(d).reduce((s,p) => s + p.engagement, 0) / Object.values(d).length).toFixed(2);
+  const totalFol   = Object.values(d).reduce((s,p) => s + p.followers, 0);
+
+  document.getElementById("kpi-reach").textContent     = fmt(totalReach);
+  document.getElementById("kpi-imp").textContent       = fmt(totalImp);
+  document.getElementById("kpi-er").textContent        = avgER + "%";
+  document.getElementById("kpi-followers").textContent = fmt(totalFol);
+  document.getElementById("kpi-reach-delta").textContent    = "▲ 前期比 +8.4%";
+  document.getElementById("kpi-imp-delta").textContent      = "▲ 前期比 +11.2%";
+  document.getElementById("kpi-er-delta").innerHTML         = '<span class="kpi-up">▲ 前期比 +0.3pt</span>';
+  document.getElementById("kpi-followers-delta").textContent = "▲ 前期比 +2.1%";
+
+  // Platform cards
+  const grid = document.getElementById("paGrid");
+  grid.innerHTML = "";
+  PLATFORMS_META.forEach(pm => {
+    const p = d[pm.key];
+    const card = document.createElement("div");
+    card.className = "pa-card";
+    card.innerHTML = `
+      <div class="pa-header">
+        <div class="pa-name-row">
+          <span class="pa-emoji">${pm.emoji}</span>
+          <span class="pa-name">${pm.name}</span>
+        </div>
+        <span class="pa-er">ER ${p.engagement}%</span>
+      </div>
+      <div class="pa-metrics">
+        <div class="pa-metric">
+          <div class="pa-metric-val">${fmt(p.followers)}</div>
+          <div class="pa-metric-lbl">フォロワー</div>
+        </div>
+        <div class="pa-metric">
+          <div class="pa-metric-val">${fmt(p.reach)}</div>
+          <div class="pa-metric-lbl">リーチ</div>
+        </div>
+        <div class="pa-metric">
+          <div class="pa-metric-val">${fmt(p.impressions)}</div>
+          <div class="pa-metric-lbl">インプレッション</div>
+        </div>
+        <div class="pa-metric">
+          <div class="pa-metric-val">${fmt(p.likes)}</div>
+          <div class="pa-metric-lbl">いいね</div>
+        </div>
+        <div class="pa-metric">
+          <div class="pa-metric-val">${fmt(p.comments)}</div>
+          <div class="pa-metric-lbl">コメント</div>
+        </div>
+        <div class="pa-metric">
+          <div class="pa-metric-val">${fmt(p.shares)}</div>
+          <div class="pa-metric-lbl">シェア</div>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  // Charts
+  renderCharts(d);
+}
+
+function renderCharts(d) {
+  // Generate fake trend data for the period
+  const labels = [];
+  const days = currentPeriod;
+  for (let i = days; i >= 0; i--) {
+    const dt = new Date();
+    dt.setDate(dt.getDate() - i);
+    labels.push((dt.getMonth()+1) + "/" + dt.getDate());
+  }
+
+  // Reach trend (simulate daily distribution)
+  const reachDatasets = PLATFORMS_META.map(pm => {
+    const total = d[pm.key].reach;
+    const daily = [];
+    for (let i = 0; i <= days; i++) {
+      // Add some variance
+      const base = total / (days + 1);
+      const variance = base * 0.4 * (Math.sin(i * 1.7 + pm.key.length) * 0.5 + 0.5);
+      daily.push(Math.round(base + variance));
+    }
+    return {
+      label: pm.name,
+      data: daily,
+      borderColor: pm.color,
+      backgroundColor: pm.color + "22",
+      borderWidth: 2,
+      pointRadius: days <= 7 ? 3 : 0,
+      tension: 0.4,
+      fill: false,
+    };
+  });
+
+  // Destroy & re-create reach chart
+  if (chartReach) chartReach.destroy();
+  const ctxR = document.getElementById("chartReach").getContext("2d");
+  chartReach = new Chart(ctxR, {
+    type: "line",
+    data: { labels, datasets: reachDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: "#7a76a0", font: { size: 11 }, boxWidth: 12, padding: 10 } }
+      },
+      scales: {
+        x: { ticks: { color: "#4b4870", font: { size: 10 }, maxTicksLimit: 7 }, grid: { color: "#1a1a2e" } },
+        y: { ticks: { color: "#4b4870", font: { size: 10 }, callback: v => fmt(v) }, grid: { color: "#1a1a2e" } }
+      }
+    }
+  });
+
+  // ER bar chart
+  if (chartER) chartER.destroy();
+  const ctxE = document.getElementById("chartER").getContext("2d");
+  chartER = new Chart(ctxE, {
+    type: "bar",
+    data: {
+      labels: PLATFORMS_META.map(p => p.name),
+      datasets: [{
+        label: "エンゲージメント率 (%)",
+        data: PLATFORMS_META.map(pm => d[pm.key].engagement),
+        backgroundColor: PLATFORMS_META.map(pm => pm.color + "99"),
+        borderColor: PLATFORMS_META.map(pm => pm.color),
+        borderWidth: 1.5, borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y}%` } }
+      },
+      scales: {
+        x: { ticks: { color: "#7a76a0", font: { size: 11 } }, grid: { display: false } },
+        y: { ticks: { color: "#4b4870", font: { size: 10 }, callback: v => v + "%" }, grid: { color: "#1a1a2e" } }
+      }
+    }
+  });
+}
+
+// ====================================================
+// DATA EDIT MODAL
+// ====================================================
+function openEditModal() {
+  const d = analyticsData[currentPeriod];
+  const body = document.getElementById("modalBody");
+  body.innerHTML = `
+    <div style="font-size:11px;color:#6b6890;margin-top:-8px;">
+      現在の期間: <strong style="color:#a78bfa">${currentPeriod}日間</strong> のデータを編集中
+    </div>` +
+    PLATFORMS_META.map(pm => {
+      const p = d[pm.key];
+      return `
+      <div class="modal-platform">
+        <div class="modal-platform-title">
+          <span>${pm.emoji}</span><span>${pm.name}</span>
+        </div>
+        <div class="modal-fields">
+          ${["followers:フォロワー","reach:リーチ","impressions:インプレッション",
+             "engagement:ER(%)","likes:いいね","comments:コメント","shares:シェア"].map(f => {
+            const [key, lbl] = f.split(":");
+            return `<div class="field-group">
+              <label>${lbl}</label>
+              <input type="number" id="field-${pm.key}-${key}" value="${p[key]}">
+            </div>`;
+          }).join("")}
+        </div>
+      </div>`;
+    }).join("") +
+    `<button class="modal-save" onclick="saveModalData()">保存して更新</button>`;
+
+  document.getElementById("editModal").classList.add("open");
+}
+
+function closeEditModal() {
+  document.getElementById("editModal").classList.remove("open");
+}
+
+function saveModalData() {
+  const d = analyticsData[currentPeriod];
+  PLATFORMS_META.forEach(pm => {
+    ["followers","reach","impressions","likes","comments","shares"].forEach(key => {
+      const el = document.getElementById(`field-${pm.key}-${key}`);
+      if (el) d[pm.key][key] = parseInt(el.value) || 0;
+    });
+    const erEl = document.getElementById(`field-${pm.key}-engagement`);
+    if (erEl) d[pm.key].engagement = parseFloat(erEl.value) || 0;
+  });
+  saveAnalyticsData(analyticsData);
+  closeEditModal();
+  renderAnalytics();
+}
+
+// Close modal on overlay click
+document.getElementById("editModal").addEventListener("click", function(e) {
+  if (e.target === this) closeEditModal();
+});
+
+// ====================================================
+// STUDIO FUNCTIONS
+// ====================================================
+function saveKey() {
+  const val = document.getElementById("apiKeyInput").value.trim();
+  if (!val) return;
+  apiKey = val;
+  localStorage.setItem("anthropic_api_key", val);
+  document.getElementById("apiKeySection").style.display = "none";
+}
+
+function selectTone(el) {
+  document.querySelectorAll(".tone-card").forEach(c => c.classList.remove("selected"));
+  el.classList.add("selected");
+  selectedTone = el.dataset.tone;
+}
+
+function setTopic(el) {
+  document.getElementById("topicInput").value = el.textContent.trim();
+}
+
+async function suggestTopic() {
+  if (!apiKey) { alert("先にAPIキーを入力してください"); return; }
+  const chip = document.querySelector(".ai-chip");
+  chip.textContent = "生成中...";
+  try {
+    const res = await callClaude(
+      "今日おすすめのビジネス系SNS投稿トピックを1つだけ、30文字以内で提案してください。説明は不要です。", 200
+    );
+    document.getElementById("topicInput").value = res.trim();
+  } catch(e) { alert("エラー: " + e.message); }
+  chip.innerHTML = "✦ AIが今日の提案";
+}
+
+document.querySelectorAll(".platform-item").forEach(item => {
+  item.addEventListener("click", () => {
+    const cb = item.querySelector("input");
+    cb.checked = !cb.checked;
+    item.classList.toggle("checked", cb.checked);
+    item.querySelector(".custom-check").textContent = cb.checked ? "✓" : "";
+  });
+});
+
+async function callClaude(prompt, maxTokens = 800) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  }
+  return (await res.json()).content[0].text;
+}
+
+const PLATFORM_PROMPTS = {
+  instagram: (t,s,e) => `あなたはInstagram運用のプロです。\nトピック:「${t}」\nトーン:${s}\n${e?`追加指示:${e}`:""}
+Instagram投稿文を生成してください。\n- キャプション本文（600文字程度、改行多め）\n- ハッシュタグ10個\n- 絵文字を適度に使用\n形式はそのままコピーできる投稿文として出力してください。`,
+  threads: (t,s,e) => `あなたはThreads運用のプロです。\nトピック:「${t}」\nトーン:${s}\n${e?`追加指示:${e}`:""}
+Threads投稿文を生成してください。\n- 短くてシャープな本文（300文字以内）\n- 読み手が思わずシェアしたくなる内容\n- ハッシュタグは3個まで`,
+  facebook: (t,s,e) => `あなたはFacebook運用のプロです。\nトピック:「${t}」\nトーン:${s}\n${e?`追加指示:${e}`:""}
+Facebook投稿文を生成してください。\n- 本文（400〜600文字、段落分け）\n- 読者に語りかける書き方\n- CTAを最後に入れる`,
+  twitter: (t,s,e) => `あなたはX(Twitter)運用のプロです。\nトピック:「${t}」\nトーン:${s}\n${e?`追加指示:${e}`:""}
+X(Twitter)投稿文を生成してください。\n- 140文字以内の本文\n- インプレッションが取れる書き出し\n- ハッシュタグ2個まで`,
+  wordpress: (t,s,e) => `あなたはSEOライターです。\nトピック:「${t}」\nトーン:${s}\n${e?`追加指示:${e}`:""}
+WordPressブログ記事の構成と導入文を生成してください。\n- SEOタイトル（H1）\n- メタディスクリプション（120文字）\n- 記事構成（H2×4〜5個、各200文字の説明）\n- 導入文（300文字）`,
+  reel: (t,s,e) => `あなたはリール動画の企画ディレクターです。\nトピック:「${t}」\nトーン:${s}\n${e?`追加指示:${e}`:""}
+Instagramリール用の画像テキスト案を生成してください。\n- 1枚目:アイキャッチテキスト（インパクト重視、20文字以内）\n- 2〜5枚目:各スライドのテキスト（30文字以内×4枚）\n- 最終枚:CTA（行動喚起、25文字以内）\n- BGM雰囲気の提案`,
+};
+
+const PLATFORM_LABELS = {
+  instagram:"📱 Instagram", threads:"🧵 Threads", facebook:"📘 Facebook",
+  twitter:"𝕏 Twitter/X", wordpress:"🌐 WordPress", reel:"🎬 リール画像",
+};
+
+async function generateAll() {
+  if (!apiKey) { alert("先にAPIキーを入力してください"); return; }
+  const topic = document.getElementById("topicInput").value.trim();
+  if (!topic) { alert("テーマ・トピックを入力してください"); return; }
+  const extra = document.getElementById("extraInput").value.trim();
+  const selected = [...document.querySelectorAll(".platform-item.checked")].map(el => el.dataset.platform);
+  if (!selected.length) { alert("プラットフォームを1つ以上選択してください"); return; }
+
+  const outputEl = document.getElementById("output");
+  const contentsEl = document.getElementById("outputContents");
+  outputEl.style.display = "block";
+  contentsEl.innerHTML = "";
+  outputEl.scrollIntoView({ behavior:"smooth", block:"start" });
+
+  const btn = document.getElementById("generateBtn");
+  btn.disabled = true; btn.textContent = "生成中...";
+
+  const cards = {};
+  for (const p of selected) {
+    const card = document.createElement("div");
+    card.className = "platform-output";
+    card.innerHTML = `
+      <div class="platform-output-header">
+        <span class="platform-output-name">${PLATFORM_LABELS[p]}</span>
+        <button class="copy-btn" onclick="copyPlatform('${p}')">コピー</button>
+      </div>
+      <div class="platform-output-body streaming-cursor" id="out-${p}">生成中<span class="loading-dots"></span></div>`;
+    contentsEl.appendChild(card);
+    cards[p] = document.getElementById(`out-${p}`);
+  }
+
+  await Promise.all(selected.map(async p => {
+    try {
+      const text = await callClaude(PLATFORM_PROMPTS[p](topic, selectedTone, extra), 1000);
+      cards[p].classList.remove("streaming-cursor");
+      cards[p].textContent = text;
+    } catch(e) {
+      cards[p].classList.remove("streaming-cursor");
+      cards[p].textContent = "エラー: " + e.message;
+      cards[p].style.color = "#f87171";
+    }
+  }));
+
+  btn.disabled = false; btn.textContent = "✦ 一括生成する";
+}
+
+function copyPlatform(platform) {
+  const el = document.getElementById(`out-${platform}`);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent);
+  document.querySelectorAll(".copy-btn").forEach(b => {
+    if (b.getAttribute("onclick") === `copyPlatform('${platform}')`) {
+      b.textContent = "コピー済み!";
+      setTimeout(() => b.textContent = "コピー", 1500);
+    }
+  });
+}
+
+function copyAll() {
+  const all = [...document.querySelectorAll(".platform-output-body")]
+    .map(el => {
+      const name = el.closest(".platform-output")?.querySelector(".platform-output-name")?.textContent || "";
+      return `=== ${name} ===\n${el.textContent}`;
+    }).join("\n\n");
+  navigator.clipboard.writeText(all);
+  const btn = document.querySelector(".copy-all-btn");
+  btn.textContent = "コピー済み!";
+  setTimeout(() => btn.textContent = "すべてコピー", 1500);
+}
+
+function resetAll() {
+  document.getElementById("output").style.display = "none";
+  document.getElementById("outputContents").innerHTML = "";
+  document.getElementById("topicInput").value = "";
+  document.getElementById("extraInput").value = "";
+}
+</script>
+</body>
+</html>

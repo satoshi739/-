@@ -1,0 +1,40 @@
+# リードシート テンプレ
+# ファイル名: leads/YYYY-MM-DD_[会社名またはお名前].yaml
+
+lead_id: ""                     # 例: 2026-04-05-001
+created_at: ""                  # 例: 2026-04-05
+brand: ""                       # dsc-marketing / cashflowsupport / upjapan
+
+# --- 連絡先 ---
+name: ""                        # 担当者名
+company: ""                     # 会社名（個人の場合は屋号）
+email: ""
+phone: ""
+channel: ""                     # instagram / line / form / referral / event / other
+referred_by: ""                 # 紹介の場合のみ
+
+# --- 状態 ---
+stage: "L1"                     # L1〜L6（PIPELINE.mdを参照）
+last_contact: ""                # 最終コンタクト日
+next_action: ""                 # 次にやること
+next_action_date: ""            # 期日
+
+# --- ヒアリングメモ ---
+current_situation: ""           # 現状（課題・背景）
+goals: ""                       # 達成したいこと
+budget_range: ""                # 予算感（月額 / 一括）
+timeline: ""                    # いつまでに動きたいか
+decision_maker: ""              # 意思決定者は本人か否か
+concerns: ""                    # 懸念・不安
+
+# --- 提案 ---
+proposed_plan: ""               # 提案したプラン
+proposed_amount: 0              # 金額（税込）
+proposal_sent_at: ""            # 提案書送付日
+proposal_url: ""                # 提案書ファイルのパス or URL
+
+# --- 結果 ---
+outcome: ""                     # contracted / lost / pending
+contract_date: ""               # 契約日
+lost_reason: ""                 # 失注理由（予算/タイミング/競合/ニーズ違い/その他）
+notes: ""                       # その他メモ

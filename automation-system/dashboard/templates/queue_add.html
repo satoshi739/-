@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% block title %}投稿追加 — UPJ Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">＋ 投稿を追加</div>
+    <div class="page-sub">ブランドとプラットフォームを選んで投稿をキューに追加</div>
+  </div>
+  <a href="/queue" class="btn btn-ghost">← 戻る</a>
+</div>
+
+<div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start;">
+
+  <!-- 左：ブランド × プラットフォーム選択 -->
+  <div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:14px;">ブランド</div>
+      {% for bid, brand in brands.items() %}
+      <button onclick="selectBrand('{{ bid }}')"
+              id="brand-btn-{{ bid }}"
+              class="btn btn-ghost"
+              style="width:100%;justify-content:flex-start;margin-bottom:8px;border-left:3px solid {{ brand.color }};">
+        {{ brand.name_short }}
+        <span style="font-size:11px;color:var(--muted);margin-left:4px;">{{ brand.name }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <div class="card" id="platform-panel" style="display:none;">
+      <div class="card-title" style="margin-bottom:14px;">プラットフォーム</div>
+      <div id="platform-buttons"></div>
+    </div>
+  </div>
+
+  <!-- 右：フォーム -->
+  <div class="card" id="form-panel" style="display:none;">
+    <div class="card-header">
+      <span class="card-title" id="form-title">投稿内容</span>
+    </div>
+
+    <form method="POST" id="mainForm">
+      <input type="hidden" name="brand"   id="f-brand">
+      <input type="hidden" name="channel" id="f-channel">
+
+      <!-- Instagram / Threads 共通 -->
+      <div id="f-image-group" class="form-group" style="display:none;">
+        <label class="form-label">画像URL <span style="color:var(--muted);font-size:11px;">（公開アクセス可能なURL）</span></label>
+        <input type="url" name="image_url" class="form-input" placeholder="https://...">
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">ナノバナナプロ → Googleドライブ → 共有リンク</div>
+      </div>
+
+      <!-- Instagram 専用 -->
+      <div id="f-ig-group" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">投稿タイプ</label>
+          <select name="media_type" class="form-select" id="mediaType" onchange="toggleVideoUrl()">
+            <option value="image">🖼️ 画像投稿</option>
+            <option value="reel">🎬 リール</option>
+          </select>
+        </div>
+        <div id="f-video-url" class="form-group" style="display:none;">
+          <label class="form-label">動画URL</label>
+          <input type="url" name="video_url" class="form-input" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">キャプション</label>
+          <textarea name="caption" class="form-textarea" id="ig-caption-area"
+                    placeholder="投稿本文...&#10;&#10;#ハッシュタグ" style="min-height:140px;"></textarea>
+        </div>
+      </div>
+
+      <!-- Threads / Twitter（X）共通テキスト -->
+      <div id="f-text-group" class="form-group" style="display:none;">
+        <label class="form-label" id="text-label">投稿テキスト</label>
+        <textarea name="text" class="form-textarea" id="text-area"
+                  placeholder="テキストを入力..." style="min-height:100px;"></textarea>
+        <div id="char-count" style="font-size:12px;color:var(--muted);margin-top:4px;text-align:right;"></div>
+      </div>
+
+      <!-- YouTube / TikTok -->
+      <div id="f-video-group" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">タイトル</label>
+          <input type="text" name="title" class="form-input" placeholder="動画タイトル">
+        </div>
+        <div class="form-group">
+          <label class="form-label">動画URL</label>
+          <input type="url" name="video_url" class="form-input" placeholder="https://...">
+        </div>
+        <div id="f-yt-only" style="display:none;">
+          <div class="form-group">
+            <label class="form-label">説明文</label>
+            <textarea name="description" class="form-textarea" placeholder="動画の説明文..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">タグ（カンマ区切り）</label>
+            <input type="text" name="tags" class="form-input" placeholder="マーケティング,集客,SNS">
+          </div>
+        </div>
+      </div>
+
+      <!-- Facebook -->
+      <div id="f-facebook-group" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">投稿テキスト</label>
+          <textarea name="fb_text" class="form-textarea" style="min-height:120px;" placeholder="Facebookページへの投稿文..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">画像URL <span style="color:var(--muted);font-size:11px;">（任意）</span></label>
+          <input type="url" name="fb_image_url" class="form-input" placeholder="https://...">
+        </div>
+      </div>
+
+      <!-- LINE -->
+      <div id="f-line-group" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">配信メッセージ</label>
+          <textarea name="message" class="form-textarea" style="min-height:140px;" placeholder="LINE配信のメッセージ本文..."></textarea>
+        </div>
+      </div>
+
+      <!-- WordPress -->
+      <div id="f-wp-group" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">タイトル</label>
+          <input type="text" name="title" class="form-input" placeholder="記事タイトル">
+        </div>
+        <div class="form-group">
+          <label class="form-label">本文</label>
+          <div id="quill-editor" style="height:240px;"></div>
+          <input type="hidden" name="content" id="quill-content">
+        </div>
+        <div class="form-group">
+          <label class="form-label">公開設定</label>
+          <select name="wp_status" class="form-select">
+            <option value="draft">下書き保存</option>
+            <option value="publish">今すぐ公開</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 投稿予約日時（Flatpickr） -->
+      <div id="f-schedule-group" style="display:none;" class="form-group">
+        <label class="form-label" style="display:flex;align-items:center;gap:6px;">
+          📅 投稿予約日時
+          <span style="font-size:11px;color:var(--muted);font-weight:400;">（空白 = 自動投稿キューに入れるだけ）</span>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;">
+          <input type="text" id="schedule-picker" name="schedule_at" class="form-input"
+                 placeholder="日時を選択..." readonly>
+          <button type="button" onclick="document.getElementById('schedule-picker')._flatpickr.clear()"
+                  style="background:var(--s2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--muted2);cursor:pointer;font-size:12px;transition:all .15s;white-space:nowrap;"
+                  onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted2)'">
+            ✕ クリア
+          </button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.6;">
+          指定した日時になるとスケジューラーが自動で投稿します。空白の場合は次の自動投稿バッチ（毎朝5:00）で処理されます。
+        </div>
+      </div>
+
+      <!-- AI生成ボタン -->
+      {% if ai %}
+      <div id="f-ai-group" style="display:none;margin-bottom:16px;">
+        <button type="button" onclick="aiGenerate()" class="btn btn-purple btn-sm">
+          ✦ Claude AI で文章を生成
+        </button>
+      </div>
+      {% endif %}
+
+      <button type="submit" onclick="syncQuill()" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;">
+        キューに追加 →
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+const BRAND_CHANNELS = {{ brands | tojson }};
+const ICONS = {{ platform_icons | tojson }};
+let currentBrand = '', currentChannel = '';
+
+// Quill エディタ初期化
+let quill = null;
+document.addEventListener('DOMContentLoaded', () => {
+  quill = new Quill('#quill-editor', {
+    theme: 'snow',
+    placeholder: '記事本文を入力... 見出し・太字・リンクが使えます',
+    modules: {
+      toolbar: [
+        [{ header: [2, 3, false] }],
+        ['bold', 'italic', 'underline'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link', 'blockquote'],
+        ['clean']
+      ]
+    }
+  });
+
+  // Flatpickr 初期化
+  flatpickr('#schedule-picker', {
+    locale: 'ja',
+    enableTime: true,
+    dateFormat: 'Y-m-d H:i',
+    minDate: 'today',
+    time_24hr: true,
+    defaultHour: 7,
+    defaultMinute: 0,
+  });
+});
+
+function syncQuill() {
+  if (quill) {
+    document.getElementById('quill-content').value = quill.root.innerHTML;
+  }
+}
+
+function selectBrand(bid) {
+  currentBrand = bid;
+  document.getElementById('f-brand').value = bid;
+  // ブランドボタンのハイライト
+  document.querySelectorAll('[id^=brand-btn-]').forEach(b => b.classList.remove('btn-primary'));
+  document.getElementById('brand-btn-' + bid).classList.add('btn-primary');
+
+  // プラットフォームボタン生成
+  const chs = BRAND_CHANNELS[bid]?.channels || {};
+  const panel = document.getElementById('platform-buttons');
+  panel.innerHTML = '';
+  for (const [p, enabled] of Object.entries(chs)) {
+    if (!enabled) continue;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-ghost';
+    btn.style = 'width:100%;justify-content:flex-start;margin-bottom:8px;';
+    btn.textContent = (ICONS[p] || '') + ' ' + p;
+    btn.onclick = () => selectPlatform(p, btn);
+    panel.appendChild(btn);
+  }
+  document.getElementById('platform-panel').style.display = 'block';
+  document.getElementById('form-panel').style.display = 'none';
+}
+
+function selectPlatform(p, btn) {
+  currentChannel = p;
+  document.getElementById('f-channel').value = p;
+  document.querySelectorAll('#platform-buttons .btn').forEach(b => b.classList.remove('btn-primary'));
+  btn.classList.add('btn-primary');
+
+  // フォームフィールドの表示切替
+  const show = id => document.getElementById(id).style.display = '';
+  const hide = id => document.getElementById(id).style.display = 'none';
+  ['f-image-group','f-ig-group','f-text-group','f-video-group',
+   'f-facebook-group','f-line-group','f-wp-group','f-ai-group','f-yt-only','f-video-url','f-schedule-group'].forEach(hide);
+
+  if (p === 'instagram') { show('f-image-group'); show('f-ig-group'); show('f-ai-group'); show('f-schedule-group'); }
+  if (p === 'threads')   { show('f-image-group'); show('f-text-group'); show('f-ai-group'); show('f-schedule-group'); document.getElementById('text-label').textContent='投稿テキスト（500字以内）'; }
+  if (p === 'facebook')  { show('f-facebook-group'); show('f-ai-group'); show('f-schedule-group'); }
+  if (p === 'twitter')   { show('f-text-group'); show('f-schedule-group'); document.getElementById('text-label').textContent='ツイート（280字以内）'; setupCharCount(280); }
+  if (p === 'youtube')   { show('f-video-group'); show('f-yt-only'); show('f-schedule-group'); }
+  if (p === 'tiktok')    { show('f-video-group'); show('f-schedule-group'); }
+  if (p === 'line')      { show('f-line-group'); show('f-ai-group'); show('f-schedule-group'); }
+  if (p === 'wordpress') { show('f-wp-group'); show('f-schedule-group'); }
+
+  document.getElementById('form-title').textContent = (ICONS[p]||'') + ' ' + p + ' 投稿';
+  document.getElementById('form-panel').style.display = 'block';
+}
+
+function toggleVideoUrl() {
+  const mt = document.getElementById('mediaType').value;
+  document.getElementById('f-video-url').style.display = mt === 'reel' ? '' : 'none';
+}
+
+function setupCharCount(max) {
+  const area = document.getElementById('text-area');
+  const counter = document.getElementById('char-count');
+  area.oninput = () => {
+    const len = area.value.length;
+    counter.textContent = `${len} / ${max}`;
+    counter.style.color = len > max ? 'var(--red)' : 'var(--muted)';
+  };
+}
+
+async function aiGenerate() {
+  const topic = prompt('トピックを入力してください（例：集客を増やす3つの方法）');
+  if (!topic) return;
+  const btn = event.target;
+  btn.textContent = '⏳ 生成中...'; btn.disabled = true;
+
+  if (currentChannel === 'line') {
+    const r = await fetch('/api/ai/generate_line', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({topic, brand: currentBrand, purpose:'集客・認知'})
+    });
+    const d = await r.json();
+    if (d.message) document.querySelector('[name=message]').value = d.message;
+  } else {
+    const r = await fetch('/api/ai/generate_post', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({topic, brand: currentBrand, target:'', tone:'実務的・わかりやすい'})
+    });
+    const d = await r.json();
+    if (d.full) {
+      const ta = document.getElementById('ig-caption-area') || document.getElementById('text-area');
+      if (ta) ta.value = d.full;
+    }
+  }
+  btn.textContent = '✨ Claude AI で文章を生成'; btn.disabled = false;
+}
+</script>
+{% endblock %}

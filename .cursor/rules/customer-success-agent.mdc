@@ -1,0 +1,27 @@
+---
+description: カスタマーサクセス（customer-success-system）に関する作業の振る舞いルール
+globs: ["customer-success-system/**"]
+alwaysApply: false
+---
+
+# カスタマーサクセスエージェント ルール
+
+## 役割
+顧客の定着・更新・解約防止・丁寧なオフボーディングをサポートする。
+
+## 哲学
+- 「解約を防ぐ」ではなく「顧客が成功する」を目指す
+- 値引き・追加無償は単独決裁しない
+
+## アットリスク検知
+→ `docs/AT_RISK.md` の兆候チェックリストを月1回確認
+
+## 作業の型
+1. 月次健全性確認 → `templates/client-health-sheet.yaml` を更新
+2. 四半期レビュー → `templates/qbr-agenda.md` を使用
+3. 更新時 → `templates/renewal-checklist.md` を1ヶ月前から開始
+4. 解約確定 → `templates/offboarding-checklist.md` に従い丁寧に処理
+
+## 連携
+- 更新完了 → `project-sheet.yaml` の `end_date` 更新
+- 解約確定 → `finance-system/` の請求停止 + `monthly-finance-log.yaml` の churned_clients 記録

@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}週次カレンダー — UPJ Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 7px 18px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--s2);
+    color: var(--muted2); transition: all .15s; font-family: inherit;
+  }
+  .tab-btn.active {
+    background: rgba(99,102,241,.15); border-color: rgba(99,102,241,.4); color: var(--accent2);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 1200px) { .week-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 700px)  { .week-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .day-card {
+    background: var(--s1); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px;
+    transition: border-color .2s, transform .15s;
+    min-height: 160px;
+  }
+  .day-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .day-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted); margin-bottom: 4px;
+  }
+  .day-date { font-size: 13px; font-weight: 600; color: var(--muted2); margin-bottom: 12px; }
+  .day-topic { font-size: 12.5px; color: var(--text); font-weight: 600; line-height: 1.5; margin-bottom: 8px; }
+  .day-empty { font-size: 12px; color: var(--muted); font-style: italic; margin-top: 12px; }
+
+  .caption-toggle {
+    font-size: 11px; color: var(--accent2); cursor: pointer; background: none;
+    border: none; padding: 0; font-family: inherit; margin-top: 6px;
+  }
+  .caption-toggle:hover { color: var(--text); }
+  .caption-body {
+    display: none; font-size: 11.5px; color: var(--muted2); line-height: 1.7;
+    margin-top: 8px; background: var(--s2); border-radius: 6px; padding: 10px;
+    border: 1px solid var(--border);
+  }
+  .caption-body.open { display: block; }
+
+  .line-section { margin-top: 24px; }
+  .line-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px; background: var(--s2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); margin-bottom: 8px;
+  }
+  .line-time { font-size: 11px; font-weight: 700; color: var(--green2); flex-shrink: 0; min-width: 50px; }
+  .line-msg { font-size: 13px; color: var(--text); line-height: 1.6; }
+
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,.2); border-top-color: #fff;
+    border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .no-calendar-msg {
+    text-align: center; padding: 60px 20px;
+    color: var(--muted); font-size: 13px;
+  }
+  .no-calendar-msg .icon { font-size: 40px; margin-bottom: 14px; opacity: .35; }
+
+  .file-meta { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+</style>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">◫ 週次カレンダー</div>
+    <div class="page-sub">AIが提案する週ごとの投稿スケジュール</div>
+  </div>
+</div>
+
+{% if not ai %}
+<div class="alert alert-warn">
+  ⚠️ ANTHROPIC_API_KEY が未設定です。AIカレンダー生成を使用するには
+  <a href="/settings">設定ページ</a> からAPIキーを設定してください。
+</div>
+{% endif %}
+
+<div class="tabs">
+  {% for bid in brands %}
+  <button class="tab-btn {% if loop.first %}active{% endif %}" onclick="switchTab('{{ bid }}')">
+    <span style="width:8px;height:8px;border-radius:50%;background:{{ brands[bid].get('color','#6366f1') }};display:inline-block;margin-right:6px;"></span>
+    {{ brands[bid].get('name_short', bid) }}
+  </button>
+  {% endfor %}
+</div>
+
+{% for bid in brands %}
+{% set cal = calendars.get(bid) %}
+<div class="tab-panel {% if loop.first %}active{% endif %}" id="tab-{{ bid }}">
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+    <button class="btn btn-primary {% if not ai %}btn-ghost{% endif %}"
+            id="gen-btn-{{ bid }}"
+            {% if not ai %}disabled title="ANTHROPIC_API_KEY未設定"{% endif %}
+            onclick="generateCalendar('{{ bid }}')">
+      ✦ 新しいカレンダーをAIで生成
+    </button>
+    {% if cal %}
+    <button class="btn" id="sched-btn-{{ bid }}"
+            onclick="scheduleWeek('{{ bid }}')"
+            style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.35);color:var(--accent2);font-weight:600;">
+      📅 全部キューに予約
+    </button>
+    <span class="badge badge-ok">最新: {{ cal.get('week_start', '不明') }}</span>
+    <div id="sched-result-{{ bid }}" style="display:none;font-size:12px;color:var(--green2);font-weight:600;"></div>
+    {% endif %}
+  </div>
+
+  {% if cal %}
+  <div class="file-meta">ファイル: {{ cal.get('_file', '—') }} / 週: {{ cal.get('week_start', '—') }}</div>
+
+  <!-- 曜日カード -->
+  {% set days = cal.get('calendar', cal.get('days', [])) %}
+  {% if days %}
+  <div class="week-grid">
+    {% set dow = ['月', '火', '水', '木', '金', '土', '日'] %}
+    {% for day in days %}
+    <div class="day-card">
+      <div class="day-label">{{ dow[loop.index0 % 7] }}曜日</div>
+      <div class="day-date">{{ day.get('date', '') }}</div>
+
+      {% if day.get('topic') %}
+      <div class="day-topic">{{ day.get('topic') }}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+        {% if day.get('format') %}
+        <span class="badge {% if day.format == 'reel' %}badge-purple{% elif day.format == 'carousel' %}badge-warn{% else %}badge-l2{% endif %}">
+          {{ day.format }}
+        </span>
+        {% endif %}
+        {% if day.get('platform') %}
+        <span class="badge badge-l1">{{ day.platform }}</span>
+        {% endif %}
+      </div>
+      {% if day.get('caption_draft') %}
+      <button class="caption-toggle" onclick="toggleCaption(this)">▶ キャプション草稿を見る</button>
+      <div class="caption-body">{{ day.caption_draft }}</div>
+      {% endif %}
+      {% else %}
+      <div class="day-empty">投稿なし</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-info">カレンダーに曜日データが含まれていません。</div>
+  {% endif %}
+
+  <!-- LINEスケジュール -->
+  {% set line_sched = cal.get('line_schedule', []) %}
+  {% if line_sched %}
+  <div class="line-section">
+    <div class="card-title" style="margin-bottom:12px;">LINE スケジュール</div>
+    {% for item in line_sched %}
+    <div class="line-item">
+      <span class="line-time">{{ item.get('time', '—') }}</span>
+      <span class="line-msg">{{ item.get('message', item.get('text', '—')) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <!-- カレンダーなし -->
+  <div class="card">
+    <div class="no-calendar-msg">
+      <div class="icon">🗓</div>
+      <div style="font-weight:600;margin-bottom:6px;">週次カレンダーがありません</div>
+      <div>「AIで生成」ボタンをクリックして最初のカレンダーを作成してください。</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- カレンダーデータ（JS用） -->
+  {% if cal %}
+  <script>
+    window._calData = window._calData || {};
+    window._calData['{{ bid }}'] = {{ cal | tojson }};
+  </script>
+  {% endif %}
+
+  <!-- 生成結果表示エリア -->
+  <div id="result-{{ bid }}" style="display:none;" class="card">
+    <div class="card-header"><span class="card-title">生成されたカレンダー</span></div>
+    <pre id="result-json-{{ bid }}" style="font-size:11px;color:var(--muted2);white-space:pre-wrap;line-height:1.7;"></pre>
+  </div>
+
+</div>
+{% endfor %}
+
+<script>
+function switchTab(bid) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${bid}')"]`).classList.add('active');
+  document.getElementById(`tab-${bid}`).classList.add('active');
+}
+
+function toggleCaption(btn) {
+  const body = btn.nextElementSibling;
+  const open = body.classList.toggle('open');
+  btn.textContent = open ? '▼ キャプション草稿を閉じる' : '▶ キャプション草稿を見る';
+}
+
+async function generateCalendar(bid) {
+  const btn = document.getElementById(`gen-btn-${bid}`);
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> 生成中…`;
+  try {
+    const res = await fetch(`/api/ai/weekly_calendar/${bid}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const d = await res.json();
+    if (d.ok) {
+      toast('✅ 週次カレンダーを生成しました。ページを更新します…', 'ok');
+      const resultBox = document.getElementById(`result-${bid}`);
+      const resultJson = document.getElementById(`result-json-${bid}`);
+      resultBox.style.display = 'block';
+      resultJson.textContent = JSON.stringify(d.calendar, null, 2);
+      // 生成後にそのままキュー予約も実行
+      window._calData = window._calData || {};
+      window._calData[bid] = d.calendar;
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      toast(`エラー: ${d.error}`, 'err');
+    }
+  } catch (e) {
+    toast(`通信エラー: ${e}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
+}
+
+async function scheduleWeek(bid) {
+  const btn = document.getElementById(`sched-btn-${bid}`);
+  const resultEl = document.getElementById(`sched-result-${bid}`);
+  const cal = (window._calData || {})[bid];
+  if (!cal) { toast('カレンダーデータが見つかりません', 'err'); return; }
+
+  // カレンダーデータをアイテムリストに変換
+  const items = [];
+  const days = cal.calendar || cal.days || [];
+  for (const day of days) {
+    const posts = day.posts || (day.topic ? [day] : []);
+    for (const post of posts) {
+      items.push({
+        date:          day.date || '',
+        time:          post.time || '12:00',
+        platform:      post.platform || 'instagram',
+        caption_draft: post.caption_draft || post.caption || '',
+        hashtags:      post.hashtags || '',
+        topic:         post.topic || day.topic || '',
+        format:        post.format || 'image',
+      });
+    }
+  }
+  // LINE スケジュールも含める
+  for (const item of (cal.line_schedule || [])) {
+    items.push({
+      date:          item.date || '',
+      time:          item.time || '10:00',
+      platform:      'line',
+      message_draft: item.message_draft || item.message || '',
+      caption_draft: item.message_draft || '',
+      topic:         item.topic || '',
+    });
+  }
+
+  if (items.length === 0) { toast('予約できるアイテムがありません', 'err'); return; }
+
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> 予約中…`;
+
+  try {
+    const res = await fetch(`/api/queue/schedule_week/${bid}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      resultEl.textContent = `✅ ${d.scheduled}件をキューに予約しました`;
+      resultEl.style.display = 'block';
+      toast(`📅 ${d.scheduled}件を予約キューに追加しました！`, 'ok');
+    } else {
+      toast(`エラー: ${d.error}`, 'err');
+    }
+  } catch (e) {
+    toast(`通信エラー: ${e}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
+}
+</script>
+{% endblock %}

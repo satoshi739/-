@@ -1,0 +1,7 @@
+automation-system/.env
+automation-system/credentials.json
+automation-system/data/
+automation-system/logs/
+**/__pycache__/
+*.pyc
+*.db

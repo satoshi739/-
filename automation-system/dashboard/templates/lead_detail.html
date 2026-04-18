@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}{{ lead.name or 'リード' }} — UPJ Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">{{ lead.name or '（名前なし）' }}</div>
+    <div class="page-sub">{{ lead.company or '' }}{% if lead.brand %} · {{ lead.brand }}{% endif %} · {{ lead.lead_id }}</div>
+  </div>
+  <div class="header-actions">
+    {% if ai %}
+    <button onclick="generateReply()" class="btn btn-purple" id="ai-btn">✨ AI返信生成</button>
+    {% endif %}
+    <a href="/leads" class="btn btn-ghost">← 一覧</a>
+  </div>
+</div>
+
+<!-- AI返信エリア -->
+{% if ai %}
+<div id="ai-reply-area" style="display:none;margin-bottom:18px;">
+  <div class="card" style="border-color:var(--purple);">
+    <div class="card-header">
+      <span class="card-title" style="color:var(--purple);">✨ AI返信ドラフト</span>
+      <button onclick="document.getElementById('ai-reply-area').style.display='none'" class="btn btn-ghost btn-sm">✕</button>
+    </div>
+    <div id="ai-reply-text" class="ai-output"></div>
+    <div class="ai-output-actions" style="margin-top:10px;">
+      <button onclick="copyReply()" class="btn btn-purple btn-sm">📋 コピー</button>
+      <button onclick="copyToNotes()" class="btn btn-ghost btn-sm">メモに貼り付け</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+  <!-- 基本情報 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">基本情報</span></div>
+    <table>
+      {% for label, val in [
+        ('ステージ',   lead.stage),
+        ('ブランド',   lead.brand),
+        ('チャネル',   lead.channel),
+        ('メール',     lead.email),
+        ('電話',       lead.phone),
+        ('起票日',     lead.created_at),
+        ('最終連絡',   lead.last_contact),
+      ] %}
+      <tr>
+        <td style="color:var(--muted);width:90px;font-size:13px;">{{ label }}</td>
+        <td style="font-size:14px;">
+          {% if label == 'ステージ' %}
+            <span class="badge badge-{{ (lead.stage or '')|lower }}">{{ val or '-' }}</span>
+          {% else %}{{ val or '-' }}{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <!-- ヒアリング -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">ヒアリング内容</span></div>
+    <table>
+      {% for label, val in [
+        ('現状・相談内容', lead.current_situation),
+        ('目標',          lead.goals),
+        ('予算感',        lead.budget_range),
+        ('タイムライン',  lead.timeline),
+        ('懸念',          lead.concerns),
+      ] %}
+      <tr>
+        <td style="color:var(--muted);width:110px;font-size:12px;vertical-align:top;padding-top:13px;">{{ label }}</td>
+        <td style="font-size:13px;line-height:1.5;">{{ val or '−' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<!-- ステータス更新フォーム -->
+<div class="card">
+  <div class="card-header"><span class="card-title">ステータス更新</span></div>
+  <form method="POST">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+      <div class="form-group">
+        <label class="form-label">ステージ</label>
+        <select name="stage" class="form-select">
+          {% for s in ['L1','L2','L3','L4','L5','L6'] %}
+          <option value="{{ s }}" {% if lead.stage == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">結果</label>
+        <select name="outcome" class="form-select">
+          <option value="" {% if not lead.outcome %}selected{% endif %}>対応中</option>
+          <option value="contracted" {% if lead.outcome=='contracted' %}selected{% endif %}>契約済み ✅</option>
+          <option value="lost" {% if lead.outcome=='lost' %}selected{% endif %}>失注</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">失注理由</label>
+        <select name="lost_reason" class="form-select">
+          {% for r in ['','予算','タイミング','競合','ニーズ違い','無返答','その他'] %}
+          <option value="{{ r }}" {% if lead.lost_reason == r %}selected{% endif %}>{{ r or '-' }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="form-group">
+        <label class="form-label">次のアクション</label>
+        <input type="text" name="next_action" class="form-input" value="{{ lead.next_action or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">期日</label>
+        <input type="date" name="next_action_date" class="form-input" value="{{ lead.next_action_date or '' }}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ヒアリングメモ（現状）</label>
+      <textarea name="current_situation" class="form-textarea" style="min-height:70px;">{{ lead.current_situation or '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">内部メモ</label>
+      <textarea name="notes" class="form-textarea" id="notes-area">{{ lead.notes or '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">💾 保存</button>
+  </form>
+</div>
+
+<script>
+const leadId = '{{ lead_id }}';
+
+async function generateReply() {
+  const btn = document.getElementById('ai-btn');
+  btn.textContent = '⏳ 生成中...'; btn.disabled = true;
+
+  const resp = await fetch('/api/ai/lead_reply/' + leadId);
+  const d = await resp.json();
+
+  btn.textContent = '✨ AI返信生成'; btn.disabled = false;
+
+  if (d.error) { alert('エラー: ' + d.error); return; }
+
+  document.getElementById('ai-reply-text').textContent = d.reply;
+  document.getElementById('ai-reply-area').style.display = 'block';
+  document.getElementById('ai-reply-area').scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyReply() {
+  navigator.clipboard.writeText(document.getElementById('ai-reply-text').textContent);
+  alert('コピーしました');
+}
+
+function copyToNotes() {
+  const notes = document.getElementById('notes-area');
+  const reply = document.getElementById('ai-reply-text').textContent;
+  const now = new Date().toLocaleDateString('ja-JP');
+  notes.value += (notes.value ? '\n' : '') + `[${now} AI案] ${reply}`;
+  notes.scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+
+{% endblock %}

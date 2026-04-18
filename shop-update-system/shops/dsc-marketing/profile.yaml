@@ -1,0 +1,75 @@
+# マーケティング／導線設計サービス プロファイル
+# 正の情報は https://dsc-marketing.com/ の最新表記で確認すること
+
+id: dsc-marketing
+name_ja: DSc Marketing | UPJ
+name_kana: ディーエスシー マーケティング
+category: マーケティング・導線設計・Web制作
+
+legal_entity: 株式会社ユニバーサルプラネットジャパン|UPJ
+representatives: ""
+founded: ""
+capital_jpy: null
+
+address:
+  postal: ""
+  prefecture: 東京都
+  lines: 中央区銀座7丁目13番21号
+  building: Ginza Rokushuビル2階
+
+phone: "+81-50-6871-8255"
+
+hours:
+  mon: "10:00-17:00"
+  tue: "10:00-17:00"
+  wed: "10:00-17:00"
+  thu: "10:00-17:00"
+  fri: "10:00-17:00"
+  sat: "closed"
+  sun: "closed"
+
+holiday_note: 受付は平日のみ（サイト表記）。祝日の扱いは公式に要確認。
+
+services:
+  - 集客導線の設計・最適化（SNS×LINE×HP）
+  - ホームページ制作・改善・SEO内部設計
+  - SNS運用とWeb連携
+  - LINE公式アカウント構築（クーポン・スタンプ・分岐シナリオ等）
+  - Googleビジネスプロフィール／MEO関連（プランによる）
+
+usp: SNS・LINE・Web をつないで「迷わず行動できる」導線を自社運用できる形で構築。
+
+cta: 公式LINE・お問い合わせフォーム・電話で無料相談。
+
+links:
+  website: https://dsc-marketing.com/
+  map: ""
+  line: ""
+  reserve: ""
+  contact_form: https://dsc-marketing.com/
+
+regions_note: サイト表記に Japan, Thailand あり。対応地域の詳細は要確認。
+
+campaigns: []
+
+brand_voice:
+  tone: 成果・導線・仕組みを前面。無理に煽らない実務寄り。
+  ng_words:
+    - 必ず上位
+    - 誰でも稼げる
+    - 違法・誇大な効果保証
+
+channels:
+  google_business_profile: true
+  instagram: true
+  wordpress_news: true
+  printed_flyer: false
+
+pricing_note: |
+  サイト掲載の料金例：DSC Founders 5 月額25,000円（税込）創業パートナー限定、
+  スタンダード39,800円、グロース79,800円、プラチナ100,800円（いずれも税込・要確認）。
+  残枠・条件は変更されうるため、営業・契約前に必ず公式ページで確認。
+
+compliance_note: |
+  お客様の声の数値はサイト掲載の事例に依存。転用時は出典と期間を明記。
+  MEO・順位表現は景表法・プラットフォーム規約に配慮。

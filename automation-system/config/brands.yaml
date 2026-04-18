@@ -1,0 +1,76 @@
+# ブランド別チャンネル設定
+brands:
+  upjapan:
+    name: "UPJ（Universal Planet Japan）"
+    name_short: UPJ
+    color: "#5b8af5"
+    url: "https://upjapan.co.jp/"
+    channels:
+      instagram: true
+      threads:   true
+      facebook:  true
+      twitter:   true
+      youtube:   false
+      tiktok:    false
+      line:      false
+      wordpress: true
+
+  dsc-marketing:
+    name: "DSc Marketing"
+    name_short: DSc
+    color: "#34d399"
+    url: "https://dsc-marketing.com/"
+    channels:
+      instagram: true
+      threads:   true
+      facebook:  true
+      twitter:   true
+      youtube:   true
+      tiktok:    true
+      line:      true
+      wordpress: true
+
+  cashflowsupport:
+    name: "cashflowsupport"
+    name_short: CSF
+    color: "#fbbf24"
+    url: "https://cashflowsupport.jp/"
+    channels:
+      instagram: true
+      threads:   false
+      facebook:  true
+      twitter:   false
+      youtube:   false
+      tiktok:    false
+      line:      true
+      wordpress: true
+
+  satoshi-blog:
+    name: "Satoshi Life Blog"
+    name_short: Blog
+    color: "#a78bfa"
+    url: "https://satoshi-life.site/blog/"
+    channels:
+      instagram: false
+      threads:   false
+      facebook:  false
+      twitter:   false
+      youtube:   false
+      tiktok:    false
+      line:      false
+      wordpress: true
+
+  bangkok-peach:
+    name: "Bangkok Peach Group"
+    name_short: BPG
+    color: "#f472b6"
+    url: "https://bangkok-peach-group.com/"
+    channels:
+      instagram: true
+      threads:   true
+      facebook:  true
+      twitter:   true
+      youtube:   false
+      tiktok:    true
+      line:      true
+      wordpress: true

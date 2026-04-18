@@ -1,0 +1,51 @@
+# プロジェクトシート テンプレ
+# 保存先: project-system/projects/[案件番号]/project-sheet.yaml
+
+project_id: ""                  # 例: DSC-2026-001
+brand: ""                       # dsc-marketing / cashflowsupport / upjapan
+type: ""                        # monthly（月額）/ one-time（単発）/ consulting
+
+# --- 顧客情報 ---
+client_name: ""                 # 会社名・担当者名
+client_contact:
+  name: ""
+  email: ""
+  phone: ""
+  slack_or_line: ""
+
+# --- 案件概要 ---
+project_name: ""                # 例: 〇〇株式会社 SNS運用支援
+description: ""                 # 何をやるか一言
+
+# --- スケジュール ---
+start_date: ""
+end_date: ""                    # 単発の場合。月額は "" のまま
+monthly_renewal: true           # 月額の場合 true
+
+# --- 金額 ---
+monthly_fee_jpy: 0              # 月額（税込）。単発は 0
+total_fee_jpy: 0                # 単発の場合の合計（税込）
+
+# --- 請求・入金（finance-system と同期）---
+billing:
+  billing_cycle: ""             # 例: 月末締め翌月末払い（契約書に合わせる）
+  last_invoice_date: ""       # 最終請求書送付日
+  last_payment_date: ""       # 最終入金確認日
+  payment_status: "current"     # current / overdue / paused / closed
+
+# --- 状態 ---
+phase: "P1"                     # P1〜P5（PIPELINE.mdを参照）
+last_update: ""                 # 最終更新日
+next_milestone: ""              # 次のマイルストーン
+next_milestone_date: ""
+
+# --- 担当 ---
+project_manager: ""             # UPJ側の担当者名
+
+# --- 納品物 ---
+deliverables:
+  - ""
+
+# --- メモ ---
+notes: ""
+issues: ""                      # 懸念・問題点

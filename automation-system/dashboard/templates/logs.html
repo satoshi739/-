@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}ログ — UPJ Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">📋 実行ログ</div>
+    <div class="page-sub">スケジューラー・朝のオペレーター・Webhookサーバーの動作記録</div>
+  </div>
+  <button onclick="location.reload()" class="btn btn-ghost">🔄 更新</button>
+</div>
+
+<div class="card">
+  <div class="card-title">⏰ スケジューラー（直近50行）</div>
+  <div class="log-box" id="schedulerLog">
+    {% for line in scheduler_log %}
+    <div class="{% if 'ERROR' in line %}log-err{% elif 'WARNING' in line %}log-warn{% endif %}">{{ line }}</div>
+    {% else %}
+    <div style="color:var(--muted);">ログがまだありません</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">☀️ 朝のオペレーター（直近50行）</div>
+  <div class="log-box">
+    {% for line in morning_log %}
+    <div class="{% if 'ERROR' in line %}log-err{% elif 'WARNING' in line %}log-warn{% endif %}">{{ line }}</div>
+    {% else %}
+    <div style="color:var(--muted);">ログがまだありません</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">📡 LINE Webhookサーバー（直近50行）</div>
+  <div class="log-box">
+    {% for line in server_log %}
+    <div class="{% if 'ERROR' in line %}log-err{% elif 'WARNING' in line %}log-warn{% endif %}">{{ line }}</div>
+    {% else %}
+    <div style="color:var(--muted);">ログがまだありません</div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  // ログボックスを一番下にスクロール
+  document.querySelectorAll('.log-box').forEach(el => {
+    el.scrollTop = el.scrollHeight;
+  });
+</script>
+
+{% endblock %}

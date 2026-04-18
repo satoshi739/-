@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}カンバン — UPJ Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">🎯 リード カンバン</div>
+    <div class="page-sub">ドラッグ＆ドロップでステージを更新できます</div>
+  </div>
+  <div class="header-actions">
+    <a href="/leads" class="btn btn-ghost">リスト表示</a>
+  </div>
+</div>
+
+<div class="kanban" id="kanban">
+  {% set col_colors = {'L1':'var(--muted)','L2':'#74b0ff','L3':'var(--green)','L4':'var(--yellow)'} %}
+  {% set col_labels = {'L1':'L1 未コンタクト','L2':'L2 コンタクト済','L3':'L3 商談中','L4':'L4 提案済'} %}
+
+  {% for stage, leads in kanban.items() %}
+  <div class="kanban-col" id="col-{{ stage }}" data-stage="{{ stage }}"
+       ondragover="event.preventDefault(); this.classList.add('drag-over')"
+       ondragleave="this.classList.remove('drag-over')"
+       ondrop="drop(event, '{{ stage }}')">
+    <div class="kanban-col-header">
+      <span class="kanban-col-title" style="color:{{ col_colors[stage] }};">{{ col_labels[stage] }}</span>
+      <span class="kanban-count">{{ leads|length }}</span>
+    </div>
+
+    {% for lead in leads %}
+    <div class="kanban-card"
+         draggable="true"
+         id="card-{{ lead.lead_id }}"
+         data-lead-id="{{ lead.lead_id }}"
+         ondragstart="dragStart(event)"
+         onclick="location.href='/leads/{{ lead.lead_id }}'">
+      <div class="kanban-card-name">{{ lead.name or '（名前なし）' }}</div>
+      <div class="kanban-card-meta">{{ lead.brand or '' }}</div>
+      {% if lead.next_action %}
+      <div style="margin-top:7px;font-size:11px;background:var(--surface3);padding:4px 8px;border-radius:5px;color:var(--muted);">
+        → {{ lead.next_action[:35] }}
+      </div>
+      {% endif %}
+      {% if lead.next_action_date %}
+      <div style="font-size:11px;color:{% if lead.next_action_date < now_date %}var(--red){% else %}var(--muted){% endif %};margin-top:4px;">
+        📅 {{ lead.next_action_date }}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    {% if not leads %}
+    <div style="text-align:center;padding:30px 10px;color:var(--border);font-size:13px;">
+      ドロップしてここへ移動
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div id="move-toast" style="
+  display:none; position:fixed; bottom:28px; right:28px;
+  background:var(--green); color:#0a2010; padding:12px 20px;
+  border-radius:10px; font-size:14px; font-weight:700;
+  box-shadow: 0 4px 20px rgba(52,211,153,.4);
+  z-index:9999;">✅ ステージを更新しました</div>
+
+<script>
+const nowDate = '{{ now_date }}';
+let draggingId = null;
+
+function dragStart(e) {
+  draggingId = e.currentTarget.dataset.leadId;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+async function drop(e, newStage) {
+  e.preventDefault();
+  const col = document.getElementById('col-' + newStage);
+  col.classList.remove('drag-over');
+
+  if (!draggingId) return;
+  const card = document.getElementById('card-' + draggingId);
+  if (!card) return;
+
+  // DOM更新（楽観的更新）
+  col.appendChild(card);
+  card.classList.remove('dragging');
+
+  // API呼び出し
+  const resp = await fetch('/api/leads/stage', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ lead_id: draggingId, stage: newStage })
+  });
+
+  if (resp.ok) {
+    const toast = document.getElementById('move-toast');
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 2000);
+    // カード数を更新
+    document.querySelectorAll('.kanban-col').forEach(col => {
+      const cards = col.querySelectorAll('.kanban-card').length;
+      col.querySelector('.kanban-count').textContent = cards;
+    });
+  } else {
+    alert('更新に失敗しました');
+  }
+  draggingId = null;
+}
+
+document.addEventListener('dragend', () => {
+  document.querySelectorAll('.kanban-card').forEach(c => c.classList.remove('dragging'));
+});
+</script>
+{% endblock %}

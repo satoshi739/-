@@ -1,0 +1,28 @@
+# 顧客ヘルス 1枚シート
+# 保存先: customer-success-system/accounts/[project_id]/health-YYYY-MM.yaml
+
+project_id: ""                  # project-system と同一
+brand: ""                       # dsc-marketing / cashflowsupport / upjapan
+client_name: ""
+review_month: ""                # 例: 2026-04
+
+# --- 定量（わかる範囲で）---
+payment_status: ""              # current / overdue / paused
+meetings_held: 0                # 当月ミーティング回数
+sla_breaches: 0                 # 約束した返信・納品の遅延回数
+
+# --- 定性 ---
+satisfaction: ""                # high / neutral / low / unknown
+relationship_owner_client: ""   # 顧客側のキーパーソン
+notes_on_relationship: ""
+
+# --- リスク ---
+at_risk: false
+risk_signals: []                # 例: ["返信遅延", "効果への不満"]
+
+# --- アクション ---
+actions_this_month: []
+next_touch_date: ""
+
+# --- メモ ---
+notes: ""

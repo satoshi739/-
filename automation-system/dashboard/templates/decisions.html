@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}判断待ち — UPJ Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">⚠️ 判断待ちキュー</div>
+    <div class="page-sub">自動処理できなかった案件。あなたが判断してください。</div>
+  </div>
+</div>
+
+{% set open = decisions | selectattr('resolved', 'falsy') | list %}
+{% set closed = decisions | selectattr('resolved', 'truthy') | list %}
+
+{% if open %}
+<div class="card">
+  <div class="card-title">未対応 ({{ open | length }}件)</div>
+  {% for d in open %}
+  <div style="border-bottom:1px solid var(--border);padding:16px 0;{% if loop.last %}border-bottom:none{% endif %}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+      <span class="badge badge-warn">{{ d.type }}</span>
+      <span style="font-size:12px;color:var(--muted);">{{ d.created_at }}</span>
+    </div>
+    <div style="font-size:14px;margin-bottom:8px;font-weight:600;">{{ d.reason }}</div>
+    {% if d.detail %}
+    <div style="font-size:12px;color:var(--muted);background:var(--surface2);padding:8px;border-radius:6px;margin-bottom:12px;">
+      {% for k, v in d.detail.items() %}<strong>{{ k }}:</strong> {{ v }}<br>{% endfor %}
+    </div>
+    {% endif %}
+    <form method="POST" action="/decisions/resolve/{{ d._file }}" style="display:flex;gap:10px;align-items:center;">
+      <input type="text" name="note" class="form-input" placeholder="対応内容を一言メモ（任意）" style="flex:1;">
+      <button type="submit" class="btn btn-success">✅ 対応済み</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-ok">
+  ✅ 判断待ちはありません。すべて対応済みです。
+</div>
+{% endif %}
+
+{% if closed %}
+<div class="card" style="margin-top:20px;">
+  <div class="card-title">対応済み ({{ closed | length }}件)</div>
+  <table>
+    <thead><tr><th>種類</th><th>内容</th><th>対応メモ</th><th>対応日時</th></tr></thead>
+    <tbody>
+    {% for d in closed %}
+    <tr>
+      <td><span class="badge badge-ok">{{ d.type }}</span></td>
+      <td style="font-size:13px;">{{ d.reason[:50] }}</td>
+      <td style="font-size:13px;color:var(--muted);">{{ d.resolved_note or '-' }}</td>
+      <td style="font-size:12px;color:var(--muted);">{{ (d.resolved_at or '')[:16] }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

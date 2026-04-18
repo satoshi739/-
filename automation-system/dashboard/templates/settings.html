@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+{% block title %}API設定 — {{ brand.name_short }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title" style="display:flex;align-items:center;gap:10px;">
+      <span style="width:12px;height:12px;border-radius:50%;background:{{ brand.color }};display:inline-block;"></span>
+      ⚙️ {{ brand.name_short }} — API設定
+    </div>
+    <div class="page-sub">APIキーを入力すると自動投稿・自動連携が有効になります</div>
+  </div>
+  <div class="header-actions">
+    <a href="/brands/{{ brand_id }}" class="btn btn-ghost">← ブランドページ</a>
+  </div>
+</div>
+
+<!-- 保存メッセージ -->
+{% if saved %}
+<div class="alert alert-ok" style="margin-bottom:20px;">
+  <span>✅</span>
+  <div><strong>保存しました。</strong> APIキーが更新されました。ダッシュボードを再起動すると反映されます。</div>
+</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-warn" style="margin-bottom:20px;">
+  <span>⚠️</span><div>{{ error }}</div>
+</div>
+{% endif %}
+
+<form method="POST" action="/settings/{{ brand_id }}" id="settings-form">
+
+{% set prefix = brand_id.upper().replace('-','_') %}
+
+<!-- ═══ Claude AI ═══ -->
+<div class="card" style="margin-bottom:16px;border-top:3px solid var(--purple);">
+  <div class="card-header">
+    <span class="card-title">✨ Claude AI（全ブランド共通）</span>
+    {% if status.anthropic %}
+    <span class="badge badge-ok">✅ 接続済み</span>
+    {% else %}
+    <span class="badge badge-warn">未設定</span>
+    {% endif %}
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+    AI一括生成・文章自動作成・リード返信に使用。<a href="https://console.anthropic.com/" target="_blank" style="color:var(--accent);">console.anthropic.com</a> で取得
+  </div>
+  <div class="form-group">
+    <label class="form-label">ANTHROPIC_API_KEY</label>
+    <input type="password" name="ANTHROPIC_API_KEY" class="form-input"
+           value="{{ env.get('ANTHROPIC_API_KEY','') }}"
+           placeholder="sk-ant-..." autocomplete="off">
+  </div>
+</div>
+
+<!-- ═══ Instagram / Meta ═══ -->
+{% if brand.channels.instagram or brand.channels.threads or brand.channels.facebook %}
+<div class="card" style="margin-bottom:16px;border-top:3px solid #e1306c;">
+  <div class="card-header">
+    <span class="card-title">📷 Instagram / 🧵 Threads / 📘 Facebook（Meta）</span>
+    {% if status.meta %}
+    <span class="badge badge-ok">✅ 接続済み</span>
+    {% else %}
+    <span class="badge badge-warn">未設定</span>
+    {% endif %}
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+    <strong>取得方法：</strong>
+    <ol style="margin:6px 0 0 16px;line-height:2;">
+      <li><a href="https://developers.facebook.com/" target="_blank" style="color:var(--accent);">Meta for Developers</a> → アプリを作成</li>
+      <li>Instagram Graph API を追加</li>
+      <li>アクセストークンを長期トークンに変換</li>
+      <li>IG ビジネスアカウントのIDを取得</li>
+    </ol>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_META_ACCESS_TOKEN</label>
+      <input type="password" name="{{ prefix }}_META_ACCESS_TOKEN" class="form-input"
+             value="{{ env.get(prefix+'_META_ACCESS_TOKEN','') }}" placeholder="EAAxxxxx..." autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_INSTAGRAM_ACCOUNT_ID</label>
+      <input type="text" name="{{ prefix }}_INSTAGRAM_ACCOUNT_ID" class="form-input"
+             value="{{ env.get(prefix+'_INSTAGRAM_ACCOUNT_ID','') }}" placeholder="17841400000000000">
+    </div>
+    {% if brand.channels.threads %}
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_THREADS_USER_ID</label>
+      <input type="text" name="{{ prefix }}_THREADS_USER_ID" class="form-input"
+             value="{{ env.get(prefix+'_THREADS_USER_ID','') }}" placeholder="Threads ユーザーID">
+    </div>
+    {% endif %}
+    {% if brand.channels.facebook %}
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_FB_PAGE_ID</label>
+      <input type="text" name="{{ prefix }}_FB_PAGE_ID" class="form-input"
+             value="{{ env.get(prefix+'_FB_PAGE_ID','') }}" placeholder="Facebook ページID">
+    </div>
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_FB_PAGE_TOKEN</label>
+      <input type="password" name="{{ prefix }}_FB_PAGE_TOKEN" class="form-input"
+             value="{{ env.get(prefix+'_FB_PAGE_TOKEN','') }}" placeholder="ページアクセストークン" autocomplete="off">
+    </div>
+    {% endif %}
+  </div>
+  <button type="button" onclick="testConnection('meta', '{{ brand_id }}')" class="btn btn-ghost btn-sm">🔌 接続テスト</button>
+</div>
+{% endif %}
+
+<!-- ═══ Twitter / X ═══ -->
+{% if brand.channels.twitter %}
+<div class="card" style="margin-bottom:16px;border-top:3px solid #1da1f2;">
+  <div class="card-header">
+    <span class="card-title">𝕏 Twitter / X</span>
+    {% if status.twitter %}
+    <span class="badge badge-ok">✅ 接続済み</span>
+    {% else %}
+    <span class="badge badge-warn">未設定</span>
+    {% endif %}
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+    <a href="https://developer.twitter.com/en/portal/dashboard" target="_blank" style="color:var(--accent);">Twitter Developer Portal</a>
+    → アプリ作成 → 「Keys and Tokens」タブで取得。Read and Write 権限が必要。
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_TWITTER_API_KEY</label>
+      <input type="password" name="{{ prefix }}_TWITTER_API_KEY" class="form-input"
+             value="{{ env.get(prefix+'_TWITTER_API_KEY','') }}" placeholder="API Key" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_TWITTER_API_SECRET</label>
+      <input type="password" name="{{ prefix }}_TWITTER_API_SECRET" class="form-input"
+             value="{{ env.get(prefix+'_TWITTER_API_SECRET','') }}" placeholder="API Secret" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_TWITTER_ACCESS_TOKEN</label>
+      <input type="password" name="{{ prefix }}_TWITTER_ACCESS_TOKEN" class="form-input"
+             value="{{ env.get(prefix+'_TWITTER_ACCESS_TOKEN','') }}" placeholder="Access Token" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_TWITTER_ACCESS_SECRET</label>
+      <input type="password" name="{{ prefix }}_TWITTER_ACCESS_SECRET" class="form-input"
+             value="{{ env.get(prefix+'_TWITTER_ACCESS_SECRET','') }}" placeholder="Access Token Secret" autocomplete="off">
+    </div>
+  </div>
+  <button type="button" onclick="testConnection('twitter', '{{ brand_id }}')" class="btn btn-ghost btn-sm">🔌 接続テスト</button>
+</div>
+{% endif %}
+
+<!-- ═══ LINE ═══ -->
+{% if brand.channels.line %}
+<div class="card" style="margin-bottom:16px;border-top:3px solid #06c755;">
+  <div class="card-header">
+    <span class="card-title">📱 LINE Messaging API</span>
+    {% if status.line %}
+    <span class="badge badge-ok">✅ 接続済み</span>
+    {% else %}
+    <span class="badge badge-warn">未設定</span>
+    {% endif %}
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+    <a href="https://developers.line.biz/console/" target="_blank" style="color:var(--accent);">LINE Developers</a>
+    → チャネル → Messaging API → チャネルアクセストークン（長期）を発行
+  </div>
+  {% set line_token_key = 'LINE_CHANNEL_ACCESS_TOKEN' if brand_id == 'dsc-marketing' else 'LINE_CHANNEL_ACCESS_TOKEN_' + prefix.split('_')[0] %}
+  {% set line_secret_key = 'LINE_CHANNEL_SECRET' if brand_id == 'dsc-marketing' else 'LINE_CHANNEL_SECRET_' + prefix.split('_')[0] %}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div class="form-group">
+      <label class="form-label">チャネルアクセストークン</label>
+      <input type="password" name="{{ line_token_key }}" class="form-input"
+             value="{{ env.get(line_token_key,'') }}" placeholder="長期アクセストークン" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">チャネルシークレット</label>
+      <input type="password" name="{{ line_secret_key }}" class="form-input"
+             value="{{ env.get(line_secret_key,'') }}" placeholder="チャネルシークレット" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">OWNER_LINE_USER_ID <span style="color:var(--muted);font-weight:normal;">（朝のサマリー受信用）</span></label>
+      <input type="text" name="OWNER_LINE_USER_ID" class="form-input"
+             value="{{ env.get('OWNER_LINE_USER_ID','') }}" placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+    </div>
+  </div>
+  <button type="button" onclick="testConnection('line', '{{ brand_id }}')" class="btn btn-ghost btn-sm">🔌 接続テスト</button>
+</div>
+{% endif %}
+
+<!-- ═══ WordPress ═══ -->
+{% if brand.channels.wordpress %}
+<div class="card" style="margin-bottom:16px;border-top:3px solid #21759b;">
+  <div class="card-header">
+    <span class="card-title">🌐 WordPress REST API</span>
+    {% if status.wordpress %}
+    <span class="badge badge-ok">✅ 接続済み</span>
+    {% else %}
+    <span class="badge badge-warn">未設定</span>
+    {% endif %}
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+    WordPress管理画面 → ユーザー → プロフィール → 一番下の「<strong>アプリケーションパスワード</strong>」で生成。
+    REST APIが有効になっていることを確認してください。
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_WP_URL</label>
+      <input type="url" name="{{ prefix }}_WP_URL" class="form-input"
+             value="{{ env.get(prefix+'_WP_URL', brand.url) }}" placeholder="{{ brand.url }}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_WP_USER</label>
+      <input type="text" name="{{ prefix }}_WP_USER" class="form-input"
+             value="{{ env.get(prefix+'_WP_USER','') }}" placeholder="WordPressユーザー名">
+    </div>
+    <div class="form-group" style="grid-column:1/-1;">
+      <label class="form-label">{{ prefix }}_WP_APP_PASSWORD</label>
+      <input type="password" name="{{ prefix }}_WP_APP_PASSWORD" class="form-input"
+             value="{{ env.get(prefix+'_WP_APP_PASSWORD','') }}" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" autocomplete="off">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">スペースはそのまま入力してOKです</div>
+    </div>
+  </div>
+  <button type="button" onclick="testConnection('wordpress', '{{ brand_id }}')" class="btn btn-ghost btn-sm">🔌 接続テスト</button>
+</div>
+{% endif %}
+
+<!-- ═══ YouTube ═══ -->
+{% if brand.channels.youtube %}
+<div class="card" style="margin-bottom:16px;border-top:3px solid #ff0000;">
+  <div class="card-header">
+    <span class="card-title">▶️ YouTube Data API</span>
+    {% if status.youtube %}
+    <span class="badge badge-ok">✅ 接続済み</span>
+    {% else %}
+    <span class="badge badge-warn">未設定</span>
+    {% endif %}
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+    <a href="https://console.cloud.google.com/" target="_blank" style="color:var(--accent);">Google Cloud Console</a>
+    → YouTube Data API v3 を有効化 → OAuth2 認証情報を作成 → <code>credentials.json</code> を <code>automation-system/</code> に配置
+  </div>
+  <div class="form-group">
+    <label class="form-label">{{ prefix }}_YOUTUBE_CHANNEL_ID</label>
+    <input type="text" name="{{ prefix }}_YOUTUBE_CHANNEL_ID" class="form-input"
+           value="{{ env.get(prefix+'_YOUTUBE_CHANNEL_ID','') }}" placeholder="UCxxxxxxxxxxxxxxxxxxxxxxxxx">
+  </div>
+  <div class="alert alert-info" style="margin-top:8px;">
+    <span>📁</span>
+    <div>OAuth2 credentials.json ファイルを <code>automation-system/credentials.json</code> に配置してください</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ═══ TikTok ═══ -->
+{% if brand.channels.tiktok %}
+<div class="card" style="margin-bottom:16px;border-top:3px solid #010101;">
+  <div class="card-header">
+    <span class="card-title">🎵 TikTok Content Posting API</span>
+    {% if status.tiktok %}
+    <span class="badge badge-ok">✅ 接続済み</span>
+    {% else %}
+    <span class="badge badge-warn">未設定</span>
+    {% endif %}
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+    <a href="https://developers.tiktok.com/" target="_blank" style="color:var(--accent);">TikTok for Developers</a>
+    → アプリ作成 → Content Posting API → アクセストークンを取得
+  </div>
+  <div class="form-group">
+    <label class="form-label">{{ prefix }}_TIKTOK_ACCESS_TOKEN</label>
+    <input type="password" name="{{ prefix }}_TIKTOK_ACCESS_TOKEN" class="form-input"
+           value="{{ env.get(prefix+'_TIKTOK_ACCESS_TOKEN','') }}" placeholder="act.xxxxx" autocomplete="off">
+  </div>
+</div>
+{% endif %}
+
+<!-- ═══ Google Analytics / Search Console ═══ -->
+<div class="card" style="margin-bottom:16px;border-top:3px solid #4285f4;">
+  <div class="card-header">
+    <span class="card-title">📊 Google Analytics 4 / 🔍 Search Console</span>
+    {% if status.google %}
+    <span class="badge badge-ok">✅ 接続済み</span>
+    {% else %}
+    <span class="badge badge-warn">未設定</span>
+    {% endif %}
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+    <strong>取得方法：</strong>
+    <ol style="margin:6px 0 0 16px;line-height:2;">
+      <li><a href="https://console.cloud.google.com/" target="_blank" style="color:var(--accent);">Google Cloud Console</a> → サービスアカウントを作成</li>
+      <li>JSONキーをダウンロード → <code>automation-system/credentials.json</code> として保存</li>
+      <li>GA4：プロパティ設定 → アクセス管理 → サービスアカウントを「閲覧者」で追加</li>
+      <li>Search Console：設定 → ユーザーと権限 → サービスアカウントを追加</li>
+    </ol>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_GA4_PROPERTY_ID</label>
+      <input type="text" name="{{ prefix }}_GA4_PROPERTY_ID" class="form-input"
+             value="{{ env.get(prefix+'_GA4_PROPERTY_ID','') }}" placeholder="123456789">
+    </div>
+    <div class="form-group">
+      <label class="form-label">{{ prefix }}_GSC_SITE_URL</label>
+      <input type="url" name="{{ prefix }}_GSC_SITE_URL" class="form-input"
+             value="{{ env.get(prefix+'_GSC_SITE_URL', brand.url) }}" placeholder="{{ brand.url }}">
+    </div>
+  </div>
+  <div class="alert alert-info" style="margin-top:8px;">
+    <span>📁</span>
+    <div>サービスアカウントの <code>credentials.json</code> を <code>automation-system/</code> フォルダに配置してください</div>
+  </div>
+</div>
+
+<!-- ═══ 共通設定 ═══ -->
+<div class="card" style="margin-bottom:24px;border-top:3px solid var(--border);">
+  <div class="card-header">
+    <span class="card-title">🔧 共通設定</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div class="form-group">
+      <label class="form-label">DRY_RUN <span style="color:var(--muted);font-weight:normal;">（true=テストモード・実際に投稿しない）</span></label>
+      <select name="DRY_RUN" class="form-select">
+        <option value="false" {{ 'selected' if env.get('DRY_RUN','false')=='false' }}>false（本番・実際に投稿する）</option>
+        <option value="true"  {{ 'selected' if env.get('DRY_RUN','false')=='true' }}>true（テストモード）</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">NOTIFY_EMAIL <span style="color:var(--muted);font-weight:normal;">（エスカレーション通知先）</span></label>
+      <input type="email" name="NOTIFY_EMAIL" class="form-input"
+             value="{{ env.get('NOTIFY_EMAIL','') }}" placeholder="your@email.com">
+    </div>
+  </div>
+</div>
+
+<!-- 保存ボタン -->
+<div style="position:sticky;bottom:20px;display:flex;gap:12px;">
+  <button type="submit" class="btn btn-primary" style="flex:1;justify-content:center;padding:16px;font-size:16px;box-shadow:0 8px 24px rgba(91,138,245,.4);">
+    💾 APIキーを保存する
+  </button>
+  <a href="/brands/{{ brand_id }}" class="btn btn-ghost" style="padding:16px 20px;">キャンセル</a>
+</div>
+
+</form>
+
+<!-- 接続テスト結果 -->
+<div id="test-result" style="display:none;position:fixed;bottom:90px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;min-width:260px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.5);">
+  <div id="test-result-text" style="font-size:13px;"></div>
+</div>
+
+<script>
+async function testConnection(type, brandId) {
+  const res = document.getElementById('test-result');
+  const txt = document.getElementById('test-result-text');
+  res.style.display = 'block';
+  txt.innerHTML = '⏳ 接続テスト中...';
+
+  try {
+    const r = await fetch(`/api/test_connection/${brandId}/${type}`, {method: 'POST'});
+    const d = await r.json();
+    if (d.ok) {
+      txt.innerHTML = `✅ <strong>${type}</strong> 接続成功！<br><span style="font-size:11px;color:var(--muted);">${d.detail||''}</span>`;
+      txt.style.color = 'var(--green)';
+    } else {
+      txt.innerHTML = `❌ <strong>${type}</strong> 接続失敗<br><span style="font-size:11px;color:var(--muted);">${d.error||''}</span>`;
+      txt.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    txt.innerHTML = '❌ テストに失敗しました';
+    txt.style.color = 'var(--red)';
+  }
+
+  setTimeout(() => { res.style.display = 'none'; }, 5000);
+}
+
+// パスワードフィールドの表示切替
+document.querySelectorAll('input[type=password]').forEach(input => {
+  const wrap = document.createElement('div');
+  wrap.style = 'position:relative;';
+  input.parentNode.insertBefore(wrap, input);
+  wrap.appendChild(input);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.style = 'position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:0;';
+  btn.textContent = '👁';
+  btn.onclick = () => {
+    input.type = input.type === 'password' ? 'text' : 'password';
+    btn.textContent = input.type === 'password' ? '👁' : '🙈';
+  };
+  wrap.appendChild(btn);
+});
+</script>
+
+{% endblock %}
