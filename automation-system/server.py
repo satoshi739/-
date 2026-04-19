@@ -33,9 +33,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-messenger = LINEMessenger()
+_messenger: LINEMessenger | None = None
 
 SCENARIOS_PATH = Path(__file__).parent / "config" / "line_scenarios.yaml"
+
+
+def _get_messenger() -> LINEMessenger:
+    global _messenger
+    if _messenger is None:
+        _messenger = LINEMessenger()
+    return _messenger
 
 
 def _load_scenarios() -> dict:
@@ -57,7 +64,7 @@ def webhook():
     # 署名検証
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data()
-    if not messenger.verify_signature(body, signature):
+    if not _get_messenger().verify_signature(body, signature):
         logger.warning("署名検証失敗")
         abort(400)
 
@@ -84,6 +91,7 @@ def webhook():
 
 def _handle_follow(user_id: str, scenarios: dict):
     """友だち追加時の処理"""
+    messenger = _get_messenger()
     profile = messenger.get_profile(user_id)
     display_name = profile.get("displayName", "")
 
@@ -98,6 +106,7 @@ def _handle_message(user_id: str, text: str, reply_token: str, scenarios: dict):
     # 既存リードか確認
     existing = load_lead_by_line_id(user_id)
 
+    messenger = _get_messenger()
     if not existing:
         # 新規リード → 自動起票
         profile = messenger.get_profile(user_id)
