@@ -60,7 +60,7 @@ def require_login():
     if not pw:
         return  # パスワード未設定 → 認証スキップ
     # ログイン不要なパス
-    exempt = ("/login", "/static", "/favicon.ico", "/health")
+    exempt = ("/login", "/static", "/favicon.ico", "/health", "/webhook")
     if any(request.path.startswith(e) for e in exempt):
         return
     if not session.get("logged_in"):
@@ -1385,6 +1385,45 @@ def api_save_story(brand_id):
     return jsonify({"ok": True})
 
 
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    from sns.line_api import LINEMessenger
+    from sales.lead_intake import create_lead_from_line, load_lead_by_line_id
+    import yaml as _yaml
+    from flask import abort
+    scenarios_path = AUTO / "config" / "line_scenarios.yaml"
+    messenger = LINEMessenger()
+    signature = request.headers.get("X-Line-Signature", "")
+    body = request.get_data()
+    if not messenger.verify_signature(body, signature):
+        abort(400)
+    data = request.get_json()
+    scenarios = _yaml.safe_load(scenarios_path.read_text(encoding="utf-8")) if scenarios_path.exists() else {}
+    for event in data.get("events", []):
+        event_type = event.get("type")
+        user_id = event.get("source", {}).get("userId", "")
+        if event_type == "follow":
+            welcome = scenarios.get("welcome_message", "ご登録ありがとうございます！")
+            messenger.push(user_id, welcome)
+        elif event_type == "message" and event["message"]["type"] == "text":
+            text = event["message"]["text"]
+            reply_token = event.get("replyToken", "")
+            existing = load_lead_by_line_id(user_id)
+            if not existing:
+                profile = messenger.get_profile(user_id)
+                create_lead_from_line(user_id, profile.get("displayName", ""), text)
+            reply = None
+            for item in scenarios.get("keyword_replies", []):
+                if any(kw in text for kw in item.get("keywords", [])):
+                    reply = item["reply"]
+                    break
+            if reply:
+                messenger.reply(reply_token, reply)
+            else:
+                messenger.reply(reply_token, "メッセージありがとうございます！\n内容を確認して、担当者からご返信します。\n（平日10:00〜17:00 受付）")
+    return "OK"
+
+
 def startup():
     """アプリ起動時の初期化処理"""
     # 必要なディレクトリを作成
@@ -1414,7 +1453,7 @@ if __name__ == "__main__":
         ]
     )
     startup()
-    port = int(os.environ.get("DASHBOARD_PORT", 8080))
+    port = int(os.environ.get("PORT", os.environ.get("DASHBOARD_PORT", 8080)))
     debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     print(f"\n✅ ダッシュボード起動: http://localhost:{port}")
     if os.environ.get("DASHBOARD_PASSWORD"):
