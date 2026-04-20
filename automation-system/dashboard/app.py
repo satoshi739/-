@@ -1425,7 +1425,7 @@ def webhook():
 
 
 def startup():
-    """アプリ起動時の初期化処理"""
+    """アプリ起動時の初期化処理（gunicorn 起動時もここで初期化される）"""
     # 必要なディレクトリを作成
     for d in [LEADS_DIR, FINANCE_DIR, PROJECTS_DIR, DECISION_DIR,
               IG_QUEUE, LINE_QUEUE, QUEUE_ROOT, LOGS_DIR, CALENDAR_DIR,
@@ -1442,6 +1442,8 @@ def startup():
         log.warning(f"YAML移行スキップ: {e}")
     log.info("✅ ダッシュボード初期化完了")
 
+
+startup()
 
 if __name__ == "__main__":
     logging.basicConfig(
