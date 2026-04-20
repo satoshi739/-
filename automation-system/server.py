@@ -128,6 +128,11 @@ def _handle_message(user_id: str, text: str, reply_token: str, scenarios: dict):
         messenger.reply(reply_token, default_reply)
 
 
+@app.route("/", methods=["GET"])
+def index():
+    return {"status": "ok", "service": "upjapan-automation"}
+
+
 @app.route("/health", methods=["GET"])
 def health():
     return {"status": "ok"}
