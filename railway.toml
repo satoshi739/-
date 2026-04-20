@@ -3,5 +3,5 @@ builder = "nixpacks"
 buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-startCommand = "cd automation-system && gunicorn server:app --bind 0.0.0.0:$PORT"
+startCommand = "cd automation-system && gunicorn dashboard.app:app --bind 0.0.0.0:$PORT"
 restartPolicyType = "on_failure"
