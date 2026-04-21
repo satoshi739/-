@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}ストーリーテンプレート — UPJ Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-title">⚙️ ストーリーテンプレート</div>
+    <div class="page-sub">曜日・ブランド別の自動ストーリー配信ルールを管理する</div>
+  </div>
+  <div class="header-actions">
+    <a href="/story-autopilot" class="btn btn-ghost btn-sm">← Story Autopilot</a>
+    <a href="/story-autopilot/templates/new" class="btn btn-accent btn-sm">＋ 新規作成</a>
+  </div>
+</div>
+
+<!-- ブランドフィルター -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
+  <a href="/story-autopilot/templates" class="btn btn-sm {{ 'btn-accent' if not brand_filter else 'btn-ghost' }}">全て</a>
+  {% for bid, b in brands.items() %}
+  <a href="/story-autopilot/templates?brand={{ bid }}"
+     class="btn btn-sm {{ 'btn-accent' if brand_filter==bid else 'btn-ghost' }}">
+    <span style="width:7px;height:7px;border-radius:50%;background:{{ b.color }};display:inline-block;margin-right:4px;"></span>
+    {{ b.name_short }}
+  </a>
+  {% endfor %}
+</div>
+
+{% if not templates %}
+<div class="card" style="text-align:center;padding:60px 20px;">
+  <div style="font-size:60px;margin-bottom:16px;opacity:.4;">📋</div>
+  <div style="font-size:16px;font-weight:600;margin-bottom:8px;">テンプレートがありません</div>
+  <div style="color:var(--muted2);font-size:13px;margin-bottom:20px;">ブランド・曜日ごとのストーリー配信ルールを設定します</div>
+  <a href="/story-autopilot/templates/new" class="btn btn-accent">最初のテンプレートを作成</a>
+</div>
+{% else %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;">
+  {% for t in templates %}
+  {% set brand_cfg = brands.get(t.brand, {}) %}
+  <div class="card" style="border-left:3px solid {{ brand_cfg.get('color','#6366f1') }};">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);">{{ t.name }}</div>
+        <div style="font-size:11px;color:var(--muted2);margin-top:4px;">
+          <span style="color:{{ brand_cfg.get('color','#6366f1') }};font-weight:600;">{{ brand_cfg.get('name_short', t.brand) }}</span>
+          · {{ t.story_type }}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        {% if t.is_active %}
+        <span style="font-size:10px;background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3);padding:2px 8px;border-radius:20px;font-weight:600;">ON</span>
+        {% else %}
+        <span style="font-size:10px;background:var(--s3);color:var(--muted);border:1px solid var(--border);padding:2px 8px;border-radius:20px;">OFF</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if t.description %}
+    <div style="font-size:12px;color:var(--muted2);margin-bottom:12px;line-height:1.6;">{{ t.description }}</div>
+    {% endif %}
+
+    <!-- 実行モード -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      {% set mode_color = {'full_auto':'var(--green)','semi_auto':'var(--yellow)','human_approval_required':'var(--red)'}[t.run_mode] %}
+      {% set mode_label = {'full_auto':'全自動','semi_auto':'セミ自動','human_approval_required':'要承認'}[t.run_mode] %}
+      <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(0,0,0,.2);border:1px solid var(--border);color:{{ mode_color }};font-weight:600;">
+        ▶ {{ mode_label }}
+      </span>
+      <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:var(--s3);border:1px solid var(--border);color:var(--muted2);">
+        🕐 {{ t.run_time }}
+      </span>
+      <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:var(--s3);border:1px solid var(--border);color:var(--muted2);">
+        📦 {{ t.asset_source }}
+      </span>
+    </div>
+
+    <!-- 曜日ビジュアル -->
+    <div style="display:flex;gap:4px;margin-bottom:14px;">
+      {% for day, label in [('mon','月'),('tue','火'),('wed','水'),('thu','木'),('fri','金'),('sat','土'),('sun','日')] %}
+      <div style="width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;
+        {{ 'background:' + brand_cfg.get('color','#6366f1') + ';color:#fff;' if day in t.active_days else 'background:var(--s3);color:var(--muted);border:1px solid var(--border);' }}">
+        {{ label }}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if t.topic_prompt %}
+    <div style="font-size:11px;color:var(--muted);background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">
+      💬 {{ t.topic_prompt }}
+    </div>
+    {% endif %}
+
+    {% if t.last_run_at %}
+    <div style="font-size:10px;color:var(--muted);margin-bottom:12px;">最終実行: {{ t.last_run_at[:16] }}</div>
+    {% endif %}
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost btn-sm" onclick="generateFromTemplate({{ t.id }})" style="flex:1;">▶ 候補生成</button>
+      <a href="/story-autopilot/templates/{{ t.id }}" class="btn btn-ghost btn-sm">編集</a>
+      <form action="/story-autopilot/templates/{{ t.id }}/delete" method="post" style="display:inline;" onsubmit="return confirm('削除しますか？');">
+        <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red);">削除</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script>
+function generateFromTemplate(tmplId) {
+  Toastify({text:'⏳ 候補を生成中...', duration:3000}).showToast();
+  fetch('/api/story-autopilot/generate', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({template_id: tmplId})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      Toastify({text:`✅ 候補を生成しました (run#${d.run_id}) ステータス:${d.status}`, duration:3000, style:{background:'var(--green)'}}).showToast();
+      setTimeout(()=>{ window.location.href = '/story-autopilot/candidates'; }, 1500);
+    } else {
+      Toastify({text: d.error || '生成エラー', style:{background:'var(--red)'}}).showToast();
+    }
+  });
+}
+</script>
+{% endblock %}

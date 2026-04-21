@@ -74,7 +74,22 @@
     </tbody>
   </table>
   {% else %}
-  <div style="text-align:center;padding:60px;color:var(--muted);">リードはまだありません</div>
+  <div style="text-align:center;padding:72px 20px;">
+    <div style="font-size:48px;opacity:.3;margin-bottom:16px;">👤</div>
+    <div style="font-size:16px;font-weight:600;color:var(--muted2);margin-bottom:8px;">リードがまだありません</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px;">
+      {% if stage_filter %}
+      「{{ stage_filter }}」ステージのリードが見つかりません。<br>フィルターを変更してみてください。
+      {% else %}
+      LINEやフォームからリードが入ると、ここに表示されます。
+      {% endif %}
+    </div>
+    {% if stage_filter %}
+    <a href="/leads" class="btn btn-ghost btn-sm">フィルターをクリア</a>
+    {% else %}
+    <a href="/decisions" class="btn btn-primary btn-sm">📋 判断待ちを確認</a>
+    {% endif %}
+  </div>
   {% endif %}
 </div>
 

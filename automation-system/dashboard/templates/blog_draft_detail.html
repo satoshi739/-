@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}{{ draft.title }} — Blog Draft{% endblock %}
+{% block content %}
+
+<style>
+  .draft-hero {
+    background: linear-gradient(135deg, rgba(99,102,241,.1) 0%, rgba(10,16,36,.95) 70%);
+    border: 1px solid rgba(99,102,241,.2); border-radius: var(--radius);
+    padding: 28px 32px; margin-bottom: 24px; position: relative; overflow: hidden;
+  }
+  .draft-hero::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--purple), transparent);
+  }
+
+  .outline-item {
+    padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 8px;
+    background: rgba(10,16,36,.7); border: 1px solid var(--border);
+  }
+  .outline-h2 { font-size: 13.5px; font-weight: 700; color: var(--text); }
+  .outline-h3 {
+    font-size: 12px; color: var(--muted2); margin-top: 6px; padding-left: 16px;
+    border-left: 2px solid var(--border2); line-height: 1.7;
+  }
+
+  .meta-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px; font-size: 11.5px; color: var(--muted2);
+  }
+
+  .body-preview-box {
+    background: rgba(10,16,36,.8); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 18px 20px;
+    font-size: 13px; line-height: 1.9; color: var(--muted2);
+    font-style: italic;
+  }
+
+  .kw-tag {
+    display: inline-flex; align-items: center;
+    background: rgba(99,102,241,.08); border: 1px solid rgba(99,102,241,.2);
+    border-radius: 20px; padding: 3px 11px; font-size: 11.5px; color: var(--accent2);
+    margin: 3px;
+  }
+
+  .action-footer {
+    position: sticky; bottom: 0;
+    background: rgba(3,7,17,.95); backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border); padding: 14px 20px;
+    display: flex; align-items: center; gap: 10px; z-index: 50;
+    margin: 0 -40px; padding-left: 40px; padding-right: 40px;
+  }
+</style>
+
+<div class="page-header">
+  <div>
+    <div style="font-size:12px; color:var(--muted2); margin-bottom:6px;">
+      <a href="/blog" style="color:var(--muted2); text-decoration:none;">✒ Blog Auto Growth</a>
+      <span style="margin:0 6px;">›</span>
+      <span style="color:{{ draft.brand_color }}">{{ draft.brand }}</span>
+    </div>
+    <div class="page-title" style="font-size:18px; line-height:1.4; max-width:680px;">{{ draft.title }}</div>
+  </div>
+  <div class="header-actions">
+    <span class="status-badge status-{{ draft.status }}" style="font-size:11px;padding:5px 14px;border-radius:20px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);color:var(--accent2);">
+      {% if draft.status == 'draft' %}下書き{% elif draft.status == 'idea' %}アイデア{% else %}{{ draft.status }}{% endif %}
+    </span>
+  </div>
+</div>
+
+<!-- Hero -->
+<div class="draft-hero">
+  <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+    <span class="meta-pill">
+      <span style="width:7px;height:7px;border-radius:50%;background:{{ draft.brand_color }};box-shadow:0 0 5px {{ draft.brand_color }};"></span>
+      {{ draft.brand }}
+    </span>
+    {% if draft.word_count > 0 %}
+    <span class="meta-pill">📝 {{ draft.word_count }} 文字</span>
+    {% endif %}
+    <span class="meta-pill">📅 {{ draft.created_at }}</span>
+    <span class="meta-pill">🤖 {{ draft.created_by }}</span>
+    {% if draft.project %}
+    <span class="meta-pill">📌 元ネタ: {{ draft.project.source_platform }}</span>
+    {% endif %}
+  </div>
+
+  {% if draft.meta_description %}
+  <div style="font-size:13px; color:var(--muted2); line-height:1.7; margin-bottom:16px;">
+    <span style="font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-right:8px;">META</span>
+    {{ draft.meta_description }}
+  </div>
+  {% endif %}
+
+  <!-- SEOキーワード -->
+  {% if draft.seo_keywords %}
+  <div>
+    <span style="font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">SEOキーワード</span>
+    <div style="margin-top:8px;">
+      {% for kw in draft.seo_keywords %}
+      <span class="kw-tag">{{ kw }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+
+  <!-- 見出し構成 -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📐 見出し構成</span>
+        {% if draft.outline %}
+        <span style="font-size:11px;color:var(--muted2);">{{ draft.outline|length }} セクション</span>
+        {% endif %}
+      </div>
+      {% if draft.outline %}
+        {% for item in draft.outline %}
+        <div class="outline-item">
+          <div class="outline-h2">H2: {{ item.h2 }}</div>
+          {% if item.h3s %}
+          <div class="outline-h3">
+            {% for h3 in item.h3s %}
+            <div>H3: {{ h3 }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <div style="color:var(--muted); font-size:13px; padding:16px 0; text-align:center;">
+          見出し構成はまだ生成されていません
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 本文プレビュー & 元ネタ -->
+  <div>
+    {% if draft.body_preview %}
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header">
+        <span class="card-title">📝 本文プレビュー</span>
+      </div>
+      <div class="body-preview-box">"{{ draft.body_preview }}"</div>
+    </div>
+    {% endif %}
+
+    <!-- 元ネタ情報 -->
+    {% if draft.project %}
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📌 元ネタ情報</span>
+        <span style="font-size:11px;color:var(--muted2);">{{ draft.project.source_platform }}</span>
+      </div>
+      {% if draft.project.source_caption %}
+      <div style="font-size:12.5px; color:var(--muted2); line-height:1.7; padding:12px; background:rgba(255,255,255,.025); border-radius:8px; border-left:2px solid {{ draft.brand_color }};">
+        {{ draft.project.source_caption }}
+      </div>
+      {% endif %}
+      <div style="display:flex; gap:12px; margin-top:14px; font-size:12px; color:var(--muted2);">
+        <span>エンゲージメントスコア: <strong style="color:var(--text);">{{ draft.project.engagement_score }}</strong></span>
+        <span>ソース: <strong style="color:var(--text);">{{ draft.project.source_platform }}</strong></span>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- まだ本文がない場合の誘導 -->
+    {% if draft.status == 'idea' %}
+    <div style="margin-top:16px; padding:18px; background:rgba(139,92,246,.06); border:1px solid rgba(139,92,246,.2); border-radius:var(--radius-sm); text-align:center;">
+      <div style="font-size:20px; margin-bottom:8px;">🤖</div>
+      <div style="font-size:13px; font-weight:600; margin-bottom:6px;">AI に下書きを生成させる</div>
+      <div style="font-size:11.5px; color:var(--muted2); margin-bottom:14px;">見出し構成をもとに本文の草稿を自動生成します</div>
+      <button class="btn btn-purple btn-sm" onclick="toast('AI生成機能は近日公開予定です', 'info')">下書きを生成する</button>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- アクションフッター -->
+<div class="action-footer">
+  <a href="/blog" class="btn btn-ghost btn-sm">← 一覧に戻る</a>
+  <div style="flex:1;"></div>
+  {% if draft.status == 'draft' %}
+  <button class="btn btn-ghost btn-sm" onclick="toast('保存しました', 'ok')">💾 保存</button>
+  <button class="btn btn-primary btn-sm" onclick="toast('承認申請しました', 'ok')">✓ 承認申請</button>
+  {% elif draft.status == 'idea' %}
+  <button class="btn btn-purple btn-sm" onclick="toast('AI下書き生成機能は近日公開予定です', 'info')">🤖 AI で下書き生成</button>
+  {% endif %}
+</div>
+
+{% endblock %}

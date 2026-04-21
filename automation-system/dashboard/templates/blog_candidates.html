@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Blog Auto Growth — UPJ{% endblock %}
+{% block content %}
+
+<style>
+  .candidate-card {
+    background: linear-gradient(145deg, var(--s1), rgba(10,16,36,.95));
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 22px; margin-bottom: 12px;
+    text-decoration: none; color: var(--text);
+    display: flex; align-items: flex-start; gap: 18px;
+    transition: border-color .2s, transform .18s, box-shadow .2s;
+    position: relative; overflow: hidden;
+  }
+  .candidate-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,.3); }
+  .candidate-card::before {
+    content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+    background: var(--accent); border-radius: 3px 0 0 3px;
+  }
+  .candidate-card.status-draft::before   { background: var(--accent); }
+  .candidate-card.status-idea::before    { background: var(--muted); }
+  .candidate-card.status-published::before { background: var(--green); }
+
+  .score-ring {
+    width: 54px; height: 54px; flex-shrink: 0;
+    border-radius: 50%; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .score-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .score-value { font-size: 15px; font-weight: 800; z-index: 1; }
+
+  .candidate-meta { flex: 1; min-width: 0; }
+  .candidate-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; line-height: 1.4; }
+  .candidate-source {
+    font-size: 11.5px; color: var(--muted2);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .candidate-caption {
+    font-size: 12px; color: var(--muted); line-height: 1.6;
+    background: rgba(255,255,255,.025); border-radius: 8px;
+    padding: 8px 12px; border-left: 2px solid var(--border2);
+    margin-top: 6px;
+  }
+  .candidate-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+
+  .status-badge {
+    font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+  }
+  .status-draft     { background: rgba(99,102,241,.1);  color: var(--accent2); border: 1px solid rgba(99,102,241,.25); }
+  .status-idea      { background: rgba(90,100,144,.1);  color: var(--muted2);  border: 1px solid rgba(90,100,144,.2); }
+  .status-published { background: rgba(16,185,129,.1);  color: var(--green2);  border: 1px solid rgba(16,185,129,.25); }
+
+  .filter-bar {
+    display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border); background: rgba(255,255,255,.03);
+    color: var(--muted2); cursor: pointer; transition: all .15s;
+  }
+  .filter-btn:hover { border-color: var(--border2); color: var(--text); }
+  .filter-btn.active { background: rgba(99,102,241,.1); border-color: rgba(99,102,241,.3); color: var(--accent2); }
+
+  .info-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 4px; }
+
+  .source-pill {
+    font-size: 10px; font-weight: 600; padding: 2px 9px; border-radius: 20px;
+    background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--muted2);
+  }
+</style>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">✒ Blog Auto Growth</div>
+    <div class="page-sub">SNS・MEOの反応が良い投稿から記事候補を自動生成</div>
+  </div>
+  <div class="header-actions">
+    <a href="/performance-snapshot" class="btn btn-ghost btn-sm">◈ アナリティクス</a>
+    <a href="/chief-of-staff" class="btn btn-purple btn-sm">🧠 AI Chief of Staff</a>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+  <div class="stat-card">
+    <div class="stat-label">記事候補</div>
+    <div class="stat-value purple">{{ projects | length }}</div>
+    <div class="stat-meta">SNS・MEO から自動抽出</div>
+  </div>
+  <div class="stat-card green-top">
+    <div class="stat-label">下書きあり</div>
+    <div class="stat-value green">{{ projects | selectattr('status','eq','draft') | list | length }}</div>
+    <div class="stat-meta">AI が骨格生成済み</div>
+  </div>
+  <div class="stat-card yellow-top">
+    <div class="stat-label">アイデア段階</div>
+    <div class="stat-value yellow">{{ projects | selectattr('status','eq','candidate') | list | length + projects | selectattr('status','eq','idea') | list | length }}</div>
+    <div class="stat-meta">執筆待ち候補</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">平均スコア</div>
+    <div class="stat-value blue">{{ (projects | map(attribute='engagement_score') | list | sum / (projects | length)) | int if projects else 0 }}</div>
+    <div class="stat-meta">エンゲージメント換算</div>
+  </div>
+</div>
+
+<!-- フィルタ -->
+<div class="filter-bar">
+  <button class="filter-btn active" onclick="filterCards('all', this)">すべて</button>
+  <button class="filter-btn" onclick="filterCards('draft', this)">下書きあり</button>
+  <button class="filter-btn" onclick="filterCards('idea,candidate', this)">アイデア</button>
+</div>
+
+<!-- 記事候補リスト -->
+<div id="candidate-list">
+  {% for p in projects %}
+  <a href="/blog/{{ p.id }}" class="candidate-card status-{{ p.status }}" data-status="{{ p.status }}">
+
+    <!-- スコアリング -->
+    <div class="score-ring">
+      {% set score = p.engagement_score %}
+      {% set color = '#34d399' if score >= 80 else ('#fbbf24' if score >= 60 else '#6366f1') %}
+      <svg viewBox="0 0 54 54" fill="none">
+        <circle cx="27" cy="27" r="23" stroke="rgba(255,255,255,.07)" stroke-width="4"/>
+        <circle cx="27" cy="27" r="23" stroke="{{ color }}" stroke-width="4"
+          stroke-dasharray="{{ (score / 100 * 144.5) | round(1) }} 144.5"
+          stroke-linecap="round"/>
+      </svg>
+      <span class="score-value" style="color:{{ color }}">{{ score }}</span>
+    </div>
+
+    <!-- メタ情報 -->
+    <div class="candidate-meta">
+      <div class="info-row">
+        <span style="width:8px;height:8px;border-radius:50%;background:{{ p.brand_color }};box-shadow:0 0 6px {{ p.brand_color }};flex-shrink:0;display:inline-block;"></span>
+        <span style="font-size:11.5px;font-weight:700;color:{{ p.brand_color }}">{{ p.brand }}</span>
+        <span class="source-pill">{{ p.source_platform }}</span>
+        <span class="status-badge status-{{ p.status }}">
+          {% if p.status == 'draft' %}下書き{% elif p.status == 'candidate' %}候補{% else %}アイデア{% endif %}
+        </span>
+        <span style="font-size:10.5px;color:var(--muted);margin-left:auto;">{{ p.created_at }}</span>
+      </div>
+      <div class="candidate-title">{{ p.title }}</div>
+      {% if p.source_caption %}
+      <div class="candidate-caption">{{ p.source_caption[:120] }}{% if p.source_caption|length > 120 %}…{% endif %}</div>
+      {% endif %}
+    </div>
+
+    <!-- アクション -->
+    <div class="candidate-actions" onclick="event.preventDefault()">
+      {% if p.status == 'draft' %}
+      <a href="/blog/{{ p.id }}" class="btn btn-primary btn-sm">下書きを見る</a>
+      {% else %}
+      <a href="/blog/{{ p.id }}" class="btn btn-ghost btn-sm">詳細</a>
+      {% endif %}
+    </div>
+
+  </a>
+  {% endfor %}
+
+  {% if not projects %}
+  <div style="text-align:center; padding:60px 20px; color:var(--muted);">
+    <div style="font-size:36px; margin-bottom:14px;">✒</div>
+    <div style="font-size:14px; font-weight:600;">記事候補がまだありません</div>
+    <div style="font-size:12px; margin-top:8px;">SNS投稿のエンゲージメントデータが蓄積されると自動的に候補が生成されます</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- blog → Chief of Staff リンク -->
+<div style="margin-top:32px; padding:20px 24px; background:linear-gradient(135deg, rgba(139,92,246,.08), rgba(99,102,241,.05)); border:1px solid rgba(139,92,246,.2); border-radius:var(--radius); display:flex; align-items:center; gap:16px;">
+  <div style="font-size:28px;">🧠</div>
+  <div style="flex:1;">
+    <div style="font-size:14px; font-weight:700; margin-bottom:3px;">AI Chief of Staff で全社サマリーを確認</div>
+    <div style="font-size:12px; color:var(--muted2);">ブログ候補・異常検知・ブランド別おすすめアクションを一画面で確認できます</div>
+  </div>
+  <a href="/chief-of-staff" class="btn btn-purple btn-sm">開く</a>
+</div>
+
+<script>
+function filterCards(statuses, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const list = statuses === 'all' ? [] : statuses.split(',');
+  document.querySelectorAll('.candidate-card').forEach(card => {
+    if (list.length === 0 || list.includes(card.dataset.status)) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+</script>
+{% endblock %}

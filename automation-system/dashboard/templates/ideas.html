@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}コンテンツアイデア — Campaign Pipeline{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">💡 コンテンツアイデア</div>
+    <div class="page-sub">ブランド変換済みのアイデアと媒体バリアントを管理する</div>
+  </div>
+  <div class="header-actions">
+    <a href="/noimos" class="btn btn-ghost btn-sm">🧠 元ネタ登録</a>
+    <a href="/publishing" class="btn btn-primary btn-sm">📤 承認キュー {% if stats.pending_approvals %}<span style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:8px;font-size:10px;">{{ stats.pending_approvals }}</span>{% endif %}</a>
+  </div>
+</div>
+
+<!-- Filter -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+  <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px;">状態</span>
+  {% for s, label in [('','すべて'),('draft','下書き'),('approved','承認済み'),('rejected','却下')] %}
+  <a href="/ideas?status={{ s }}&brand={{ brand_filter }}&campaign_id={{ campaign_filter }}" class="platform-pill {{ 'active' if status_filter == s else '' }}">{{ label }}</a>
+  {% endfor %}
+
+  <div style="margin-left:auto;display:flex;gap:6px;">
+    <select class="form-select" style="width:auto;font-size:12px;padding:6px 10px;" onchange="location.href='/ideas?brand='+this.value+'&status={{ status_filter }}'">
+      <option value="">すべてのブランド</option>
+      {% for bid, b in brands.items() %}
+      <option value="{{ bid }}" {{ 'selected' if brand_filter==bid else '' }}>{{ b.name_short }}</option>
+      {% endfor %}
+    </select>
+    <select class="form-select" style="width:auto;font-size:12px;padding:6px 10px;" onchange="location.href='/ideas?campaign_id='+this.value+'&status={{ status_filter }}&brand={{ brand_filter }}'">
+      <option value="0">すべてのキャンペーン</option>
+      {% for c in campaigns %}
+      <option value="{{ c.id }}" {{ 'selected' if campaign_filter==c.id else '' }}>{{ c.title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+{% if ideas %}
+<div style="display:grid;gap:11px;">
+  {% for idea in ideas %}
+  <div class="card" style="padding:16px 20px;">
+    <div style="display:flex;align-items:flex-start;gap:14px;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap;">
+          <a href="/ideas/{{ idea.id }}" style="font-size:14.5px;font-weight:700;color:var(--text);text-decoration:none;">{{ idea.title }}</a>
+          {% if idea.status == 'approved' %}<span class="badge badge-ok">承認済み</span>
+          {% elif idea.status == 'rejected' %}<span class="badge badge-lost">却下</span>
+          {% else %}<span class="badge badge-l1">下書き</span>{% endif %}
+          {% set brand_info = brands.get(idea.brand, {}) %}
+          <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:{{ brand_info.color or 'var(--muted2)' }};">{{ brand_info.name_short or idea.brand }}</span>
+        </div>
+        {% if idea.hook %}
+        <div style="font-size:12.5px;color:var(--muted2);margin-bottom:7px;line-height:1.5;">
+          <span style="color:var(--accent2);font-weight:600;font-size:11px;">HOOK</span> {{ idea.hook[:120] }}{% if idea.hook|length > 120 %}…{% endif %}
+        </div>
+        {% endif %}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          {% for fmt in idea.target_formats %}
+          <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.15);color:var(--accent2);">{{ format_icons.get(fmt,'·') }} {{ fmt }}</span>
+          {% endfor %}
+          <span style="margin-left:auto;font-size:11px;color:var(--muted);">{{ idea.created_at[:10] }}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <a href="/ideas/{{ idea.id }}" class="btn btn-ghost btn-sm">詳細</a>
+        {% if idea.status == 'draft' %}
+        <form method="POST" action="/ideas/{{ idea.id }}/approve" style="display:inline;">
+          <button type="submit" class="btn btn-green btn-sm">承認</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:60px 24px;">
+  <div style="font-size:36px;margin-bottom:14px;">💡</div>
+  <div style="font-size:15px;font-weight:600;margin-bottom:8px;">アイデアがありません</div>
+  <div style="font-size:13px;color:var(--muted2);margin-bottom:22px;">元ネタを登録して構造を抽出し、ブランド変換するとここに現れます</div>
+  <a href="/noimos/new" class="btn btn-primary">🧠 元ネタを登録する</a>
+</div>
+{% endif %}
+
+{% endblock %}

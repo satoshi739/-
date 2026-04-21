@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}監査ログ — Brand OS{% endblock %}
+{% block content %}
+
+<style>
+  .filter-bar { display:flex; gap:10px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+  .filter-input { background:var(--s2); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:7px 12px; color:var(--text); font-size:13px; font-family:inherit; outline:none; }
+  .filter-input:focus { border-color:var(--accent); }
+  .log-action { font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:20px; white-space:nowrap; }
+  .log-action.ok  { background:rgba(16,185,129,.1);color:var(--green2);border:1px solid rgba(16,185,129,.2); }
+  .log-action.err { background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2); }
+  .log-action.info{ background:rgba(99,102,241,.1);color:var(--accent2);border:1px solid rgba(99,102,241,.2); }
+  .log-resource { font-size:11px; color:var(--muted2); background:var(--s3); padding:2px 8px; border-radius:6px; }
+  .log-detail { font-size:11.5px; color:var(--muted); font-family:'Courier New',monospace;
+    max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pagination { display:flex; gap:8px; align-items:center; margin-top:20px; justify-content:center; }
+  .page-btn { padding:6px 14px; border-radius:8px; border:1px solid var(--border);
+    background:var(--s2); color:var(--muted2); font-size:12px; cursor:pointer; text-decoration:none;
+    transition:all .15s; }
+  .page-btn:hover { background:var(--s3); color:var(--text); }
+  .page-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty-state .empty-icon { font-size:48px; margin-bottom:16px; opacity:.4; }
+  .empty-state .empty-title { font-size:17px; font-weight:600; color:var(--muted2); margin-bottom:8px; }
+  .empty-state .empty-body  { font-size:13px; line-height:1.6; }
+</style>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">🗂 監査ログ</div>
+    <div class="page-sub">全操作の記録。誰が・何を・いつ行ったかを追跡します</div>
+  </div>
+  <div class="header-actions">
+    <span class="live-dot">リアルタイム</span>
+    <span style="font-size:12px;color:var(--muted);">全 {{ total }} 件</span>
+  </div>
+</div>
+
+<!-- フィルター -->
+<form method="get" action="/audit-logs" class="filter-bar">
+  <input class="filter-input" name="resource" placeholder="リソース (例: lead)" value="{{ resource }}">
+  <input class="filter-input" name="action"   placeholder="アクション (例: create)" value="{{ action }}">
+  <button type="submit" class="btn btn-ghost btn-sm">絞り込む</button>
+  {% if resource or action %}
+  <a href="/audit-logs" class="btn btn-ghost btn-sm">クリア</a>
+  {% endif %}
+</form>
+
+<div class="card" style="padding:0;">
+  {% if logs %}
+  <table>
+    <thead>
+      <tr>
+        <th>日時</th>
+        <th>ユーザー</th>
+        <th>アクション</th>
+        <th>リソース</th>
+        <th>詳細</th>
+        <th>状態</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for l in logs %}
+      <tr>
+        <td style="font-size:11.5px;color:var(--muted2);white-space:nowrap;">
+          {{ l.created_at[:16] }}
+        </td>
+        <td>
+          <div style="font-size:13px;font-weight:500;">{{ l.user_name or '—' }}</div>
+          {% if l.user_id %}
+          <div style="font-size:10px;color:var(--muted);">{{ l.user_id[:12] }}…</div>
+          {% endif %}
+        </td>
+        <td>
+          <span class="log-action {{ 'err' if l.status=='error' else ('info' if 'view' in (l.action or '') or 'list' in (l.action or '') else 'ok') }}">
+            {{ l.action }}
+          </span>
+        </td>
+        <td>
+          {% if l.resource %}
+          <span class="log-resource">{{ l.resource }}</span>
+          {% if l.resource_id %}
+          <span style="font-size:10px;color:var(--muted);margin-left:4px;">{{ l.resource_id[:12] }}</span>
+          {% endif %}
+          {% else %}
+          <span style="color:var(--muted);">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if l.detail %}
+          <span class="log-detail" title="{{ l.detail }}">{{ l.detail | tojson if l.detail is mapping else l.detail }}</span>
+          {% else %}
+          <span style="color:var(--muted);">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if l.status == 'ok' %}
+          <span class="badge badge-ok">OK</span>
+          {% elif l.status == 'error' %}
+          <span class="badge badge-lost">ERROR</span>
+          {% else %}
+          <span class="badge badge-warn">{{ l.status }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🗂</div>
+    <div class="empty-title">監査ログがありません</div>
+    <div class="empty-body">
+      操作が記録されると、ここに表示されます。<br>
+      フィルターを使って特定のリソースやアクションを検索できます。
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ページネーション -->
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+  <a href="?page={{ page-1 }}&resource={{ resource }}&action={{ action }}" class="page-btn">← 前へ</a>
+  {% endif %}
+  {% for p in range([1, page-2]|max, [total_pages+1, page+3]|min) %}
+  <a href="?page={{ p }}&resource={{ resource }}&action={{ action }}"
+     class="page-btn {{ 'active' if p==page else '' }}">{{ p }}</a>
+  {% endfor %}
+  {% if page < total_pages %}
+  <a href="?page={{ page+1 }}&resource={{ resource }}&action={{ action }}" class="page-btn">次へ →</a>
+  {% endif %}
+  <span style="font-size:12px;color:var(--muted);">{{ page }} / {{ total_pages }} ページ</span>
+</div>
+{% endif %}
+
+{% endblock %}

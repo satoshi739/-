@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}{% if is_new %}テンプレート新規作成{% else %}{{ template.name }}{% endif %} — Story Autopilot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-title">{% if is_new %}＋ テンプレート作成{% else %}⚙️ {{ template.name }}{% endif %}</div>
+    <div class="page-sub">
+      {% if is_new %}Story Autopilot テンプレートを新規作成します{% else %}テンプレートの設定を編集します{% endif %}
+    </div>
+  </div>
+  <div class="header-actions">
+    <a href="/story-autopilot/templates" class="btn btn-ghost btn-sm">← テンプレート一覧</a>
+  </div>
+</div>
+
+<div style="max-width:680px;">
+  <form method="post" id="tmpl-form">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="margin-bottom:18px;">基本設定</div>
+
+      <div class="form-group">
+        <label class="form-label">ブランド <span style="color:var(--red)">*</span></label>
+        <select class="form-select" name="brand" required>
+          {% for bid, b in brands.items() %}
+          <option value="{{ bid }}" {{ 'selected' if template and template.brand==bid else '' }}>
+            {{ b.name_short }} ({{ bid }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">テンプレート名 <span style="color:var(--red)">*</span></label>
+        <input type="text" class="form-input" name="name" required
+               placeholder="例: DSc 月〜金 プロモ"
+               value="{{ template.name if template else '' }}">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">説明</label>
+        <input type="text" class="form-input" name="description"
+               placeholder="例: 採用支援の告知を平日に自動投稿"
+               value="{{ template.description if template else '' }}">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">ストーリータイプ</label>
+          <select class="form-select" name="story_type">
+            {% for val, label in [('promotion','📣 プロモーション'),('info','💡 情報・豆知識'),('poll','🗳️ アンケート'),('event','🎉 イベント'),('behind','🎥 舞台裏')] %}
+            <option value="{{ val }}" {{ 'selected' if template and template.story_type==val else '' }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">フレーム枚数</label>
+          <select class="form-select" name="frame_count">
+            {% for n in [1, 2, 3, 4, 5] %}
+            <option value="{{ n }}" {{ 'selected' if template and template.frame_count==n else ('selected' if n==3 and not template else '') }}>{{ n }} 枚</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">トピックプロンプト</label>
+        <textarea class="form-input" name="topic_prompt" rows="3"
+                  placeholder="AIに渡すプロンプト（省略可）。例: 今週のDSc採用支援のハイライトをストーリー3枚で告知してください。" style="resize:vertical;">{{ template.topic_prompt if template else '' }}</textarea>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">空欄の場合、候補生成時に手動でトピックを指定します</div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">アクティブ</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" name="is_active" value="1"
+                 {{ 'checked' if (is_new or (template and template.is_active)) else '' }}
+                 style="width:16px;height:16px;accent-color:var(--accent);">
+          <span style="font-size:13px;color:var(--text);">このテンプレートをスケジュール対象にする</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="margin-bottom:18px;">実行ルール</div>
+
+      <!-- 実行モード -->
+      <div class="form-group">
+        <label class="form-label">実行モード <span style="color:var(--red)">*</span></label>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          {% for val, icon, label, desc in [
+            ('full_auto',               '🤖', '全自動 (full_auto)',               '生成後、自動で公開します'),
+            ('semi_auto',               '⚡', 'セミ自動 (semi_auto)',             '生成後、承認待ちに入ります'),
+            ('human_approval_required', '👤', '要承認 (human_approval_required)', '毎回、人間の承認が必要です'),
+          ] %}
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--s2);transition:border-color .15s;"
+                 onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+            <input type="radio" name="run_mode" value="{{ val }}"
+                   {{ 'checked' if (template and template.run_mode==val) or (is_new and val=='semi_auto') else '' }}
+                   style="margin-top:3px;accent-color:var(--accent);">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text);">{{ icon }} {{ label }}</div>
+              <div style="font-size:11px;color:var(--muted2);margin-top:2px;">{{ desc }}</div>
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- 実行時刻 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">実行時刻</label>
+          <input type="time" class="form-input" name="run_time"
+                 value="{{ template.run_time if template else '09:00' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">素材ソース</label>
+          <select class="form-select" name="asset_source">
+            {% for val, label in [('asset_brain','Asset Brain（推奨）'),('custom','手動指定'),('none','なし')] %}
+            <option value="{{ val }}" {{ 'selected' if template and template.asset_source==val else '' }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- 曜日設定 -->
+      <div class="form-group">
+        <label class="form-label">実行曜日</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          {% for val, label in [('mon','月'),('tue','火'),('wed','水'),('thu','木'),('fri','金'),('sat','土'),('sun','日')] %}
+          <label class="day-toggle {{ 'active' if is_new or (template and val in template.active_days) else '' }}"
+                 data-day="{{ val }}">
+            <input type="checkbox" name="active_days" value="{{ val }}"
+                   {{ 'checked' if is_new or (template and val in template.active_days) else '' }}>
+            {{ label }}
+          </label>
+          {% endfor %}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="selectDays(['mon','tue','wed','thu','fri'])">平日</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="selectDays(['sat','sun'])">週末</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="selectDays(['mon','tue','wed','thu','fri','sat','sun'])">毎日</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="selectDays([])">クリア</button>
+        </div>
+      </div>
+
+      <!-- Asset タグ -->
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Asset Brain タグ（カンマ区切り）</label>
+        <input type="text" class="form-input" name="asset_tags"
+               placeholder="例: 採用, HR, DSc"
+               value="{{ template.asset_tags | join(', ') if template and template.asset_tags else '' }}">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">指定タグのアセットを候補生成時に Asset Brain から自動取得します</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button type="submit" class="btn btn-accent" style="flex:1;">
+        {% if is_new %}✅ テンプレートを作成{% else %}💾 変更を保存{% endif %}
+      </button>
+      <a href="/story-autopilot/templates" class="btn btn-ghost">キャンセル</a>
+    </div>
+  </form>
+</div>
+
+<style>
+.form-group { margin-bottom:16px; }
+.form-label { display:block;font-size:12px;font-weight:600;color:var(--muted2);margin-bottom:6px;letter-spacing:.3px; }
+.form-input, .form-select {
+  width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-size:13px;padding:9px 12px;outline:none;font-family:inherit;
+  transition:border-color .15s;
+}
+.form-input:focus, .form-select:focus { border-color:var(--border2); }
+textarea.form-input { resize:vertical; }
+
+.day-toggle {
+  display:flex;align-items:center;justify-content:center;
+  width:40px;height:40px;border-radius:10px;cursor:pointer;
+  font-size:13px;font-weight:600;user-select:none;
+  border:1px solid var(--border);color:var(--muted);
+  background:var(--s3);transition:all .15s;
+}
+.day-toggle input { display:none; }
+.day-toggle.active {
+  background:var(--accent);border-color:var(--accent);
+  color:#fff;box-shadow:0 0 12px rgba(99,102,241,.4);
+}
+</style>
+
+<script>
+// 曜日トグル
+document.querySelectorAll('.day-toggle').forEach(el => {
+  el.addEventListener('click', () => {
+    el.classList.toggle('active');
+    el.querySelector('input').checked = el.classList.contains('active');
+  });
+});
+
+function selectDays(days) {
+  document.querySelectorAll('.day-toggle').forEach(el => {
+    const day = el.dataset.day;
+    const active = days.includes(day);
+    el.classList.toggle('active', active);
+    el.querySelector('input').checked = active;
+  });
+}
+</script>
+{% endblock %}

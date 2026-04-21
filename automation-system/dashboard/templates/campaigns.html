@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Campaign Pipeline{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">🎯 Campaign Pipeline</div>
+    <div class="page-sub">企画をキャンペーン単位で束ねて、承認〜公開まで管理する</div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="toggleSection('new-camp-form')">＋ キャンペーン作成</button>
+  </div>
+</div>
+
+<!-- Stats bar -->
+<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:20px;">
+  <div class="stat-card green-top">
+    <div class="stat-label">稼働中</div>
+    <div class="stat-value green">{{ stats.campaigns_active }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">アイデア総数</div>
+    <div class="stat-value blue">{{ stats.ideas_total }}</div>
+    <div class="stat-meta">{{ stats.ideas_approved }} 件承認済み</div>
+  </div>
+  <div class="stat-card red-top">
+    <div class="stat-label">承認待ち</div>
+    <div class="stat-value red">{{ stats.pending_approvals }}</div>
+    <div class="stat-meta"><a href="/publishing" style="color:var(--red);">承認キューへ</a></div>
+  </div>
+</div>
+
+<!-- New campaign form (collapsed) -->
+<div id="new-camp-form" style="display:none;margin-bottom:20px;">
+  <div class="card" style="border-color:rgba(99,102,241,.3);">
+    <div class="card-header"><span class="card-title">新規キャンペーン</span></div>
+    <form method="POST" action="/campaigns/new">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label class="form-label">タイトル <span style="color:var(--red);">*</span></label>
+          <input class="form-input" name="title" required placeholder="例: 2026春 DSc SNSキャンペーン">
+        </div>
+        <div>
+          <label class="form-label">ブランド</label>
+          <select class="form-select" name="brand">
+            <option value="">選択...</option>
+            {% for bid, b in brands.items() %}
+            <option value="{{ bid }}">{{ b.name_short }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">目的</label>
+          <select class="form-select" name="objective">
+            <option value="">選択...</option>
+            <option value="awareness">認知拡大</option>
+            <option value="engagement">エンゲージメント</option>
+            <option value="conversion">コンバージョン</option>
+            <option value="retention">リテンション</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label class="form-label">開始日</label>
+          <input class="form-input" name="start_date" type="date">
+        </div>
+        <div>
+          <label class="form-label">終了日</label>
+          <input class="form-input" name="end_date" type="date">
+        </div>
+        <div>
+          <label class="form-label">メモ</label>
+          <input class="form-input" name="notes" placeholder="目標、背景など">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="btn btn-primary">作成する</button>
+        <button type="button" class="btn btn-ghost" onclick="toggleSection('new-camp-form')">キャンセル</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Filter -->
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+  {% for s, label in [('','すべて'),('planning','計画中'),('active','稼働中'),('paused','一時停止'),('completed','完了')] %}
+  <a href="/campaigns?status={{ s }}&brand={{ brand_filter }}" class="platform-pill {{ 'active' if status_filter==s else '' }}">{{ label }}</a>
+  {% endfor %}
+  <div style="margin-left:auto;">
+    <select class="form-select" style="width:auto;font-size:12px;padding:6px 10px;" onchange="location.href='/campaigns?brand='+this.value+'&status={{ status_filter }}'">
+      <option value="">すべてのブランド</option>
+      {% for bid, b in brands.items() %}
+      <option value="{{ bid }}" {{ 'selected' if brand_filter==bid else '' }}>{{ b.name_short }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+{% if campaigns %}
+<div style="display:grid;gap:12px;">
+  {% for c in campaigns %}
+  {% set brand_info = brands.get(c.brand, {}) %}
+  <div class="card" style="padding:18px 22px;border-left:3px solid {{ brand_info.color or 'var(--border)' }};">
+    <div style="display:flex;align-items:flex-start;gap:14px;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+          <a href="/campaigns/{{ c.id }}" style="font-size:15px;font-weight:700;color:var(--text);text-decoration:none;">{{ c.title }}</a>
+          {% if c.status == 'active' %}<span class="badge badge-ok">稼働中</span>
+          {% elif c.status == 'paused' %}<span class="badge badge-warn">停止中</span>
+          {% elif c.status == 'completed' %}<span class="badge badge-l1">完了</span>
+          {% else %}<span class="badge badge-l1">計画中</span>{% endif %}
+          {% if brand_info %}<span style="font-size:10px;color:{{ brand_info.color or 'var(--muted2)' }};">{{ brand_info.name_short }}</span>{% endif %}
+          {% if c.objective %}<span style="font-size:10px;color:var(--muted);padding:2px 7px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--border);">{{ c.objective }}</span>{% endif %}
+        </div>
+
+        <div style="display:flex;gap:16px;font-size:11.5px;color:var(--muted2);margin-bottom:8px;">
+          {% if c.start_date %}<span>📅 {{ c.start_date }} {% if c.end_date %}〜 {{ c.end_date }}{% endif %}</span>{% endif %}
+          <span>💡 アイデア {{ c.ideas|length }} 件</span>
+        </div>
+
+        <!-- Idea mini-list -->
+        {% if c.ideas %}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          {% for idea in c.ideas[:5] %}
+          <a href="/ideas/{{ idea.id }}" style="font-size:11px;padding:3px 9px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted2);text-decoration:none;transition:all .15s;" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted2)'">
+            {% if idea.status == 'approved' %}✓ {% endif %}{{ idea.title[:30] }}{% if idea.title|length > 30 %}…{% endif %}
+          </a>
+          {% endfor %}
+          {% if c.ideas|length > 5 %}<span style="font-size:11px;color:var(--muted);padding:3px 9px;">+{{ c.ideas|length - 5 }} 件</span>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <a href="/campaigns/{{ c.id }}" class="btn btn-ghost btn-sm" style="flex-shrink:0;">詳細</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:60px 24px;">
+  <div style="font-size:36px;margin-bottom:14px;">🎯</div>
+  <div style="font-size:15px;font-weight:600;margin-bottom:8px;">キャンペーンがありません</div>
+  <div style="font-size:13px;color:var(--muted2);margin-bottom:22px;">キャンペーンを作成してアイデアを束ねましょう</div>
+  <button class="btn btn-primary" onclick="toggleSection('new-camp-form')">＋ キャンペーンを作成する</button>
+</div>
+{% endif %}
+
+<script>
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el.style.display === 'block') el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+</script>
+{% endblock %}

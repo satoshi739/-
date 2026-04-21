@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}ブランド変換 — {{ pattern.title }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">🔄 ブランド変換</div>
+    <div class="page-sub">元ネタ: <strong>{{ pattern.title }}</strong></div>
+  </div>
+  <div class="header-actions">
+    <a href="/noimos/{{ pattern.id }}" class="btn btn-ghost btn-sm">← 元ネタ詳細</a>
+  </div>
+</div>
+
+<!-- 元ネタ構造サマリー -->
+<div class="card" style="margin-bottom:20px;background:rgba(99,102,241,.04);border-color:rgba(99,102,241,.2);">
+  <div class="card-header"><span class="card-title" style="color:var(--accent2);">📌 抽出済み構造</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div>
+      {% if pattern.hook %}
+      <div style="margin-bottom:12px;">
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">🎣 Hook</div>
+        <div style="font-size:12.5px;color:var(--text);line-height:1.6;">{{ pattern.hook }}</div>
+      </div>
+      {% endif %}
+      {% if pattern.problem_framing %}
+      <div style="margin-bottom:12px;">
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">⚡ Problem Framing</div>
+        <div style="font-size:12.5px;color:var(--text);line-height:1.6;">{{ pattern.problem_framing }}</div>
+      </div>
+      {% endif %}
+    </div>
+    <div>
+      {% if pattern.emotional_arc %}
+      <div style="margin-bottom:12px;">
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">🌊 Emotional Arc</div>
+        <div style="font-size:12.5px;color:var(--text);line-height:1.6;">{{ pattern.emotional_arc }}</div>
+      </div>
+      {% endif %}
+      {% if pattern.cta %}
+      <div style="margin-bottom:12px;">
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">📣 CTA</div>
+        <div style="font-size:12.5px;color:var(--text);">{{ pattern.cta }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% if pattern.risk_flags %}
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+    {% for flag in pattern.risk_flags %}
+    <span style="font-size:10.5px;padding:3px 9px;border-radius:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);">⚠ {{ flag }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<form method="POST" action="/noimos/{{ pattern.id }}/convert">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <!-- Left: ブランド設定 -->
+    <div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">ブランド設定</span></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">ブランド <span style="color:var(--red);">*</span></label>
+            <select class="form-select" name="brand" required>
+              <option value="">選択...</option>
+              {% for bid, b in brands.items() %}
+              <option value="{{ bid }}">{{ b.name_short }} — {{ b.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">キャンペーンに紐付け</label>
+            <select class="form-select" name="campaign_id">
+              <option value="">なし</option>
+              {% for c in campaigns %}
+              <option value="{{ c.id }}">{{ c.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">アイデアタイトル <span style="color:var(--red);">*</span></label>
+          <input class="form-input" name="title" required placeholder="このブランド版の企画タイトル">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">🎣 Hook（ブランド向けに書き換え）</label>
+          <textarea class="form-textarea" name="hook" rows="3" placeholder="元ネタの引きを、このブランドの言葉で再現する...">{{ pattern.hook or '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">📝 本文 / ストーリー構成</label>
+          <textarea class="form-textarea" name="body" rows="5" placeholder="Problem → Solution → Proof → CTA の流れで組み立てる..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">📣 CTA（ブランド向け）</label>
+          <input class="form-input" name="cta" value="{{ pattern.cta or '' }}" placeholder="保存してね / プロフへ / DM送って など">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">トーン</label>
+            <select class="form-select" name="tone">
+              <option value="">デフォルト</option>
+              <option value="親しみやすい">親しみやすい</option>
+              <option value="プロフェッショナル">プロフェッショナル</option>
+              <option value="エモーショナル">エモーショナル</option>
+              <option value="ユーモア">ユーモア</option>
+              <option value="教育的">教育的</option>
+              <option value="煽り">煽り</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">メモ</label>
+            <input class="form-input" name="notes" placeholder="特記事項...">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: 媒体変換 -->
+    <div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">対象媒体を選択</span></div>
+        <div style="font-size:12px;color:var(--muted2);margin-bottom:14px;">チェックした媒体ごとにバリアントの雛形が自動生成されます</div>
+
+        {% for fmt in formats %}
+        <div class="fmt-block" id="block-{{ fmt }}" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;transition:all .15s;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:0;">
+            <input type="checkbox" name="target_formats" value="{{ fmt }}" id="fmt-{{ fmt }}" onchange="toggleFmtBlock('{{ fmt }}')">
+            <span style="font-size:14px;">{{ format_icons.get(fmt, '·') }}</span>
+            <span style="font-size:13.5px;font-weight:600;color:var(--text);">{{ fmt }}</span>
+            {% if fmt == 'reel' %}<span style="font-size:10px;color:var(--muted);margin-left:auto;">15〜90秒</span>{% endif %}
+            {% if fmt == 'story' %}<span style="font-size:10px;color:var(--muted);margin-left:auto;">縦型 9:16</span>{% endif %}
+            {% if fmt == 'meo' %}<span style="font-size:10px;color:var(--muted);margin-left:auto;">Google ビジネス</span>{% endif %}
+          </label>
+          <!-- Optional per-format caption -->
+          <div class="fmt-extra-{{ fmt }}" style="display:none;margin-top:10px;">
+            <label class="form-label" style="font-size:10.5px;">キャプション草稿（任意）</label>
+            <textarea class="form-textarea" name="caption_{{ fmt }}" rows="2" placeholder="{{ fmt }} 用キャプション..."></textarea>
+            {% if fmt in ['feed','story','reel'] %}
+            <label class="form-label" style="font-size:10.5px;margin-top:6px;">ハッシュタグ（任意）</label>
+            <input class="form-input" name="hashtags_{{ fmt }}" placeholder="#タグ1 #タグ2 ...">
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:4px;">
+        <a href="/noimos/{{ pattern.id }}" class="btn btn-ghost">キャンセル</a>
+        <button type="submit" class="btn btn-green">アイデア作成 →</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+function toggleFmtBlock(fmt) {
+  const cb    = document.getElementById('fmt-' + fmt);
+  const block = document.getElementById('block-' + fmt);
+  const extra = document.querySelector('.fmt-extra-' + fmt);
+  if (cb.checked) {
+    block.style.borderColor = 'rgba(99,102,241,.4)';
+    block.style.background  = 'rgba(99,102,241,.05)';
+    if (extra) extra.style.display = 'block';
+  } else {
+    block.style.borderColor = 'var(--border)';
+    block.style.background  = '';
+    if (extra) extra.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}

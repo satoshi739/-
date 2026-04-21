@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}NoiMos AI — 元ネタアーカイブ{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">🧠 NoiMos AI <span style="font-size:13px;font-weight:400;color:var(--muted2);margin-left:8px;">元ネタアーカイブ</span></div>
+    <div class="page-sub">バズった投稿の構造を抽出し、自社ブランドへ移植する</div>
+  </div>
+  <div class="header-actions">
+    <a href="/noimos/new" class="btn btn-primary">＋ 元ネタ登録</a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="stat-label">元ネタ総数</div>
+    <div class="stat-value blue">{{ stats.patterns_total }}</div>
+    <div class="stat-meta">{{ stats.patterns_extracted }} 件抽出済み</div>
+  </div>
+  <div class="stat-card green-top">
+    <div class="stat-label">アイデア</div>
+    <div class="stat-value green">{{ stats.ideas_total }}</div>
+    <div class="stat-meta">{{ stats.ideas_approved }} 件承認済み</div>
+  </div>
+  <div class="stat-card yellow-top">
+    <div class="stat-label">バリアント</div>
+    <div class="stat-value yellow">{{ stats.variants_total }}</div>
+    <div class="stat-meta">媒体変換済み</div>
+  </div>
+  <div class="stat-card red-top">
+    <div class="stat-label">承認待ち</div>
+    <div class="stat-value red">{{ stats.pending_approvals }}</div>
+    <div class="stat-meta"><a href="/publishing" style="color:var(--red);">承認キューへ →</a></div>
+  </div>
+  <div class="stat-card" style="border-color:rgba(139,92,246,.2);">
+    <div class="stat-label">キャンペーン</div>
+    <div class="stat-value purple">{{ stats.campaigns_active }}</div>
+    <div class="stat-meta">稼働中</div>
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div style="display:flex;gap:9px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+  <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px;">フィルター</span>
+  {% for s, label in [('','すべて'),('draft','下書き'),('extracted','抽出済み'),('active','使用中')] %}
+  <a href="/noimos?status={{ s }}" class="platform-pill {{ 'active' if status_filter == s else '' }}">{{ label }}</a>
+  {% endfor %}
+  <div style="margin-left:auto;">
+    <a href="/campaigns" class="btn btn-ghost btn-sm">🎯 キャンペーン</a>
+    <a href="/ideas" class="btn btn-ghost btn-sm">💡 アイデア一覧</a>
+    <a href="/publishing" class="btn btn-ghost btn-sm">📤 承認キュー</a>
+  </div>
+</div>
+
+<!-- Pattern list -->
+{% if patterns %}
+<div style="display:grid;gap:12px;">
+  {% for p in patterns %}
+  <div class="card" style="padding:18px 22px;">
+    <div style="display:flex;align-items:flex-start;gap:16px;">
+      <!-- Status dot -->
+      <div style="flex-shrink:0;margin-top:3px;">
+        {% if p.status == 'extracted' %}
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green2);box-shadow:0 0 6px var(--green2);"></span>
+        {% elif p.status == 'active' %}
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent2);box-shadow:0 0 6px var(--accent2);"></span>
+        {% else %}
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);"></span>
+        {% endif %}
+      </div>
+
+      <!-- Main content -->
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+          <a href="/noimos/{{ p.id }}" style="font-size:15px;font-weight:700;color:var(--text);text-decoration:none;">
+            {{ p.title }}
+          </a>
+          <span class="badge badge-l1" style="font-size:9.5px;">{{ p.source_type or 'unknown' }}</span>
+          {% if p.status == 'extracted' %}
+          <span class="badge badge-ok" style="font-size:9.5px;">抽出済み</span>
+          {% elif p.status == 'draft' %}
+          <span class="badge badge-l1" style="font-size:9.5px;">下書き</span>
+          {% endif %}
+        </div>
+
+        {% if p.hook %}
+        <div style="font-size:12.5px;color:var(--muted2);margin-bottom:8px;line-height:1.5;">
+          <span style="color:var(--accent2);font-weight:600;">HOOK: </span>{{ p.hook[:120] }}{% if p.hook|length > 120 %}…{% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Format pills -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+          {% for fmt in p.format_suitability %}
+          <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.18);color:var(--accent2);">
+            {{ format_icons.get(fmt, '·') }} {{ fmt }}
+          </span>
+          {% endfor %}
+          {% for flag in p.risk_flags %}
+          <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);color:var(--red);">
+            ⚠ {{ flag }}
+          </span>
+          {% endfor %}
+        </div>
+
+        <!-- Metrics -->
+        <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);">
+          {% if p.metrics_likes %}<span>❤ {{ '{:,}'.format(p.metrics_likes) }}</span>{% endif %}
+          {% if p.metrics_saves %}<span>🔖 {{ '{:,}'.format(p.metrics_saves) }}</span>{% endif %}
+          {% if p.metrics_comments %}<span>💬 {{ '{:,}'.format(p.metrics_comments) }}</span>{% endif %}
+          {% if p.metrics_views %}<span>▶ {{ '{:,}'.format(p.metrics_views) }}</span>{% endif %}
+          <span style="margin-left:auto;">{{ p.created_at[:10] }}</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:7px;flex-shrink:0;">
+        <a href="/noimos/{{ p.id }}" class="btn btn-ghost btn-sm">詳細</a>
+        {% if p.status == 'extracted' %}
+        <a href="/noimos/{{ p.id }}/convert" class="btn btn-primary btn-sm">変換 →</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:60px 24px;">
+  <div style="font-size:40px;margin-bottom:16px;">🧠</div>
+  <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">元ネタがまだありません</div>
+  <div style="font-size:13px;color:var(--muted2);margin-bottom:24px;">バズった投稿を登録して、構造を抽出しましょう</div>
+  <a href="/noimos/new" class="btn btn-primary">＋ 元ネタを登録する</a>
+</div>
+{% endif %}
+
+{% endblock %}

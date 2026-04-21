@@ -382,6 +382,123 @@ def setup_schedule():
     schedule.every(1).minutes.do(check_scheduled_posts)
     logger.info("予約投稿チェック: 1分ごと")
 
+    # Story Autopilot（5分ごとにテンプレートの実行時刻をチェック）
+    schedule.every(5).minutes.do(story_autopilot_job)
+    logger.info("Story Autopilot: 5分ごと")
+
+
+def story_autopilot_job():
+    """
+    Story Autopilot: アクティブなテンプレートの run_time と active_days を確認し、
+    今日・今の時刻に一致するテンプレートを自動実行する。
+    """
+    now = datetime.now()
+    weekday_idx = now.weekday()  # 0=月, 6=日
+    current_time = now.strftime("%H:%M")
+
+    try:
+        sys_path = str(Path(__file__).parent / "dashboard")
+        if sys_path not in __import__("sys").path:
+            __import__("sys").path.insert(0, sys_path)
+
+        from repositories.story_repo import StoryTemplateRepo, StoryRunRepo, SocialAccountRepo
+        from connectors.meta_connector import get_meta_connector
+        import json
+
+        tmpl_repo = StoryTemplateRepo()
+        run_repo  = StoryRunRepo()
+        acct_repo = SocialAccountRepo()
+
+        templates = tmpl_repo.list()
+        triggered = 0
+
+        for tmpl in templates:
+            if not tmpl.get("is_active"):
+                continue
+
+            # 実行時刻チェック（HH:MM が一致、±2分の許容）
+            run_time = tmpl.get("run_time", "09:00")
+            try:
+                th, tm = map(int, run_time.split(":"))
+                nh, nm = now.hour, now.minute
+                diff_min = abs((nh * 60 + nm) - (th * 60 + tm))
+                if diff_min > 2:
+                    continue
+            except Exception:
+                continue
+
+            # 曜日チェック
+            active_days = tmpl.get("active_days")
+            if active_days:
+                try:
+                    days = json.loads(active_days) if isinstance(active_days, str) else active_days
+                    if weekday_idx not in days:
+                        continue
+                except Exception:
+                    pass
+
+            # 本日すでに実行済みかチェック
+            today_str = now.strftime("%Y-%m-%d")
+            existing = run_repo.list(template_id=tmpl["id"])
+            if any(r.get("created_at", "")[:10] == today_str for r in existing):
+                logger.info(f"Story Autopilot: tmpl={tmpl['id']} は本日実行済みのためスキップ")
+                continue
+
+            # 実行
+            logger.info(f"Story Autopilot: テンプレート '{tmpl['name']}' を自動実行")
+            try:
+                acct = next(
+                    (a for a in acct_repo.list() if a.get("brand") == tmpl["brand"] and a.get("platform") == "instagram"),
+                    None
+                )
+                run_id = run_repo.create({
+                    "template_id":     tmpl["id"],
+                    "brand":           tmpl["brand"],
+                    "run_mode":        tmpl.get("run_mode", "semi_auto"),
+                    "status":          "generating",
+                    "social_account_id": acct["id"] if acct else None,
+                    "caption":         f"Story Autopilot — {tmpl['name']}",
+                    "frames_json":     json.dumps([
+                        {"type": "cover", "text": tmpl["name"], "bg": "#6366f1"},
+                        {"type": "content", "text": tmpl.get("topic_prompt", ""), "bg": "#111118"},
+                        {"type": "cta", "text": "詳しくはプロフィールへ", "bg": "#10b981"},
+                    ]),
+                })
+
+                run_mode = tmpl.get("run_mode", "semi_auto")
+                if run_mode == "full_auto":
+                    # 即座に公開
+                    run = run_repo.get(run_id)
+                    connector = get_meta_connector("auto")
+                    ig_uid = acct["ig_user_id"] if acct else tmpl["brand"]
+                    result = connector.publish_story(ig_uid, media_url="https://placehold.co/1080x1920/png")
+                    if result.get("error"):
+                        run_repo.update_status(run_id, "failed", error_message=result["error"])
+                    else:
+                        run_repo.update_status(
+                            run_id, "published",
+                            ig_media_id=result.get("ig_media_id", ""),
+                            ig_permalink=result.get("permalink", ""),
+                        )
+                        tmpl_repo.touch_last_run(tmpl["id"])
+                    logger.info(f"Story full_auto 公開完了: run_id={run_id}")
+                else:
+                    # semi_auto / human_approval_required → 承認待ちにする
+                    run_repo.update_status(run_id, "pending_approval")
+                    tmpl_repo.touch_last_run(tmpl["id"])
+                    logger.info(f"Story semi_auto 承認待ち: run_id={run_id}")
+
+                triggered += 1
+
+            except Exception as e:
+                logger.error(f"Story Autopilot 実行エラー (tmpl={tmpl['id']}): {e}", exc_info=True)
+
+        if triggered:
+            logger.info(f"Story Autopilot: {triggered}件のテンプレートを実行しました")
+
+    except Exception as e:
+        logger.error(f"Story Autopilot ジョブエラー: {e}", exc_info=True)
+
 
 if __name__ == "__main__":
     logger.info("スケジューラー起動")

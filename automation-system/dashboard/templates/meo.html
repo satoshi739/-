@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}MEO Control Tower{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">📍 MEO Control Tower</div>
+    <div class="page-sub">Google Business Profile 一元管理 — 拠点スコア・レビュー・写真アラート</div>
+  </div>
+  <div class="header-actions">
+    <span class="live-dot" id="sync-status">同期済み</span>
+    <button class="btn btn-primary btn-sm" onclick="syncAll()">🔄 今すぐ同期</button>
+    <a href="/reviews" class="btn btn-ghost btn-sm">💬 Review Center</a>
+  </div>
+</div>
+
+<!-- ── Stats ── -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">管理拠点数</div>
+    <div class="stat-value blue">{{ stats.profiles }}</div>
+    <div class="stat-meta">Google Business Profile</div>
+  </div>
+  <div class="stat-card red-top">
+    <div class="stat-label">未返信レビュー</div>
+    <div class="stat-value red">{{ stats.unanswered }}</div>
+    <div class="stat-meta"><a href="/reviews?tab=unanswered" style="color:inherit;">返信センターへ →</a></div>
+  </div>
+  <div class="stat-card red-top">
+    <div class="stat-label">低評価レビュー（★1–2）</div>
+    <div class="stat-value red">{{ stats.low_rating }}</div>
+    <div class="stat-meta"><a href="/reviews?tab=low_rating" style="color:inherit;">確認する →</a></div>
+  </div>
+  <div class="stat-card yellow-top">
+    <div class="stat-label">AI下書き 承認待ち</div>
+    <div class="stat-value yellow">{{ stats.pending_drafts }}</div>
+    <div class="stat-meta"><a href="/reviews?tab=drafts" style="color:inherit;">確認する →</a></div>
+  </div>
+  <div class="stat-card yellow-top">
+    <div class="stat-label">写真不足アラート</div>
+    <div class="stat-value yellow">{{ stats.photo_alerts }}</div>
+    <div class="stat-meta">5枚未満の拠点</div>
+  </div>
+  <div class="stat-card green-top">
+    <div class="stat-label">平均 MEO スコア</div>
+    <div class="stat-value green">{{ stats.avg_meo_score }}</div>
+    <div class="stat-meta">/ 100点</div>
+  </div>
+</div>
+
+<!-- ── Alert Banner ── -->
+{% if stats.unanswered > 0 or stats.photo_alerts > 0 %}
+<div class="alert alert-warn" style="margin-bottom:18px;">
+  <span>⚠️</span>
+  <div>
+    {% if stats.unanswered > 0 %}未返信レビューが <strong>{{ stats.unanswered }}件</strong> あります。{% endif %}
+    {% if stats.photo_alerts > 0 %}写真が不足している拠点が <strong>{{ stats.photo_alerts }}件</strong> あります。{% endif %}
+    早めの対応でMEOスコアを改善しましょう。
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Shop Cards ── -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;">
+  {% for p in profiles %}
+  <div class="card" style="padding:20px 22px;margin-bottom:0;position:relative;overflow:hidden;">
+    <!-- Score bar -->
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--border);">
+      <div style="height:100%;width:{{ p.meo_score }}%;background:{% if p.meo_score >= 70 %}var(--green){% elif p.meo_score >= 45 %}var(--yellow){% else %}var(--red){% endif %};transition:width .6s ease;border-radius:2px;"></div>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+      <div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:3px;">{{ p.location_name }}</div>
+        <div style="font-size:11.5px;color:var(--muted2);">{{ p.address }}</div>
+      </div>
+      <!-- MEO Score Badge -->
+      <div style="text-align:center;flex-shrink:0;">
+        <div style="font-size:22px;font-weight:800;line-height:1;color:{% if p.meo_score >= 70 %}var(--green2){% elif p.meo_score >= 45 %}var(--yellow2){% else %}var(--red){% endif %};">
+          {{ p.meo_score }}
+        </div>
+        <div style="font-size:9px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-top:2px;">MEO Score</div>
+      </div>
+    </div>
+
+    <!-- Stars & Reviews -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:5px;">
+        <span style="font-size:16px;color:#fbbf24;">{{ '★' * (p.avg_rating | int) }}{{ '☆' * (5 - p.avg_rating | int) }}</span>
+        <span style="font-size:13px;font-weight:700;">{{ '%.1f' | format(p.avg_rating or 0) }}</span>
+      </div>
+      <span style="font-size:12px;color:var(--muted2);">{{ p.total_reviews }}件のレビュー</span>
+    </div>
+
+    <!-- Chips -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+      {% if p.unanswered_reviews > 0 %}
+      <span class="badge badge-lost">未返信 {{ p.unanswered_reviews }}件</span>
+      {% endif %}
+      {% if p.photo_alert %}
+      <span class="badge badge-warn">📷 写真不足</span>
+      {% endif %}
+      {% if p.insights %}
+      <span class="badge badge-ok">◉ インサイトあり</span>
+      {% endif %}
+      {% if p.unanswered_reviews == 0 and not p.photo_alert %}
+      <span class="badge badge-ok">✓ 問題なし</span>
+      {% endif %}
+    </div>
+
+    <!-- Insight mini row -->
+    {% if p.insights %}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+      <div style="text-align:center;">
+        <div style="font-size:14px;font-weight:700;color:var(--accent2);">{{ p.insights.views_search | default(0) }}</div>
+        <div style="font-size:9.5px;color:var(--muted);">検索表示</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:14px;font-weight:700;color:var(--green2);">{{ p.insights.actions_website | default(0) }}</div>
+        <div style="font-size:9.5px;color:var(--muted);">WEBアクション</div>
+      </div>
+      <div style="font-size:14px;font-weight:700;color:var(--yellow2);text-align:center;">
+        <div>{{ p.insights.actions_phone | default(0) }}</div>
+        <div style="font-size:9.5px;color:var(--muted);">電話アクション</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div style="display:flex;gap:7px;">
+      <a href="/meo/{{ p.id }}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">詳細</a>
+      {% if p.unanswered_reviews > 0 %}
+      <a href="/reviews?tab=unanswered&profile_id={{ p.id }}" class="btn btn-danger btn-sm">💬 返信 ({{ p.unanswered_reviews }})</a>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info" style="grid-column:1/-1;">
+    <span>ℹ️</span>
+    <div>拠点データがありません。「今すぐ同期」ボタンでデータを取得してください。</div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+async function syncAll() {
+  const btn = document.querySelector('[onclick="syncAll()"]');
+  btn.textContent = '同期中…';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/meo/sync', {method:'POST'});
+    const d   = await res.json();
+    if (d.ok) {
+      toast(`同期完了 — 拠点: ${d.counts.profiles}, レビュー: ${d.counts.reviews}`, 'ok');
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      toast('同期エラー: ' + d.error, 'err');
+    }
+  } catch(e) {
+    toast('通信エラー', 'err');
+  } finally {
+    btn.textContent = '🔄 今すぐ同期';
+    btn.disabled = false;
+  }
+}
+</script>
+{% endblock %}

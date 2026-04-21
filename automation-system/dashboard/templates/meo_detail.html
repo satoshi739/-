@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}{{ profile.location_name }} — MEO詳細{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div style="font-size:12px;color:var(--muted2);margin-bottom:6px;">
+      <a href="/meo" style="color:var(--muted2);text-decoration:none;">MEO Control Tower</a> /
+    </div>
+    <div class="page-title">📍 {{ profile.location_name }}</div>
+    <div class="page-sub">{{ profile.address }}{% if profile.phone %} · {{ profile.phone }}{% endif %}</div>
+  </div>
+  <div class="header-actions">
+    <a href="/reviews?tab=unanswered&profile_id={{ profile.id }}" class="btn btn-danger btn-sm">
+      💬 未返信 {{ profile.unanswered_reviews }}件
+    </a>
+    <a href="/meo" class="btn btn-ghost btn-sm">← 一覧へ</a>
+  </div>
+</div>
+
+<!-- ── Top Stats ── -->
+<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);">
+  <div class="stat-card" style="text-align:center;">
+    <div class="stat-label">MEO Score</div>
+    <div class="stat-value {% if profile.meo_score >= 70 %}green{% elif profile.meo_score >= 45 %}yellow{% else %}red{% endif %}">
+      {{ profile.meo_score }}
+    </div>
+    <div class="stat-meta">/ 100</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">平均評価</div>
+    <div class="stat-value yellow">{{ '%.1f' | format(profile.avg_rating or 0) }}</div>
+    <div class="stat-meta">{{ profile.total_reviews }}件</div>
+  </div>
+  <div class="stat-card red-top">
+    <div class="stat-label">未返信</div>
+    <div class="stat-value red">{{ profile.unanswered_reviews }}</div>
+    <div class="stat-meta">件のレビュー</div>
+  </div>
+  <div class="stat-card {% if profile.photo_alert %}yellow-top{% else %}green-top{% endif %}">
+    <div class="stat-label">写真枚数</div>
+    <div class="stat-value {% if profile.photo_alert %}yellow{% else %}green{% endif %}">{{ profile.photos_count }}</div>
+    <div class="stat-meta">{% if profile.photo_alert %}⚠️ 不足{% else %}✓ 十分{% endif %}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">最終同期</div>
+    <div style="font-size:12px;font-weight:600;margin-top:10px;color:var(--muted2);">
+      {{ profile.last_synced_at[:16] if profile.last_synced_at else '未同期' }}
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+  <!-- ── Insights ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">インサイト（28日）</span>
+      {% if insights.period_start %}
+      <span style="font-size:10.5px;color:var(--muted);">{{ insights.period_start }} – {{ insights.period_end }}</span>
+      {% endif %}
+    </div>
+    {% if insights %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      {% set items = [
+        ('検索表示回数', insights.views_search, 'blue'),
+        ('マップ表示回数', insights.views_maps, 'blue'),
+        ('WEBサイトアクション', insights.actions_website, 'green'),
+        ('経路アクション', insights.actions_directions, 'green'),
+        ('電話アクション', insights.actions_phone, 'yellow'),
+        ('写真閲覧数', insights.photos_views, 'purple'),
+      ] %}
+      {% for label, val, color in items %}
+      <div style="padding:10px 12px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:9px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">{{ label }}</div>
+        <div style="font-size:18px;font-weight:700;color:var(--{{ color }}2);">{{ val | default(0) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="color:var(--muted);font-size:13px;padding:12px 0;">インサイトデータなし</div>
+    {% endif %}
+  </div>
+
+  <!-- ── Rating Distribution ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">評価分布</span>
+      <span style="font-size:13px;font-weight:700;color:#fbbf24;">{{ '★' * (profile.avg_rating | int) }} {{ '%.1f' | format(profile.avg_rating or 0) }}</span>
+    </div>
+    {% set total = reviews | length %}
+    {% for star in [5,4,3,2,1] %}
+    {% set cnt = rating_dist.get(star, 0) %}
+    {% set pct = (cnt / total * 100) | int if total > 0 else 0 %}
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:7px;">
+      <span style="font-size:12px;color:#fbbf24;width:20px;text-align:right;">{{ star }}★</span>
+      <div style="flex:1;height:8px;background:var(--s3);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:{{ pct }}%;background:{% if star >= 4 %}var(--green){% elif star == 3 %}var(--yellow){% else %}var(--red){% endif %};border-radius:4px;transition:width .5s ease;"></div>
+      </div>
+      <span style="font-size:11px;color:var(--muted2);width:28px;text-align:right;">{{ cnt }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- ── Recent Posts ── -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">GBP 投稿 ({{ posts | length }})</span>
+  </div>
+  {% if posts %}
+  <table>
+    <thead><tr>
+      <th>種別</th><th>内容</th><th>状態</th><th>公開日</th>
+    </tr></thead>
+    <tbody>
+    {% for post in posts %}
+    <tr>
+      <td><span class="badge badge-purple">{{ post.post_type }}</span></td>
+      <td style="max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ post.summary }}</td>
+      <td>
+        {% if post.state == 'LIVE' or post.state == 'published' %}
+        <span class="badge badge-ok">LIVE</span>
+        {% else %}
+        <span class="badge badge-l1">{{ post.state }}</span>
+        {% endif %}
+      </td>
+      <td style="color:var(--muted2);font-size:12px;">{{ post.published_at or '—' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="color:var(--muted);font-size:13px;">投稿データなし</div>
+  {% endif %}
+</div>
+
+<!-- ── Reviews ── -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">レビュー一覧 ({{ reviews | length }})</span>
+    <a href="/reviews?tab=unanswered&profile_id={{ profile.id }}" class="card-action">未返信のみ →</a>
+  </div>
+  <table>
+    <thead><tr>
+      <th>評価</th><th>レビュアー</th><th>コメント</th><th>状態</th><th>日時</th><th>操作</th>
+    </tr></thead>
+    <tbody>
+    {% for r in reviews %}
+    <tr id="row-{{ r.id }}">
+      <td>
+        <span style="color:#fbbf24;font-size:13px;">{{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}</span>
+      </td>
+      <td style="font-weight:600;white-space:nowrap;">{{ r.reviewer_name or '匿名' }}</td>
+      <td style="max-width:320px;">
+        <div style="font-size:12.5px;line-height:1.5;">{{ r.comment or '（コメントなし）' }}</div>
+        {% if r.reply %}
+        <div style="margin-top:5px;padding:6px 9px;background:rgba(99,102,241,.06);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;font-size:11.5px;color:var(--muted2);">
+          💬 {{ r.reply[:80] }}{% if r.reply | length > 80 %}…{% endif %}
+        </div>
+        {% endif %}
+      </td>
+      <td>
+        {% if r.status == 'answered' %}
+        <span class="badge badge-ok">返信済</span>
+        {% elif r.rating <= 2 %}
+        <span class="badge badge-lost">低評価・未返信</span>
+        {% else %}
+        <span class="badge badge-warn">未返信</span>
+        {% endif %}
+      </td>
+      <td style="font-size:11.5px;color:var(--muted2);white-space:nowrap;" data-date="{{ r.created_at[:10] if r.created_at else '' }}">
+        {{ r.created_at[:10] if r.created_at else '—' }}
+        <span class="sla-badge"></span>
+      </td>
+      <td>
+        {% if r.status == 'unanswered' %}
+        <button class="btn btn-sm btn-ghost" onclick="openReply('{{ r.id }}','{{ r.reviewer_name | replace("'","") }}',{{ r.rating }})">返信</button>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Reply Modal ── -->
+<div id="reply-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);z-index:9000;display:none;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--radius);padding:28px;width:100%;max-width:560px;">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px;">💬 レビューへ返信</div>
+    <div id="modal-reviewer" style="font-size:12px;color:var(--muted2);margin-bottom:16px;"></div>
+    <input type="hidden" id="modal-review-id">
+    <input type="hidden" id="modal-draft-id" value="">
+    <textarea id="modal-reply" class="form-textarea" rows="5" placeholder="返信内容を入力…" style="margin-bottom:10px;"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeReplyModal()">キャンセル</button>
+      <button class="btn btn-ghost btn-sm" onclick="generateDraft()">✦ AI下書き</button>
+      <button class="btn btn-primary" onclick="sendReply()">送信</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// SLA 経過時間バッジ
+document.querySelectorAll('td[data-date]').forEach(td => {
+  const dateStr = td.dataset.date;
+  if (!dateStr) return;
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
+  const badge = td.querySelector('.sla-badge');
+  if (!badge) return;
+  if (diff >= 3) badge.innerHTML = `<span style="color:var(--red);font-weight:700;margin-left:4px;">${diff}日経過</span>`;
+  else if (diff >= 1) badge.innerHTML = `<span style="color:var(--yellow2);margin-left:4px;">${diff}日前</span>`;
+});
+
+function openReply(id, name, rating) {
+  document.getElementById('modal-review-id').value = id;
+  document.getElementById('modal-draft-id').value  = '';
+  document.getElementById('modal-reply').value      = '';
+  document.getElementById('modal-reviewer').textContent = name + ' — ' + '★'.repeat(rating) + '☆'.repeat(5-rating);
+  document.getElementById('reply-modal').style.display = 'flex';
+}
+function closeReplyModal() {
+  document.getElementById('reply-modal').style.display = 'none';
+}
+async function generateDraft() {
+  const rid = document.getElementById('modal-review-id').value;
+  const btn = document.querySelector('[onclick="generateDraft()"]');
+  btn.textContent = '生成中…'; btn.disabled = true;
+  try {
+    const res = await fetch(`/api/reviews/${rid}/generate_draft`, {method:'POST'});
+    const d   = await res.json();
+    if (d.ok) {
+      document.getElementById('modal-reply').value = d.draft;
+      document.getElementById('modal-draft-id').value = d.draft_id;
+      toast('AI下書きを生成しました', 'ok');
+    } else {
+      toast('生成失敗: ' + d.error, 'err');
+    }
+  } finally {
+    btn.textContent = '✦ AI下書き'; btn.disabled = false;
+  }
+}
+async function sendReply() {
+  const rid   = document.getElementById('modal-review-id').value;
+  const reply = document.getElementById('modal-reply').value.trim();
+  const did   = document.getElementById('modal-draft-id').value;
+  if (!reply) { toast('返信内容を入力してください', 'warn'); return; }
+  const res = await fetch(`/api/reviews/${rid}/reply`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({reply, draft_id: did || null}),
+  });
+  const d = await res.json();
+  if (d.ok) {
+    toast('返信を送信しました', 'ok');
+    closeReplyModal();
+    setTimeout(() => location.reload(), 800);
+  } else {
+    toast('エラー: ' + d.error, 'err');
+  }
+}
+// close on backdrop
+document.getElementById('reply-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeReplyModal();
+});
+</script>
+{% endblock %}

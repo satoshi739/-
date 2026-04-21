@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}通知 — Brand OS{% endblock %}
+{% block content %}
+
+<style>
+  .notif-list { display:flex; flex-direction:column; gap:8px; }
+  .notif-item {
+    display:flex; align-items:flex-start; gap:14px;
+    background:var(--s1); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:14px 18px;
+    transition:border-color .15s, background .15s; cursor:pointer;
+    text-decoration:none; color:inherit;
+  }
+  .notif-item:hover { border-color:var(--border2); background:var(--s2); }
+  .notif-item.unread { border-left:3px solid var(--accent); background:rgba(99,102,241,.04); }
+  .notif-item.unread:hover { background:rgba(99,102,241,.08); }
+  .notif-icon-wrap {
+    width:38px; height:38px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px;
+  }
+  .notif-icon-wrap.info    { background:rgba(99,102,241,.12); }
+  .notif-icon-wrap.success { background:rgba(16,185,129,.12); }
+  .notif-icon-wrap.warning { background:rgba(245,158,11,.12); }
+  .notif-icon-wrap.error   { background:rgba(239,68,68,.12); }
+  .notif-body { flex:1; min-width:0; }
+  .notif-title { font-size:13.5px; font-weight:600; margin-bottom:3px; }
+  .notif-text  { font-size:12.5px; color:var(--muted2); line-height:1.5; }
+  .notif-meta  { font-size:11px; color:var(--muted); margin-top:5px; display:flex; gap:10px; }
+  .notif-unread-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:var(--accent); flex-shrink:0; margin-top:5px;
+    box-shadow:0 0 8px var(--accent);
+  }
+  .empty-state { text-align:center; padding:80px 20px; color:var(--muted); }
+  .empty-icon  { font-size:52px; margin-bottom:16px; opacity:.35; }
+  .empty-title { font-size:18px; font-weight:600; color:var(--muted2); margin-bottom:8px; }
+  .empty-body  { font-size:13px; line-height:1.6; }
+  .priority-badge.high   { background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2); }
+  .priority-badge.normal { background:rgba(99,102,241,.1);color:var(--accent2);border:1px solid rgba(99,102,241,.2); }
+  .priority-badge.low    { background:rgba(107,114,128,.1);color:var(--muted2);border:1px solid var(--border); }
+  .priority-badge { font-size:10px; padding:1px 8px; border-radius:20px; font-weight:600; }
+</style>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">🔔 通知</div>
+    <div class="page-sub">システム・AIエージェントからの通知一覧</div>
+  </div>
+  <div class="header-actions">
+    {% set unread_list = notifs | selectattr('is_read', 'equalto', 0) | list %}
+    {% if unread_list %}
+    <button class="btn btn-ghost btn-sm" onclick="markAllRead()">すべて既読にする</button>
+    <span style="font-size:12px;color:var(--muted2);">未読 {{ unread_list|length }} 件</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="notif-list">
+  {% if notifs %}
+    {% for n in notifs %}
+    {% set icon_map = {'info':'ℹ️','success':'✅','warning':'⚠️','error':'❌','approval':'📋','escalation':'🚨','publish':'📤','lead':'👤'} %}
+    {% set icon = icon_map.get(n.type, '🔔') %}
+    <a href="{{ n.link or '#' }}" class="notif-item {{ 'unread' if not n.is_read else '' }}"
+       onclick="markRead({{ n.id }}, event)">
+      <div class="notif-icon-wrap {{ n.type or 'info' }}">{{ icon }}</div>
+      <div class="notif-body">
+        <div class="notif-title">{{ n.title }}</div>
+        {% if n.body %}
+        <div class="notif-text">{{ n.body }}</div>
+        {% endif %}
+        <div class="notif-meta">
+          <span>{{ n.created_at[:16] }}</span>
+          <span>{{ n.source }}</span>
+          {% if n.priority == 'high' %}
+          <span class="priority-badge high">重要</span>
+          {% elif n.priority == 'low' %}
+          <span class="priority-badge low">低</span>
+          {% endif %}
+        </div>
+      </div>
+      {% if not n.is_read %}
+      <div class="notif-unread-dot"></div>
+      {% endif %}
+    </a>
+    {% endfor %}
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🔔</div>
+    <div class="empty-title">通知はありません</div>
+    <div class="empty-body">
+      システムやAIエージェントからの通知が<br>届くと、ここに表示されます。
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function markRead(id, e) {
+  fetch('/api/notifications/mark-read', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id})
+  }).then(r => r.json()).then(d => {
+    const badge = document.getElementById('notif-nav-badge');
+    if (badge) { badge.textContent = d.unread; badge.style.display = d.unread > 0 ? 'inline' : 'none'; }
+  }).catch(() => {});
+}
+
+function markAllRead() {
+  fetch('/api/notifications/mark-read', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({})
+  }).then(r => r.json()).then(d => {
+    document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+    document.querySelectorAll('.notif-unread-dot').forEach(el => el.remove());
+    const badge = document.getElementById('notif-nav-badge');
+    if (badge) { badge.style.display = 'none'; }
+    toast('すべて既読にしました', 'ok');
+    setTimeout(() => location.reload(), 800);
+  }).catch(() => toast('エラーが発生しました', 'err'));
+}
+</script>
+
+{% endblock %}

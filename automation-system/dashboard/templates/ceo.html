@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+{% block title %}AI CEO ダッシュボード — UPJ{% endblock %}
+{% block content %}
+
+<style>
+  /* ── CEO固有スタイル ── */
+  .ceo-header-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: linear-gradient(135deg, rgba(139,92,246,.15), rgba(99,102,241,.1));
+    border: 1px solid rgba(139,92,246,.35); border-radius: 20px; padding: 6px 14px;
+    font-size: 12px; color: var(--purple2); font-weight: 600;
+  }
+  .ceo-header-badge::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--purple2); box-shadow: 0 0 8px var(--purple2); animation: glow 2s infinite;
+  }
+
+  /* タスクキュー */
+  .task-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px; border-radius: var(--radius-sm); margin-bottom: 7px;
+    background: rgba(10,16,36,.7); border: 1px solid var(--border);
+    transition: border-color .15s, background .15s;
+  }
+  .task-row:hover { border-color: var(--border2); background: var(--s2); }
+  .task-priority-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .task-priority-dot.high { background: var(--red);     box-shadow: 0 0 6px var(--red); }
+  .task-priority-dot.mid  { background: var(--yellow2); box-shadow: 0 0 6px var(--yellow2); }
+  .task-priority-dot.low  { background: var(--muted); }
+  .task-id    { font-size: 10px; color: var(--muted); width: 22px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .task-name  { flex: 1; font-size: 13px; font-weight: 500; min-width: 0; }
+  .task-agent { font-size: 11px; color: var(--muted2); width: 150px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task-eta   { font-size: 11px; color: var(--muted2); width: 70px; text-align: right; flex-shrink: 0; }
+  .task-status-badge {
+    font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+  }
+  .status-waiting_human { background: rgba(239,68,68,.1);   color: var(--red);     border: 1px solid rgba(239,68,68,.25); }
+  .status-in_progress   { background: rgba(99,102,241,.1);  color: var(--accent2); border: 1px solid rgba(99,102,241,.25); }
+  .status-pending       { background: rgba(245,158,11,.1);  color: var(--yellow2); border: 1px solid rgba(245,158,11,.25); }
+  .status-scheduled     { background: rgba(16,185,129,.08); color: var(--green2);  border: 1px solid rgba(16,185,129,.2); }
+  .status-done          { background: rgba(90,100,144,.1);  color: var(--muted2);  border: 1px solid rgba(90,100,144,.2); }
+
+  /* ボトルネック */
+  .bottleneck-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 13px 16px; border-radius: var(--radius-sm); margin-bottom: 8px;
+  }
+  .bottleneck-item.impact-high { background: rgba(239,68,68,.06);   border: 1px solid rgba(239,68,68,.2);  }
+  .bottleneck-item.impact-mid  { background: rgba(245,158,11,.06);  border: 1px solid rgba(245,158,11,.2); }
+  .bottleneck-item.impact-low  { background: rgba(99,102,241,.06);  border: 1px solid rgba(99,102,241,.2); }
+  .bottleneck-area {
+    font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px;
+    white-space: nowrap; flex-shrink: 0; margin-top: 1px;
+    background: rgba(255,255,255,.06); color: var(--muted2); border: 1px solid var(--border);
+  }
+  .bottleneck-text { flex: 1; font-size: 13px; line-height: 1.6; }
+
+  /* エスカレーション */
+  .escalation-item {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 9px;
+    border: 1px solid var(--border); background: rgba(10,16,36,.7);
+  }
+  .escalation-urgency-high { border-left: 3px solid var(--red); }
+  .escalation-urgency-mid  { border-left: 3px solid var(--yellow2); }
+  .escalation-urgency-low  { border-left: 3px solid var(--muted); }
+  .escalation-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px;
+    background: rgba(139,92,246,.1); color: var(--purple2); border: 1px solid rgba(139,92,246,.25);
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .escalation-body { flex: 1; }
+  .escalation-title { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; }
+  .escalation-deadline { font-size: 11px; color: var(--muted2); }
+
+  /* 戦略優先順位 */
+  .priority-item {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 9px;
+    background: rgba(10,16,36,.7); border: 1px solid var(--border);
+    transition: border-color .18s;
+  }
+  .priority-item:hover { border-color: var(--border2); }
+  .priority-num {
+    width: 28px; height: 28px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800;
+    background: linear-gradient(135deg, rgba(99,102,241,.25), rgba(139,92,246,.2));
+    border: 1px solid rgba(99,102,241,.3); color: var(--accent2);
+  }
+  .priority-focus      { font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .priority-rationale  { font-size: 12px; color: var(--muted2); line-height: 1.55; }
+
+  /* 社長に上げる案件 */
+  .to-president-item {
+    display: flex; align-items: flex-start; gap: 13px;
+    padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 9px;
+    background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(10,16,36,.9));
+    border: 1px solid rgba(99,102,241,.25);
+    transition: border-color .18s;
+  }
+  .to-president-item:hover { border-color: rgba(99,102,241,.45); }
+  .to-president-icon { font-size: 20px; flex-shrink: 0; width: 28px; text-align: center; }
+  .to-president-item-title   { font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .to-president-context { font-size: 12px; color: var(--muted2); line-height: 1.55; }
+
+  /* ブランド状態 (CEO視点) */
+  .ceo-brand-table { width: 100%; }
+  .ceo-brand-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .ceo-brand-row:last-child { border-bottom: none; }
+  .ceo-brand-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .ceo-brand-name { font-size: 13px; font-weight: 700; width: 48px; flex-shrink: 0; }
+  .ceo-brand-bar-wrap { flex: 1; }
+  .ceo-brand-bar-label { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted2); margin-bottom: 4px; }
+  .ceo-bar-track { height: 5px; background: rgba(255,255,255,.07); border-radius: 10px; overflow: hidden; }
+  .ceo-bar-fill  { height: 100%; border-radius: 10px; }
+  .ceo-brand-meta { font-size: 11.5px; color: var(--muted2); width: 120px; text-align: right; flex-shrink: 0; }
+  .ceo-brand-health { flex-shrink: 0; }
+
+  .agent-mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+  .agent-mini {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--radius-sm);
+    background: rgba(10,16,36,.7); border: 1px solid var(--border);
+  }
+  .agent-mini-icon { font-size: 15px; flex-shrink: 0; }
+  .agent-mini-name { font-size: 12.5px; font-weight: 600; flex: 1; }
+  .agent-mini-dot  { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .agent-mini-dot.ok   { background: var(--green2); box-shadow: 0 0 5px var(--green2); animation: glow 2.5s infinite; }
+  .agent-mini-dot.warn { background: var(--yellow2); box-shadow: 0 0 5px var(--yellow2); animation: glow 2.5s infinite; }
+  .agent-mini-dot.idle { background: var(--muted); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 960px) { .two-col { grid-template-columns: 1fr; } }
+
+  .section-title {
+    font-size: 10.5px; font-weight: 700; color: var(--muted2);
+    text-transform: uppercase; letter-spacing: 1.1px;
+  }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-action { font-size: 12px; color: var(--accent2); text-decoration: none; }
+  .section-action:hover { color: var(--text); }
+  .empty-cta { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; }
+  .empty-cta a { color: var(--accent2); text-decoration: none; font-weight: 600; }
+</style>
+
+<!-- ══ ページヘッダー ══ -->
+<div class="page-header">
+  <div>
+    <div style="font-size:11px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;">
+      AI CEO Dashboard &nbsp;·&nbsp; {{ brief.date }}
+    </div>
+    <div class="page-title">🤖 AI CEO ダッシュボード</div>
+    <div class="page-sub">全ブランド・全エージェントの制御と、社長への報告事項</div>
+  </div>
+  <div class="header-actions">
+    <span class="ceo-header-badge">AI運営中</span>
+    <a href="/president" class="btn btn-ghost btn-sm">👑 社長画面</a>
+    <a href="/decisions" class="btn btn-primary btn-sm">△ 承認待ち {% if pending_approvals %}<span style="background:rgba(255,255,255,.2);border-radius:20px;padding:0 7px;">{{ pending_approvals|length }}</span>{% endif %}</a>
+  </div>
+</div>
+
+<!-- ══ 社長に上げるべき案件（最上位表示）══ -->
+{% if to_president %}
+<div class="card" style="margin-bottom:20px;border-color:rgba(99,102,241,.3);">
+  <div class="section-header">
+    <span class="section-title" style="color:var(--accent2);">👑 社長に上げるべき案件</span>
+    <a href="/president" class="section-action">社長画面を開く →</a>
+  </div>
+  {% for item in to_president %}
+  <div class="to-president-item">
+    <span class="to-president-icon">{{ item.icon }}</span>
+    <div>
+      <div class="to-president-item-title">{{ item.item }}</div>
+      <div class="to-president-context">{{ item.context }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ══ 今日の戦略優先順位 ══ -->
+<div class="card">
+  <div class="section-header">
+    <span class="section-title">🎯 今日の戦略優先順位</span>
+    <span style="font-size:11px;color:var(--muted);">AI CEOが策定</span>
+  </div>
+  {% if ceo_priorities %}
+    {% for p in ceo_priorities %}
+    <div class="priority-item">
+      <div class="priority-num">{{ p.order }}</div>
+      <div>
+        <div class="priority-focus">{{ p.focus }}</div>
+        <div class="priority-rationale">{{ p.rationale }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-cta">戦略優先順位なし</div>
+  {% endif %}
+</div>
+
+<!-- ══ 全ブランド状態 + エスカレーション ══ -->
+<div class="two-col" style="margin-bottom:0;">
+
+  <!-- 全ブランド状態 -->
+  <div class="card" style="margin-bottom:0;">
+    <div class="section-header">
+      <span class="section-title">🏢 全ブランドの状態</span>
+      <a href="/brands" class="section-action">詳細</a>
+    </div>
+    <div class="ceo-brand-table">
+      {% for bid, b in brand_status.items() %}
+      <a href="{{ b.link }}" style="text-decoration:none;color:inherit;">
+      <div class="ceo-brand-row">
+        <span class="ceo-brand-dot" style="background:{{ b.color }};box-shadow:0 0 6px {{ b.color }};"></span>
+        <span class="ceo-brand-name">{{ b.name }}</span>
+        <div class="ceo-brand-bar-wrap">
+          <div class="ceo-brand-bar-label">
+            <span>今週の投稿進捗</span>
+            <span>{{ b.posts_week }}/{{ b.target_week }}件</span>
+          </div>
+          <div class="ceo-bar-track">
+            <div class="ceo-bar-fill" style="width:{{ [(b.posts_week / b.target_week * 100)|int, 100]|min }}%;background:{{ b.color }};opacity:.75;"></div>
+          </div>
+        </div>
+        <div class="ceo-brand-meta">
+          <span style="color:var(--muted2);">素材</span>
+          <span style="color:{% if b.media_left <= 3 %}var(--red){% elif b.media_left <= 7 %}var(--yellow2){% else %}var(--green2){% endif %};font-weight:700;">{{ b.media_left }}枚</span>
+          &nbsp;/&nbsp;
+          <span style="color:var(--muted2);">リード</span>
+          <span style="font-weight:700;">{{ b.leads_active }}</span>
+        </div>
+        <div class="ceo-brand-health">
+          <span class="badge {% if b.health == 'alert' %}badge-lost{% elif b.health == 'warn' %}badge-warn{% else %}badge-ok{% endif %}" style="font-size:9px;">
+            {% if b.health == 'alert' %}要対応{% elif b.health == 'warn' %}注意{% else %}良好{% endif %}
+          </span>
+        </div>
+      </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- エスカレーション -->
+  <div class="card" style="margin-bottom:0;">
+    <div class="section-header">
+      <span class="section-title">⬆️ エスカレーション</span>
+      <span style="font-size:11px;color:var(--muted);">社長判断が必要な案件</span>
+    </div>
+    {% if escalations %}
+      {% for e in escalations %}
+      <div class="escalation-item escalation-urgency-{{ e.urgency }}">
+        <span class="escalation-badge">→ {{ e.to }}</span>
+        <div class="escalation-body">
+          <div class="escalation-title">{{ e.item }}</div>
+          <div class="escalation-deadline">期限: {{ e.deadline }}</div>
+        </div>
+        <span class="badge {% if e.urgency == 'high' %}badge-lost{% elif e.urgency == 'mid' %}badge-warn{% else %}badge-l2{% endif %}" style="font-size:9px;flex-shrink:0;">
+          {% if e.urgency == 'high' %}緊急{% elif e.urgency == 'mid' %}重要{% else %}通常{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-cta">エスカレーション案件なし ✓<br><a href="/president">社長画面</a></div>
+    {% endif %}
+  </div>
+</div>
+
+<div style="height:16px;"></div>
+
+<!-- ══ タスクキュー ══ -->
+<div class="card">
+  <div class="section-header">
+    <span class="section-title">📋 Task Queue</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:11px;color:var(--muted);">{{ task_queue|length }}件</span>
+      <a href="/decisions" class="section-action">承認待ちを処理</a>
+    </div>
+  </div>
+
+  <!-- ステータス凡例 -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+    <span class="task-status-badge status-waiting_human">人間承認待ち</span>
+    <span class="task-status-badge status-in_progress">実行中</span>
+    <span class="task-status-badge status-pending">待機中</span>
+    <span class="task-status-badge status-scheduled">スケジュール済</span>
+  </div>
+
+  {% if task_queue %}
+    {% for t in task_queue %}
+    <div class="task-row">
+      <span class="task-priority-dot {{ t.priority }}"></span>
+      <span class="task-id">#{{ t.id }}</span>
+      <span class="task-name">{{ t.task }}</span>
+      <span class="task-agent">{{ t.agent }}</span>
+      <span class="task-status-badge status-{{ t.status }}">
+        {% if t.status == 'waiting_human' %}人間承認待ち
+        {% elif t.status == 'in_progress'  %}実行中
+        {% elif t.status == 'pending'      %}待機中
+        {% elif t.status == 'scheduled'    %}スケジュール済
+        {% else %}{{ t.status }}{% endif %}
+      </span>
+      <span class="task-eta">{{ t.eta }}</span>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-cta">タスクキューが空です<br><a href="/queue">コンテンツキュー</a></div>
+  {% endif %}
+</div>
+
+<!-- ══ ボトルネック ══ -->
+<div class="card">
+  <div class="section-header">
+    <span class="section-title">🚧 ボトルネック</span>
+    <span style="font-size:11px;color:var(--muted);">{{ bottlenecks|length }}件検出</span>
+  </div>
+  {% if bottlenecks %}
+    {% for b in bottlenecks %}
+    <div class="bottleneck-item impact-{{ b.impact }}">
+      <span class="bottleneck-area">{{ b.area }}</span>
+      <span class="bottleneck-text">{{ b.issue }}</span>
+      <span class="badge {% if b.impact == 'high' %}badge-lost{% elif b.impact == 'mid' %}badge-warn{% else %}badge-l2{% endif %}" style="font-size:9px;flex-shrink:0;">
+        {% if b.impact == 'high' %}高{% elif b.impact == 'mid' %}中{% else %}低{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-cta">ボトルネックなし ✓</div>
+  {% endif %}
+</div>
+
+<!-- ══ AI Chief of Staff パネル ══ -->
+<div style="margin-bottom:16px; padding:16px 20px; background:linear-gradient(135deg, rgba(99,102,241,.07), rgba(139,92,246,.04)); border:1px solid rgba(99,102,241,.2); border-radius:var(--radius); display:flex; align-items:flex-start; gap:20px;">
+  <div style="font-size:26px; flex-shrink:0;">🧠</div>
+  <div style="flex:1; min-width:0;">
+    <div style="font-size:13px; font-weight:700; margin-bottom:10px;">AI Chief of Staff — ブランド別おすすめアクション</div>
+    {% if recommendations %}
+      {% for rec in recommendations[:3] %}
+      <div style="display:flex; align-items:flex-start; gap:10px; padding:9px 12px; border-radius:8px; margin-bottom:6px; background:rgba(10,16,36,.6); border:1px solid var(--border); border-left:2px solid {% if rec.priority == 'high' %}var(--red){% elif rec.priority == 'mid' %}var(--yellow2){% else %}var(--muted){% endif %};">
+        {% if rec.brand_color %}<span style="width:7px;height:7px;border-radius:50%;background:{{ rec.brand_color }};box-shadow:0 0 4px {{ rec.brand_color }};flex-shrink:0;margin-top:4px;"></span>{% endif %}
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:12.5px; font-weight:600; line-height:1.4; margin-bottom:2px;">{{ rec.title }}</div>
+          <div style="font-size:11px; color:var(--muted2);">{{ rec.body[:80] }}…</div>
+        </div>
+        <a href="{{ rec.action_url or '#' }}" class="btn btn-ghost btn-sm" style="flex-shrink:0;">→</a>
+      </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+  <a href="/chief-of-staff" class="btn btn-primary btn-sm" style="flex-shrink:0;">全部見る →</a>
+</div>
+
+<!-- ══ 異常検知サマリー ══ -->
+{% set open_anomalies = anomaly_alerts | selectattr('resolved', 'false') | list %}
+{% if open_anomalies %}
+<div class="card" style="margin-bottom:16px;">
+  <div class="section-header">
+    <span class="section-title">⚡ 異常検知</span>
+    <a href="/anomaly-alerts" class="section-action">詳細 →</a>
+  </div>
+  {% for alert in open_anomalies[:4] %}
+  <div style="display:flex; align-items:flex-start; gap:10px; padding:10px 14px; border-radius:var(--radius-sm); margin-bottom:8px;
+    {% if alert.severity == 'alert' %}background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);{% elif alert.severity == 'warn' %}background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);{% else %}background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);{% endif %}">
+    <span style="font-size:14px;flex-shrink:0;">{% if alert.severity == 'alert' %}🔴{% elif alert.severity == 'warn' %}🟡{% else %}🔵{% endif %}</span>
+    <div style="flex:1;">
+      <div style="font-size:12.5px;font-weight:600;margin-bottom:2px;">
+        {% if alert.brand %}[{{ alert.brand }}] {% endif %}{{ alert.metric }} — {{ alert.platform }}
+      </div>
+      <div style="font-size:11.5px;color:var(--muted2);">{{ alert.message[:90] }}{% if alert.message|length > 90 %}…{% endif %}</div>
+    </div>
+    {% if alert.delta_pct is not none %}
+    <span style="font-size:12px;font-weight:700;flex-shrink:0;color:{% if alert.delta_pct < 0 %}var(--red){% else %}var(--green2){% endif %};">
+      {% if alert.delta_pct >= 0 %}+{% endif %}{{ alert.delta_pct }}%
+    </span>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ══ Performance Snapshot ══ -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="section-header">
+    <span class="section-title">◈ Performance Snapshot — {{ perf_snapshot.period }}</span>
+    <a href="/performance-snapshot" class="section-action">詳細 →</a>
+  </div>
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:14px;">
+    {% for kpi in perf_snapshot.summary_kpis %}
+    <div style="text-align:center; padding:12px; background:rgba(10,16,36,.7); border:1px solid var(--border); border-radius:var(--radius-sm);">
+      <div style="font-size:9.5px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">{{ kpi.label }}</div>
+      <div style="font-size:20px;font-weight:800;color:{% if kpi.color == 'green' %}var(--green2){% elif kpi.color == 'yellow' %}var(--yellow2){% elif kpi.color == 'purple' %}var(--purple2){% else %}var(--accent2){% endif %};">{{ kpi.value }}</div>
+      <div style="font-size:10px;margin-top:4px;color:{% if kpi.direction == 'up' %}var(--green2){% else %}var(--yellow2){% endif %};">
+        {% if kpi.direction == 'up' %}▲{% else %}▼{% endif %} {{ kpi.delta }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <a href="/blog" class="btn btn-ghost btn-sm">✒ Blog候補</a>
+    <a href="/daily-briefs" class="btn btn-ghost btn-sm">☀️ Daily Brief</a>
+    <a href="/anomaly-alerts" class="btn btn-ghost btn-sm">⚡ 異常検知</a>
+  </div>
+</div>
+
+<!-- ══ 全エージェント状態 ══ -->
+<div class="card">
+  <div class="section-header">
+    <span class="section-title">🤖 全エージェントの状態</span>
+    <a href="/logs" class="section-action">詳細ログ</a>
+  </div>
+  <div class="agent-mini-grid">
+    {% for ag in agents %}
+    <div class="agent-mini">
+      <span class="agent-mini-icon">{{ ag.icon }}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="agent-mini-name">{{ ag.name }}</div>
+        <div style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ ag.last_run }}</div>
+      </div>
+      <span class="agent-mini-dot {{ ag.status }}"
+        title="{% if ag.status == 'ok' %}正常稼働{% elif ag.status == 'warn' %}警告{% else %}待機中{% endif %}"></span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ステータスサマリー -->
+  <div style="display:flex;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+    {% set ok_count   = agents | selectattr('status', 'eq', 'ok')   | list | length %}
+    {% set warn_count = agents | selectattr('status', 'eq', 'warn') | list | length %}
+    {% set idle_count = agents | selectattr('status', 'eq', 'idle') | list | length %}
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--green2);flex-shrink:0;"></span>
+      正常 {{ ok_count }}
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--yellow2);flex-shrink:0;"></span>
+      警告 {{ warn_count }}
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;"></span>
+      待機 {{ idle_count }}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

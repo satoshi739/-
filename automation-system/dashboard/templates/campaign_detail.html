@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ campaign.title }} — Campaign{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">🎯 {{ campaign.title }}</div>
+    <div class="page-sub">
+      {% set brand_info = brands.get(campaign.brand, {}) %}
+      <span style="color:{{ brand_info.color or 'var(--muted2)' }};">{{ brand_info.name_short or campaign.brand or '—' }}</span>
+      &nbsp;·&nbsp; {{ campaign.objective or '目的未設定' }}
+      {% if campaign.start_date %}&nbsp;·&nbsp; {{ campaign.start_date }}{% if campaign.end_date %} 〜 {{ campaign.end_date }}{% endif %}{% endif %}
+    </div>
+  </div>
+  <div class="header-actions">
+    <a href="/campaigns" class="btn btn-ghost btn-sm">← 一覧</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+
+  <!-- Left: アイデア一覧 -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">アイデア ({{ ideas|length }})</span>
+        <a href="/noimos" class="btn btn-ghost btn-sm">＋ 元ネタから追加</a>
+      </div>
+      {% if ideas %}
+      {% for idea in ideas %}
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+            <a href="/ideas/{{ idea.id }}" style="font-size:13.5px;font-weight:600;color:var(--text);text-decoration:none;">{{ idea.title }}</a>
+            {% if idea.status == 'approved' %}<span class="badge badge-ok" style="font-size:9px;">承認済み</span>
+            {% elif idea.status == 'rejected' %}<span class="badge badge-lost" style="font-size:9px;">却下</span>
+            {% else %}<span class="badge badge-l1" style="font-size:9px;">下書き</span>{% endif %}
+          </div>
+          {% if idea.hook %}<div style="font-size:11.5px;color:var(--muted2);line-height:1.5;">{{ idea.hook[:80] }}…</div>{% endif %}
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;">
+            {% for fmt in idea.target_formats %}
+            <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.15);color:var(--accent2);">{{ format_icons.get(fmt,'·') }} {{ fmt }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        <a href="/ideas/{{ idea.id }}" class="btn btn-ghost btn-sm" style="flex-shrink:0;">詳細</a>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="text-align:center;padding:24px;color:var(--muted);font-size:12.5px;">
+        アイデアがまだありません。元ネタを登録してブランド変換する際に、このキャンペーンを選択してください。
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Publishing jobs -->
+    {% if jobs %}
+    <div class="card">
+      <div class="card-header"><span class="card-title">承認ジョブ ({{ jobs|length }})</span></div>
+      {% for j in jobs %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:12.5px;color:var(--text);">{{ j.platform or '—' }} {% if j.scheduled_at %}<span style="color:var(--muted);font-size:11px;">{{ j.scheduled_at[:16] }}</span>{% endif %}</div>
+          {% if j.approval_note %}<div style="font-size:11px;color:var(--muted2);">{{ j.approval_note }}</div>{% endif %}
+        </div>
+        {% if j.status == 'approved' %}<span class="badge badge-ok">承認</span>
+        {% elif j.status == 'rejected' %}<span class="badge badge-lost">却下</span>
+        {% else %}<span class="badge badge-warn">審査中</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Right: キャンペーン設定 -->
+  <div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">設定を編集</span></div>
+      <form method="POST" action="/campaigns/{{ campaign.id }}/update">
+        <div class="form-group">
+          <label class="form-label">タイトル</label>
+          <input class="form-input" name="title" value="{{ campaign.title }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">目的</label>
+          <select class="form-select" name="objective">
+            <option value="">選択...</option>
+            {% for obj in ['awareness','engagement','conversion','retention'] %}
+            <option value="{{ obj }}" {{ 'selected' if campaign.objective==obj else '' }}>{{ obj }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ステータス</label>
+          <select class="form-select" name="status">
+            {% for s in ['planning','active','paused','completed'] %}
+            <option value="{{ s }}" {{ 'selected' if campaign.status==s else '' }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="form-group">
+            <label class="form-label">開始日</label>
+            <input class="form-input" name="start_date" type="date" value="{{ campaign.start_date or '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">終了日</label>
+            <input class="form-input" name="end_date" type="date" value="{{ campaign.end_date or '' }}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">メモ</label>
+          <textarea class="form-textarea" name="notes" rows="3">{{ campaign.notes or '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">保存</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

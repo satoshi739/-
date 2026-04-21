@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}元ネタ登録 — NoiMos AI{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">＋ 元ネタ登録</div>
+    <div class="page-sub">バズった投稿をアーカイブし、構造を記録する</div>
+  </div>
+  <div class="header-actions">
+    <a href="/noimos" class="btn btn-ghost btn-sm">← 一覧</a>
+  </div>
+</div>
+
+<form method="POST" action="/noimos/new">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <!-- Left: 元ネタ情報 -->
+    <div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">元ネタ情報</span></div>
+
+        <div class="form-group">
+          <label class="form-label">タイトル（管理用）<span style="color:var(--red);">*</span></label>
+          <input class="form-input" name="title" placeholder="例: 「〇〇してみた」系リール — 保存急増パターン" required>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">ソースプラットフォーム</label>
+            <select class="form-select" name="source_type">
+              <option value="">選択...</option>
+              {% for st in source_types %}
+              <option value="{{ st }}">{{ st }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">元ネタURL</label>
+            <input class="form-input" name="source_url" placeholder="https://...">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">元ネタキャプション / 概要</label>
+          <textarea class="form-textarea" name="source_caption" rows="4" placeholder="元の投稿文をここに貼り付ける..."></textarea>
+        </div>
+
+        <!-- Metrics -->
+        <div style="font-size:11px;color:var(--muted2);font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">実績数値（任意）</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-size:10px;">❤ いいね</label>
+            <input class="form-input" name="metrics_likes" type="number" min="0" placeholder="0">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-size:10px;">🔖 保存</label>
+            <input class="form-input" name="metrics_saves" type="number" min="0" placeholder="0">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-size:10px;">💬 コメント</label>
+            <input class="form-input" name="metrics_comments" type="number" min="0" placeholder="0">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-size:10px;">▶ 再生数</label>
+            <input class="form-input" name="metrics_views" type="number" min="0" placeholder="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: 構造抽出 -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">構造抽出（任意 — 後から入力可）</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">🎣 Hook（最初の引き）</label>
+          <textarea class="form-textarea" name="hook" rows="2" placeholder="冒頭で視聴者を引き止めた表現・切り口..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">⚡ Problem Framing（問題提示）</label>
+          <textarea class="form-textarea" name="problem_framing" rows="2" placeholder="どんな悩み・課題を掘り起こしたか..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">🌊 Emotional Arc（感情の流れ）</label>
+          <textarea class="form-textarea" name="emotional_arc" rows="2" placeholder="共感→驚き→納得 など感情の変化..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">📣 CTA（行動喚起）</label>
+          <input class="form-input" name="cta" placeholder="保存してね / コメントで教えて / DMへ など">
+        </div>
+      </div>
+
+      <!-- Format suitability -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">媒体適性</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          {% for fmt in formats %}
+          <label style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:all .15s;" class="fmt-check-label">
+            <input type="checkbox" name="format_suitability" value="{{ fmt }}" style="display:none;" onchange="toggleFmtLabel(this)">
+            <span>{{ format_icons.get(fmt, '·') }} {{ fmt }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Risk flags -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">⚠ リスクフラグ</span></div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+          {% for flag in risk_flag_options %}
+          <label style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;border:1px solid rgba(239,68,68,.2);cursor:pointer;font-size:11.5px;color:var(--muted2);" class="risk-label">
+            <input type="checkbox" name="risk_flags" value="{{ flag }}" style="display:none;" onchange="toggleRiskLabel(this)">
+            {{ flag }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">メモ</label>
+        <textarea class="form-textarea" name="notes" rows="2" placeholder="特記事項、参照アカウント等..."></textarea>
+      </div>
+
+      <div style="display:flex;gap:9px;justify-content:flex-end;">
+        <a href="/noimos" class="btn btn-ghost">キャンセル</a>
+        <button type="submit" class="btn btn-primary">登録する</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+function toggleFmtLabel(cb) {
+  const label = cb.closest('label');
+  if (cb.checked) {
+    label.style.background = 'rgba(99,102,241,.12)';
+    label.style.borderColor = 'rgba(99,102,241,.4)';
+    label.style.color = 'var(--accent2)';
+  } else {
+    label.style.background = '';
+    label.style.borderColor = 'var(--border)';
+    label.style.color = '';
+  }
+}
+function toggleRiskLabel(cb) {
+  const label = cb.closest('label');
+  if (cb.checked) {
+    label.style.background = 'rgba(239,68,68,.1)';
+    label.style.borderColor = 'rgba(239,68,68,.4)';
+    label.style.color = 'var(--red)';
+  } else {
+    label.style.background = '';
+    label.style.borderColor = 'rgba(239,68,68,.2)';
+    label.style.color = 'var(--muted2)';
+  }
+}
+</script>
+{% endblock %}

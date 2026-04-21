@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}承認キュー — Campaign Pipeline{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">📤 承認キュー</div>
+    <div class="page-sub">承認依頼一覧 — 承認すると投稿キューへの送出準備が完了します</div>
+  </div>
+  <div class="header-actions">
+    <a href="/ideas" class="btn btn-ghost btn-sm">💡 アイデア一覧</a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:20px;">
+  <div class="stat-card red-top">
+    <div class="stat-label">承認待ち</div>
+    <div class="stat-value red">{{ stats.pending_approvals }}</div>
+  </div>
+  <div class="stat-card green-top">
+    <div class="stat-label">アイデア承認済み</div>
+    <div class="stat-value green">{{ stats.ideas_approved }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">バリアント</div>
+    <div class="stat-value blue">{{ stats.variants_total }}</div>
+  </div>
+</div>
+
+<!-- Status filter -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+  {% for s, label in [('pending_approval','承認待ち'),('approved','承認済み'),('rejected','却下'),('all','すべて')] %}
+  <a href="/publishing?status={{ s }}" class="platform-pill {{ 'active' if status_filter==s else '' }}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+{% if jobs %}
+<div style="display:grid;gap:12px;">
+  {% for j in jobs %}
+  {% set idea = j.get('_idea') %}
+  {% set variant = j.get('_variant') %}
+  {% set brand_info = brands.get(j.brand, {}) %}
+  <div class="card" style="padding:18px 22px;">
+    <div style="display:flex;align-items:flex-start;gap:16px;">
+
+      <!-- Status indicator -->
+      <div style="flex-shrink:0;margin-top:2px;">
+        {% if j.status == 'approved' %}
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--green2);box-shadow:0 0 8px var(--green2);"></div>
+        {% elif j.status == 'rejected' %}
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);"></div>
+        {% else %}
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--yellow2);box-shadow:0 0 8px var(--yellow2);animation:livePulse 2s infinite;"></div>
+        {% endif %}
+      </div>
+
+      <!-- Content -->
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;flex-wrap:wrap;">
+          {% if idea %}
+          <a href="/ideas/{{ idea.id }}" style="font-size:14.5px;font-weight:700;color:var(--text);text-decoration:none;">{{ idea.title }}</a>
+          {% else %}
+          <span style="font-size:14.5px;font-weight:700;color:var(--text);">job #{{ j.id }}</span>
+          {% endif %}
+          {% if j.status == 'pending_approval' %}<span class="badge badge-warn">審査中</span>
+          {% elif j.status == 'approved' %}<span class="badge badge-ok">承認済み</span>
+          {% elif j.status == 'rejected' %}<span class="badge badge-lost">却下</span>
+          {% else %}<span class="badge badge-l1">{{ j.status }}</span>{% endif %}
+          {% if brand_info %}<span style="font-size:10px;color:{{ brand_info.color or 'var(--muted2)' }};">{{ brand_info.name_short }}</span>{% endif %}
+          {% if j.platform %}<span style="font-size:10.5px;padding:2px 8px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted2);">{{ j.platform }}</span>{% endif %}
+        </div>
+
+        <!-- Variant preview -->
+        {% if variant and variant.caption %}
+        <div style="font-size:12.5px;color:var(--muted2);line-height:1.6;background:var(--s2);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;border:1px solid var(--border);">
+          <span style="font-size:10px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px;">{{ variant.format }} キャプション</span>
+          {{ variant.caption[:200] }}{% if variant.caption|length > 200 %}…{% endif %}
+        </div>
+        {% endif %}
+
+        <div style="display:flex;gap:14px;font-size:11px;color:var(--muted);">
+          {% if j.scheduled_at %}<span>📅 {{ j.scheduled_at[:16] }}</span>{% endif %}
+          <span>登録: {{ j.created_at[:10] }}</span>
+          {% if j.approval_note %}<span>メモ: {{ j.approval_note }}</span>{% endif %}
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;flex-direction:column;gap:7px;flex-shrink:0;min-width:120px;">
+        {% if j.status == 'pending_approval' %}
+        <form method="POST" action="/publishing/{{ j.id }}/approve">
+          <input type="hidden" name="note" value="">
+          <button type="submit" class="btn btn-green btn-sm" style="width:100%;">✓ 承認</button>
+        </form>
+        <form method="POST" action="/publishing/{{ j.id }}/reject">
+          <input type="hidden" name="note" value="">
+          <button type="submit" class="btn btn-danger btn-sm" style="width:100%;">✕ 却下</button>
+        </form>
+        {% elif j.status == 'approved' %}
+        <div style="text-align:center;">
+          <span class="badge badge-ok" style="display:block;text-align:center;margin-bottom:6px;">承認済み</span>
+          {% if idea %}<a href="/ideas/{{ idea.id }}" class="btn btn-ghost btn-sm" style="width:100%;">詳細</a>{% endif %}
+        </div>
+        {% else %}
+        {% if idea %}<a href="/ideas/{{ idea.id }}" class="btn btn-ghost btn-sm" style="width:100%;">詳細</a>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Approve / reject with note (expanded form) -->
+    {% if j.status == 'pending_approval' %}
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <details>
+        <summary style="font-size:11.5px;color:var(--muted2);cursor:pointer;">コメント付きで承認 / 却下</summary>
+        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <form method="POST" action="/publishing/{{ j.id }}/approve">
+            <textarea class="form-textarea" name="note" rows="2" placeholder="承認コメント（任意）" style="margin-bottom:6px;"></textarea>
+            <button type="submit" class="btn btn-green btn-sm">✓ コメント付き承認</button>
+          </form>
+          <form method="POST" action="/publishing/{{ j.id }}/reject">
+            <textarea class="form-textarea" name="note" rows="2" placeholder="却下理由を入力..." style="margin-bottom:6px;"></textarea>
+            <button type="submit" class="btn btn-danger btn-sm">✕ コメント付き却下</button>
+          </form>
+        </div>
+      </details>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div style="text-align:center;padding:56px 24px;background:var(--s1);border:1px dashed {% if status_filter=='pending_approval' %}rgba(16,185,129,.25){% else %}var(--border){% endif %};border-radius:16px;">
+  <div style="font-size:52px;margin-bottom:14px;">{% if status_filter=='pending_approval' %}✅{% else %}📭{% endif %}</div>
+  <div style="font-size:16px;font-weight:700;color:{% if status_filter=='pending_approval' %}var(--green2){% else %}var(--text){% endif %};margin-bottom:8px;">
+    {% if status_filter == 'pending_approval' %}承認待ちはありません{% else %}該当するジョブがありません{% endif %}
+  </div>
+  <div style="font-size:13px;color:var(--muted2);margin-bottom:22px;line-height:1.6;">
+    {% if status_filter == 'pending_approval' %}
+      全て承認済みです。新しいコンテンツはアイデアから承認依頼を送ってください。
+    {% else %}
+      コンテンツ企画から新しいアイデアを追加し、承認依頼を送ると表示されます。
+    {% endif %}
+  </div>
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <a href="/ideas" class="btn btn-accent btn-sm">💡 アイデアを追加</a>
+    <a href="/campaigns" class="btn btn-ghost btn-sm">🎯 Campaign Pipeline</a>
+    <a href="/story-autopilot/candidates" class="btn btn-ghost btn-sm">📱 ストーリー候補</a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,7 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pip3 install -r requirements.txt"
 
 [deploy]
-startCommand = "gunicorn server:app --bind 0.0.0.0:$PORT"
+startCommand = "bash start_dashboard.sh"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
 restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

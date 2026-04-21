@@ -1,54 +1,110 @@
 {% extends "base.html" %}
-{% block title %}ブランド管理 — UPJ Dashboard{% endblock %}
+{% block title %}ブランド運営 — Brand OS{% endblock %}
 {% block content %}
 
 <div class="page-header">
   <div>
-    <div class="page-title">🏢 ブランド管理</div>
-    <div class="page-sub">UPJ グループ 3ブランドの一元管理</div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;">BRAND OPERATIONS</div>
+    <div class="page-title">🏷 ブランド運営</div>
+    <div class="page-sub">UPJ グループ 全ブランドの運転席</div>
   </div>
-  <a href="/queue/add" class="btn btn-primary">＋ 投稿追加</a>
+  <div class="header-actions">
+    <a href="/queue/add" class="btn btn-primary">＋ 投稿追加</a>
+  </div>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;">
   {% for brand_id, brand in brands.items() %}
-  <div class="card" style="border-top: 3px solid {{ brand.color }};">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+  {% set s = brand_stats[brand_id] %}
+  {% set has_alert = s.story_pending > 0 or s.publishing_pending > 0 or (s.meo_unanswered is defined and s.meo_unanswered > 2) %}
+
+  <div class="card" style="border-top:3px solid {{ brand.color }};padding:20px;">
+
+    <!-- ヘッダー -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
       <div>
-        <div style="font-size:17px;font-weight:800;">{{ brand.name_short }}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px;">{{ brand.name }}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:{{ brand.color }};box-shadow:0 0 6px {{ brand.color }};flex-shrink:0;"></span>
+          <span style="font-size:17px;font-weight:800;">{{ brand.name_short }}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--muted);margin-left:16px;">{{ brand.name }}</div>
       </div>
-      {% if brand_stats[brand_id].pending > 0 %}
-      <span class="badge badge-warn">{{ brand_stats[brand_id].pending }} 件待機</span>
+      {% if has_alert %}
+      <span style="font-size:10px;font-weight:700;background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25);padding:2px 8px;border-radius:20px;">要対応</span>
       {% else %}
-      <span class="badge badge-ok">✅</span>
+      <span style="font-size:10px;font-weight:700;background:rgba(16,185,129,.12);color:var(--green2);border:1px solid rgba(16,185,129,.25);padding:2px 8px;border-radius:20px;">正常</span>
       {% endif %}
     </div>
 
-    <!-- チャンネル一覧 -->
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+    <!-- ミニステータスグリッド -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px;">
+
+      <!-- 投稿キュー -->
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:8px 10px;text-align:center;">
+        <div style="font-size:18px;font-weight:800;color:{{ 'var(--yellow2)' if s.queue_pending > 0 else 'var(--green2)' }};">{{ s.queue_pending }}</div>
+        <div style="font-size:9.5px;color:var(--muted);margin-top:2px;">投稿待ち</div>
+      </div>
+
+      <!-- ストーリー -->
+      <div style="background:var(--s2);border:1px solid {{ 'rgba(239,68,68,.3)' if s.story_pending > 0 else 'var(--border)' }};border-radius:9px;padding:8px 10px;text-align:center;">
+        <div style="font-size:18px;font-weight:800;color:{{ 'var(--red)' if s.story_pending > 0 else 'var(--muted)' }};">{{ s.story_pending }}</div>
+        <div style="font-size:9.5px;color:var(--muted);margin-top:2px;">Story待ち</div>
+      </div>
+
+      <!-- コンテンツ承認 -->
+      <div style="background:var(--s2);border:1px solid {{ 'rgba(239,68,68,.3)' if s.publishing_pending > 0 else 'var(--border)' }};border-radius:9px;padding:8px 10px;text-align:center;">
+        <div style="font-size:18px;font-weight:800;color:{{ 'var(--red)' if s.publishing_pending > 0 else 'var(--muted)' }};">{{ s.publishing_pending }}</div>
+        <div style="font-size:9.5px;color:var(--muted);margin-top:2px;">承認待ち</div>
+      </div>
+    </div>
+
+    <!-- MEOスコア + ブログ -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">
+      {% if s.meo_score is not none and s.meo_score %}
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:7px 10px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:13px;">📍</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:{{ 'var(--green2)' if s.meo_score >= 70 else 'var(--yellow2)' if s.meo_score >= 40 else 'var(--red)' }};">{{ s.meo_score }}</div>
+          <div style="font-size:9px;color:var(--muted);">MEOスコア</div>
+        </div>
+      </div>
+      {% else %}
+      <div style="background:var(--s2);border:1px dashed var(--border);border-radius:9px;padding:7px 10px;display:flex;align-items:center;gap:8px;opacity:.4;">
+        <span style="font-size:13px;">📍</span>
+        <div style="font-size:11px;color:var(--muted);">MEO未連携</div>
+      </div>
+      {% endif %}
+
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:7px 10px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:13px;">✒</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--blue);">{{ s.blog_drafts }}</div>
+          <div style="font-size:9px;color:var(--muted);">ブログ下書き</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Agent -->
+    <div style="background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.12);border-radius:9px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:7px;">
+        <div style="width:6px;height:6px;border-radius:50%;background:{{ 'var(--green2)' if s.agents_online > 0 else 'var(--border)' }};{{ 'animation:livePulse 2s infinite;' if s.agents_online > 0 else '' }}"></div>
+        <span style="font-size:11.5px;color:var(--muted2);">AI Agent</span>
+      </div>
+      <span style="font-size:11.5px;font-weight:700;color:{{ 'var(--green2)' if s.agents_online > 0 else 'var(--muted)' }};">{{ s.agents_online }}/{{ s.agents_total }} 稼働</span>
+    </div>
+
+    <!-- チャンネルタグ -->
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;">
       {% for p, enabled in brand.channels.items() %}
       {% if enabled %}
-      <span style="background:var(--surface2);border:1px solid var(--border);
-                   padding:4px 10px;border-radius:20px;font-size:12px;">
-        {{ platform_icons.get(p,'') }} {{ p }}
-      </span>
-      {% else %}
-      <span style="background:var(--surface);border:1px dashed var(--border);
-                   padding:4px 10px;border-radius:20px;font-size:12px;color:var(--border);">
-        {{ p }}
-      </span>
+      <span style="background:var(--s3);border:1px solid var(--border);padding:3px 8px;border-radius:14px;font-size:10.5px;color:var(--muted2);">{{ platform_icons.get(p,'') }} {{ p }}</span>
       {% endif %}
       {% endfor %}
     </div>
 
-    <a href="{{ brand.url }}" target="_blank"
-       style="font-size:12px;color:var(--muted);display:block;margin-bottom:14px;">
-      🌐 {{ brand.url }}
-    </a>
-
-    <a href="/brands/{{ brand_id }}" class="btn btn-ghost" style="width:100%;justify-content:center;">
-      管理画面を開く →
+    <!-- CTA -->
+    <a href="/brands/{{ brand_id }}" class="btn btn-ghost" style="width:100%;justify-content:center;text-align:center;font-size:13px;">
+      運転席を開く →
     </a>
   </div>
   {% endfor %}

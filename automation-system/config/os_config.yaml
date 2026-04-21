@@ -1,0 +1,124 @@
+# UPJ Autonomous Brand OS — 組織定義
+# Human = President / Founder / Owner
+# AI = CEO（全ブランドを統括）
+# Agents = 専門AI（各領域を担当）
+
+organization:
+  name: "UPJ Autonomous Brand OS"
+  version: "1.0"
+
+president:
+  name: "Satoshi"
+  role: "President / Founder / Owner"
+  authority: "最終意思決定・方針設定・AI CEO への指示"
+
+ai_ceo:
+  id: "ai-ceo"
+  name: "CEO Agent"
+  role: "AI CEO"
+  description: "全ブランドの自律運営を統括するAI CEO。各専門エージェントを指揮し、日次サマリーの報告・戦略判断の補佐・判断待ちキューの管理を担う。"
+  model: "claude-sonnet-4-6"
+  status: "active"
+  responsibilities:
+    - "全ブランドのKPI監視"
+    - "朝のサマリー配信（LINE）"
+    - "判断待ちキューの優先度付け"
+    - "Agentsへのタスク指示"
+    - "月次レポート生成"
+
+agents:
+  - id: "agent-content-upj"
+    name: "UPJ Content Agent"
+    role: "コンテンツ生成 / UPJ専任"
+    brand: "upjapan"
+    model: "claude-haiku-4-5-20251001"
+    status: "active"
+    description: "UPJブランドのSNSコンテンツ（Instagram・Threads・Facebook・Twitter・WordPress）を自律生成・キュー登録する。"
+    tools:
+      - "generate_post"
+      - "queue_push"
+      - "weekly_calendar"
+
+  - id: "agent-content-dsc"
+    name: "DSC Content Agent"
+    role: "コンテンツ生成 / DSC専任"
+    brand: "dsc-marketing"
+    model: "claude-haiku-4-5-20251001"
+    status: "active"
+    description: "DSc Marketingブランドの全チャンネルコンテンツを自律生成・スケジューリングする。"
+    tools:
+      - "generate_post"
+      - "queue_push"
+      - "weekly_calendar"
+      - "line_broadcast"
+
+  - id: "agent-content-cfj"
+    name: "CFJ Content Agent"
+    role: "コンテンツ生成 / CFJ専任"
+    brand: "cashflowsupport"
+    model: "claude-haiku-4-5-20251001"
+    status: "active"
+    description: "cashflowsupport（CFJ）ブランドのコンテンツ生成とLINE配信を担う。金融コンプライアンスを厳守。"
+    tools:
+      - "generate_post"
+      - "queue_push"
+      - "line_broadcast"
+
+  - id: "agent-content-bpg"
+    name: "BPG Content Agent"
+    role: "コンテンツ生成 / Bangkok Peach専任"
+    brand: "bangkok-peach"
+    model: "claude-haiku-4-5-20251001"
+    status: "active"
+    description: "Bangkok Peach Groupの多言語コンテンツ（日英タイ）を生成・スケジューリングする。"
+    tools:
+      - "generate_post"
+      - "queue_push"
+      - "weekly_calendar"
+
+  - id: "agent-blog"
+    name: "Blog Agent"
+    role: "記事生成 / Satoshi Life Blog専任"
+    brand: "satoshi-blog"
+    model: "claude-sonnet-4-6"
+    status: "active"
+    description: "Satoshi Life Blogの記事を自律生成・WordPress下書き保存する。SEO最適化と体験談ライティングに特化。"
+    tools:
+      - "generate_blog_post"
+      - "wordpress_draft"
+
+  - id: "agent-sales"
+    name: "Sales Agent"
+    role: "営業 / リード管理・フォローアップ"
+    brand: null
+    model: "claude-haiku-4-5-20251001"
+    status: "active"
+    description: "全ブランドのリード管理・フォローアップメール生成・LINE返信・ステージ更新を担う。"
+    tools:
+      - "lead_reply"
+      - "followup_send"
+      - "stage_update"
+
+  - id: "agent-analytics"
+    name: "Analytics Agent"
+    role: "分析 / パフォーマンス監視"
+    brand: null
+    model: "claude-haiku-4-5-20251001"
+    status: "active"
+    description: "全ブランドのSNSパフォーマンス・GA4・GSCデータを監視し、改善提案を生成する。"
+    tools:
+      - "ga4_fetch"
+      - "performance_fetch"
+      - "trend_research"
+
+  - id: "agent-ops"
+    name: "Ops Agent"
+    role: "運用 / 自動化・エラー監視"
+    brand: null
+    model: "claude-haiku-4-5-20251001"
+    status: "active"
+    description: "スケジューラーの監視・エラー検知・判断待ちキューのトリアージ・日次バックアップを担う。"
+    tools:
+      - "scheduler_check"
+      - "decision_triage"
+      - "db_backup"

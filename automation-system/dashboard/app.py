@@ -22,6 +22,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 import database as db
+from repositories.asset_repo import (
+    seed_mock_data, get_recommended_by_channel,
+    get_recommended_by_brand, get_missing_alerts,
+)
 
 app = Flask(__name__)
 # セッション用シークレットキー（.envの FLASK_SECRET_KEY で上書き可）
@@ -39,6 +43,7 @@ LINE_QUEUE   = AUTO / "content_queue" / "line"
 QUEUE_ROOT   = AUTO / "content_queue"
 LOGS_DIR     = AUTO / "logs"
 BRANDS_CFG    = AUTO / "config" / "brands.yaml"
+OS_CFG        = AUTO / "config" / "os_config.yaml"
 
 INBOX_DIR     = AUTO.parent / "media" / "inbox"
 PROCESSED_DIR = AUTO.parent / "media" / "processed"
@@ -101,9 +106,15 @@ def health():
 @app.context_processor
 def inject_globals():
     """全テンプレートに共通変数を注入"""
+    unread_count = 0
+    try:
+        unread_count = db.count_unread_notifications()
+    except Exception:
+        pass
     return {
-        "nav_brands":         load_brands(),
-        "nav_platform_icons": PLATFORM_ICONS,
+        "nav_brands":              load_brands(),
+        "nav_platform_icons":      PLATFORM_ICONS,
+        "unread_notif_count":      unread_count,
     }
 
 
@@ -111,6 +122,12 @@ def load_brands() -> dict:
     if not BRANDS_CFG.exists():
         return {}
     return yaml.safe_load(BRANDS_CFG.read_text(encoding="utf-8")).get("brands", {})
+
+
+def load_os_config() -> dict:
+    if not OS_CFG.exists():
+        return {}
+    return yaml.safe_load(OS_CFG.read_text(encoding="utf-8")) or {}
 
 
 # ── ユーティリティ ────────────────────────────────────────
@@ -201,6 +218,109 @@ def get_channel_data() -> dict:
 
 # ── ページ ────────────────────────────────────────────────
 
+@app.route("/president")
+def president_dashboard():
+    from dashboard.mock_service import (
+        get_morning_brief, get_priority_actions, get_pending_approvals,
+        get_danger_alerts, get_brand_status, get_agent_status,
+        get_recent_runs, get_unreplied, get_media_shortage,
+        get_post_shortage, get_blog_candidates,
+    )
+    return render_template("president.html",
+        brief=get_morning_brief(),
+        priority_actions=get_priority_actions(),
+        pending_approvals=get_pending_approvals(),
+        danger_alerts=get_danger_alerts(),
+        brand_status=get_brand_status(),
+        agents=get_agent_status(),
+        recent_runs=get_recent_runs(),
+        unreplied=get_unreplied(),
+        media_shortage=get_media_shortage(),
+        post_shortage=get_post_shortage(),
+        blog_candidates=get_blog_candidates(),
+    )
+
+
+@app.route("/ceo")
+def ceo_dashboard():
+    from dashboard.mock_service import (
+        get_morning_brief, get_brand_status, get_agent_status,
+        get_task_queue, get_bottlenecks, get_escalations,
+        get_ceo_priorities, get_ceo_to_president, get_pending_approvals,
+        get_ai_recommendations, get_anomaly_alerts, get_strategy_notes,
+        get_performance_snapshot,
+    )
+    return render_template("ceo.html",
+        brief=get_morning_brief(),
+        brand_status=get_brand_status(),
+        agents=get_agent_status(),
+        task_queue=get_task_queue(),
+        bottlenecks=get_bottlenecks(),
+        escalations=get_escalations(),
+        ceo_priorities=get_ceo_priorities(),
+        to_president=get_ceo_to_president(),
+        pending_approvals=get_pending_approvals(),
+        recommendations=get_ai_recommendations(),
+        anomaly_alerts=get_anomaly_alerts(),
+        strategy_notes=get_strategy_notes(),
+        perf_snapshot=get_performance_snapshot(),
+    )
+
+
+# ── Blog Auto Growth ─────────────────────────────────────────
+
+@app.route("/blog")
+def blog_candidates():
+    from dashboard.mock_service import get_blog_projects
+    projects = get_blog_projects()
+    return render_template("blog_candidates.html", projects=projects)
+
+
+@app.route("/blog/<int:draft_id>")
+def blog_draft_detail(draft_id):
+    from dashboard.mock_service import get_blog_draft_detail
+    draft = get_blog_draft_detail(draft_id)
+    return render_template("blog_draft_detail.html", draft=draft)
+
+
+# ── AI Chief of Staff ─────────────────────────────────────────
+
+@app.route("/chief-of-staff")
+def chief_of_staff():
+    from dashboard.mock_service import (
+        get_ai_recommendations, get_anomaly_alerts, get_strategy_notes,
+        get_performance_snapshot, get_daily_briefs_history,
+    )
+    return render_template("chief_of_staff.html",
+        recommendations=get_ai_recommendations(),
+        anomaly_alerts=get_anomaly_alerts(),
+        strategy_notes=get_strategy_notes(),
+        perf_snapshot=get_performance_snapshot(),
+        brief_history=get_daily_briefs_history(),
+    )
+
+
+@app.route("/daily-briefs")
+def daily_briefs():
+    from dashboard.mock_service import get_daily_briefs_history
+    briefs = get_daily_briefs_history()
+    return render_template("daily_briefs.html", briefs=briefs)
+
+
+@app.route("/anomaly-alerts")
+def anomaly_alerts():
+    from dashboard.mock_service import get_anomaly_alerts
+    alerts = get_anomaly_alerts()
+    return render_template("anomaly_alerts.html", alerts=alerts)
+
+
+@app.route("/performance-snapshot")
+def performance_snapshot():
+    from dashboard.mock_service import get_performance_snapshot
+    snap = get_performance_snapshot()
+    return render_template("performance_snapshot.html", snap=snap)
+
+
 @app.route("/")
 def index():
     stats    = get_stats()
@@ -278,7 +398,7 @@ def queue_page():
                 q_dir = QUEUE_ROOT / brand_id / platform
                 items = [i for i in load_yamls(q_dir) if not i.get("posted")]
             if items:
-                queue_data[brand_id][platform] = pending
+                queue_data[brand_id][platform] = items
     # 旧キューも表示（後方互換）
     ig_queue   = load_yamls(IG_QUEUE)
     line_queue = load_yamls(LINE_QUEUE)
@@ -393,6 +513,33 @@ def generate_page():
     return render_template("generate.html")
 
 
+@app.route("/agents")
+def agents_page():
+    """AI OS — CEO + Agents ステータスページ"""
+    os_cfg   = load_os_config()
+    brands   = load_brands()
+    # DBからエージェント実行履歴を取得してYAML定義とマージ
+    db_agents = {a["agent_id"]: a for a in db.list_agents()}
+    agents_cfg = os_cfg.get("agents", [])
+    agents_merged = []
+    for ag in agents_cfg:
+        db_rec = db_agents.get(ag["id"], {})
+        agents_merged.append({
+            **ag,
+            "last_run":    db_rec.get("last_run"),
+            "last_result": db_rec.get("last_result"),
+            "run_count":   db_rec.get("run_count", 0),
+            "db_status":   db_rec.get("status", ag.get("status", "active")),
+            "brand_color": brands.get(ag.get("brand") or "", {}).get("color", "#6366f1"),
+            "brand_short": brands.get(ag.get("brand") or "", {}).get("name_short", "全ブランド"),
+        })
+    return render_template("agents.html",
+        os_cfg=os_cfg, agents=agents_merged,
+        president=os_cfg.get("president", {}),
+        ai_ceo=os_cfg.get("ai_ceo", {}),
+        ai=ai_available())
+
+
 @app.route("/analytics")
 def analytics():
     funnel   = get_funnel_data()
@@ -431,14 +578,13 @@ def analytics():
 @app.route("/brands")
 def brands_page():
     brands = load_brands()
-    # 各ブランドのキュー件数を集計
     brand_stats = {}
     for bid, bcfg in brands.items():
         pending = sum(
             len([i for i in load_yamls(QUEUE_ROOT/bid/p) if not i.get("posted")])
             for p in PLATFORMS
         )
-        brand_stats[bid] = {"pending": pending}
+        brand_stats[bid] = {"pending": pending, **_get_brand_cockpit(bid)}
     return render_template("brands.html", brands=brands, brand_stats=brand_stats,
                            platform_icons=PLATFORM_ICONS)
 
@@ -468,12 +614,100 @@ def brand_detail(brand_id):
     # WordPressの下書き一覧
     wp_drafts = _get_wp_drafts(brand_id)
 
+    # ── 運転席: ブランド別ステータスサマリー ──
+    cockpit = _get_brand_cockpit(brand_id)
+
     return render_template("brand_detail.html",
         brand_id=brand_id, brand=brand,
         platforms=platforms,
         ga_data=ga_data, gsc_data=gsc_data,
         wp_drafts=wp_drafts,
+        cockpit=cockpit,
         platform_icons=PLATFORM_ICONS)
+
+
+def _get_brand_cockpit(brand_id: str) -> dict:
+    """ブランド運転席用のサマリーデータを集約する"""
+    data = {}
+
+    # ── 投稿キュー状況 ──
+    total_pending = 0
+    for p in PLATFORMS:
+        items = load_yamls(QUEUE_ROOT / brand_id / p)
+        total_pending += sum(1 for i in items if not i.get("posted"))
+    data["queue_pending"] = total_pending
+
+    # ── ストーリー状況 ──
+    try:
+        from repositories.story_repo import StoryRunRepo, StoryTemplateRepo
+        run_repo = StoryRunRepo()
+        tmpl_repo = StoryTemplateRepo()
+        story_pending = run_repo.count_by_status(brand_id, "pending_approval")
+        story_published = run_repo.count_by_status(brand_id, "published")
+        templates_active = len([t for t in tmpl_repo.list(brand_id=brand_id) if t.get("is_active")])
+        data["story_pending"] = story_pending
+        data["story_published"] = story_published
+        data["story_templates_active"] = templates_active
+    except Exception:
+        data["story_pending"] = 0
+        data["story_published"] = 0
+        data["story_templates_active"] = 0
+
+    # ── MEO状況 ──
+    try:
+        from repositories.meo_repo import list_profiles, list_reviews, count_unanswered, get_latest_insights
+        profiles = [p for p in list_profiles() if p.get("brand_id") == brand_id]
+        if profiles:
+            profile = profiles[0]
+            unanswered = count_unanswered()
+            insights = get_latest_insights(profile["id"]) or {}
+            data["meo_score"] = profile.get("meo_score", 0)
+            data["meo_unanswered"] = unanswered
+            data["meo_avg_rating"] = insights.get("avg_rating", 0)
+            data["meo_reviews_total"] = insights.get("reviews_total", 0)
+        else:
+            data["meo_score"] = None
+    except Exception:
+        data["meo_score"] = None
+
+    # ── 承認待ちコンテンツ ──
+    try:
+        from database import get_conn
+        with get_conn() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM publishing_jobs WHERE brand=? AND status='pending_approval'",
+                (brand_id,)
+            ).fetchone()
+            data["publishing_pending"] = row[0] if row else 0
+    except Exception:
+        data["publishing_pending"] = 0
+
+    # ── ブログ候補 ──
+    try:
+        from database import get_conn
+        with get_conn() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM blog_drafts WHERE brand_id=? AND status='draft'",
+                (brand_id,)
+            ).fetchone()
+            data["blog_drafts"] = row[0] if row else 0
+    except Exception:
+        data["blog_drafts"] = 0
+
+    # ── 自動化エージェント稼働状況 ──
+    try:
+        from database import get_conn
+        with get_conn() as conn:
+            rows = conn.execute(
+                "SELECT COUNT(*), SUM(CASE WHEN status='online' THEN 1 ELSE 0 END) FROM agents"
+            ).fetchone()
+            data["agents_total"] = rows[0] or 0
+            data["agents_online"] = rows[1] or 0
+    except Exception:
+        data["agents_total"] = 0
+        data["agents_online"] = 0
+
+    return data
 
 
 def _get_ga_data(brand_id: str) -> dict:
@@ -581,6 +815,46 @@ def logs_page():
         scheduler_log=log_tail("scheduler.log"),
         morning_log  =log_tail("morning.log"),
         server_log   =log_tail("server.log"))
+
+
+@app.route("/audit-logs")
+def audit_logs_page():
+    page     = int(request.args.get("page", 1))
+    per_page = 50
+    offset   = (page - 1) * per_page
+    resource = request.args.get("resource", "")
+    action   = request.args.get("action", "")
+    logs     = db.list_audit_logs(resource=resource, action=action,
+                                   limit=per_page, offset=offset)
+    total    = db.count_audit_logs()
+    return render_template("audit_logs.html",
+        logs=logs, page=page, per_page=per_page,
+        total=total, resource=resource, action=action,
+        total_pages=max(1, (total + per_page - 1) // per_page))
+
+
+@app.route("/notifications")
+def notifications_page():
+    notifs = db.list_notifications(limit=100)
+    return render_template("notifications.html", notifs=notifs)
+
+
+@app.route("/api/notifications/mark-read", methods=["POST"])
+def api_notif_mark_read():
+    d    = request.get_json(force=True) or {}
+    nid  = d.get("id")
+    if nid:
+        db.mark_notification_read(int(nid))
+    else:
+        db.mark_all_notifications_read()
+    return jsonify({"ok": True, "unread": db.count_unread_notifications()})
+
+
+@app.route("/api/notifications")
+def api_notifications():
+    notifs  = db.list_notifications(limit=20)
+    unread  = db.count_unread_notifications()
+    return jsonify({"notifs": notifs, "unread": unread})
 
 
 # ── API ──────────────────────────────────────────────────
@@ -1385,6 +1659,334 @@ def api_save_story(brand_id):
     return jsonify({"ok": True})
 
 
+# ══════════════════════════════════════════
+# ASSET BRAIN
+# ══════════════════════════════════════════
+
+@app.route("/assets")
+def assets():
+    brands = load_brands()
+    brand   = request.args.get("brand", "")
+    atype   = request.args.get("type", "")
+    channel = request.args.get("channel", "")
+    season  = request.args.get("season", "")
+    status  = request.args.get("status", "active")
+    tag_id  = int(request.args.get("tag", 0))
+    q       = request.args.get("q", "")
+
+    asset_list = db.list_assets(
+        brand=brand, asset_type=atype, channel=channel,
+        season=season, status=status, tag_id=tag_id, q=q,
+    )
+    for a in asset_list:
+        a["tags"] = db.get_asset_tags(a["asset_id"])
+
+    tags = db.list_tags()
+    stats = db.get_asset_stats()
+    brand_ids = list(brands.keys())
+    alerts = get_missing_alerts(brand_ids)
+
+    recommended: dict = {}
+    if brand:
+        for ch in PLATFORMS:
+            recs = get_recommended_by_channel(brand, ch, limit=4)
+            if recs:
+                recommended[ch] = recs
+
+    return render_template(
+        "assets.html",
+        assets=asset_list, tags=tags, stats=stats,
+        brands=brands, alerts=alerts, recommended=recommended,
+        filters={"brand": brand, "type": atype, "channel": channel,
+                 "season": season, "status": status, "tag": tag_id, "q": q},
+        platforms=PLATFORMS, platform_icons=PLATFORM_ICONS,
+    )
+
+
+@app.route("/assets/<asset_id>")
+def asset_detail(asset_id):
+    asset = db.get_asset(asset_id)
+    if not asset:
+        return jsonify({"error": "not found"}), 404
+    asset["tags"] = db.get_asset_tags(asset_id)
+    asset["usages"] = db.get_asset_usages(asset_id)
+    return jsonify(asset)
+
+
+@app.route("/assets", methods=["POST"])
+def asset_create():
+    data = request.get_json(force=True) or {}
+    if not data.get("brand") or not data.get("asset_type"):
+        return jsonify({"error": "brand と asset_type は必須"}), 400
+    aid = db.upsert_asset(data)
+    for tag_name in data.get("tags", []):
+        db.add_asset_tag(aid, tag_name)
+    db.log_activity("asset_create", brand=data["brand"],
+                    detail=f"{data.get('title',aid)} ({data['asset_type']})")
+    return jsonify({"ok": True, "asset_id": aid})
+
+
+@app.route("/assets/<asset_id>", methods=["PATCH"])
+def asset_update(asset_id):
+    data = request.get_json(force=True) or {}
+    existing = db.get_asset(asset_id)
+    if not existing:
+        return jsonify({"error": "not found"}), 404
+    merged = {**existing, **data, "asset_id": asset_id}
+    db.upsert_asset(merged)
+    return jsonify({"ok": True})
+
+
+@app.route("/assets/<asset_id>", methods=["DELETE"])
+def asset_delete(asset_id):
+    db.delete_asset(asset_id)
+    return jsonify({"ok": True})
+
+
+@app.route("/assets/<asset_id>/tags", methods=["POST"])
+def asset_tag_add(asset_id):
+    data = request.get_json(force=True) or {}
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    tid = db.add_asset_tag(asset_id, name,
+                           category=data.get("category", "general"),
+                           color=data.get("color", "#6366f1"))
+    return jsonify({"ok": True, "tag_id": tid})
+
+
+@app.route("/assets/<asset_id>/tags/<int:tag_id>", methods=["DELETE"])
+def asset_tag_remove(asset_id, tag_id):
+    db.remove_asset_tag(asset_id, tag_id)
+    return jsonify({"ok": True})
+
+
+@app.route("/assets/<asset_id>/usage", methods=["POST"])
+def asset_usage_record(asset_id):
+    data = request.get_json(force=True) or {}
+    uid = db.record_asset_usage(
+        asset_id,
+        channel=data.get("channel", ""),
+        brand=data.get("brand", ""),
+        used_in=data.get("used_in", ""),
+        result_note=data.get("result_note", ""),
+        performance=data.get("performance", {}),
+    )
+    return jsonify({"ok": True, "usage_id": uid})
+
+
+# ══════════════════════════════════════════════════════════
+# MEO Control Tower & Review Reply Center
+# ══════════════════════════════════════════════════════════
+
+import sys as _sys
+_sys.path.insert(0, str(AUTO))
+from repositories.meo_repo import (
+    list_profiles, get_profile, list_reviews,
+    count_unanswered, count_low_rating, list_pending_drafts,
+    approve_draft, mark_draft_sent, set_review_replied,
+    add_draft, sync_from_connector, get_latest_insights,
+    list_bp_posts,
+)
+from connectors.gbp_connector import get_connector as _get_gbp_connector
+
+
+def _meo_stats() -> dict:
+    profiles = list_profiles()
+    total_unanswered = count_unanswered()
+    total_low_rating = count_low_rating(threshold=2)
+    pending_drafts   = len(list_pending_drafts())
+    photo_alerts     = sum(1 for p in profiles if p.get("photo_alert"))
+    avg_score        = int(sum(p.get("meo_score", 0) for p in profiles) / len(profiles)) if profiles else 0
+    return {
+        "profiles":       len(profiles),
+        "unanswered":     total_unanswered,
+        "low_rating":     total_low_rating,
+        "pending_drafts": pending_drafts,
+        "photo_alerts":   photo_alerts,
+        "avg_meo_score":  avg_score,
+    }
+
+
+@app.route("/meo")
+def meo_tower():
+    profiles = list_profiles()
+    stats    = _meo_stats()
+    # 各店舗の最新インサイトを付与
+    for p in profiles:
+        p["insights"] = get_latest_insights(p["id"]) or {}
+    return render_template("meo.html", profiles=profiles, stats=stats)
+
+
+@app.route("/meo/<profile_id>")
+def meo_detail(profile_id):
+    profile = get_profile(profile_id)
+    if not profile:
+        return "店舗が見つかりません", 404
+    reviews  = list_reviews(profile_id=profile_id)
+    posts    = list_bp_posts(profile_id=profile_id)
+    insights = get_latest_insights(profile_id) or {}
+    # 星ごとの集計
+    rating_dist = {i: 0 for i in range(1, 6)}
+    for r in reviews:
+        rating_dist[r.get("rating", 1)] = rating_dist.get(r.get("rating", 1), 0) + 1
+    return render_template(
+        "meo_detail.html",
+        profile=profile, reviews=reviews, posts=posts,
+        insights=insights, rating_dist=rating_dist,
+    )
+
+
+@app.route("/reviews")
+def review_center():
+    tab      = request.args.get("tab", "unanswered")
+    profile_id = request.args.get("profile_id", "")
+    profiles = list_profiles()
+
+    if tab == "unanswered":
+        reviews = list_reviews(profile_id=profile_id, status="unanswered")
+    elif tab == "low_rating":
+        reviews = list_reviews(profile_id=profile_id, max_rating=2)
+    elif tab == "drafts":
+        reviews = list_pending_drafts()
+    else:
+        reviews = list_reviews(profile_id=profile_id)
+
+    stats = _meo_stats()
+    return render_template(
+        "review_center.html",
+        reviews=reviews, tab=tab, profiles=profiles,
+        selected_profile=profile_id, stats=stats,
+    )
+
+
+@app.route("/api/meo/sync", methods=["POST"])
+def api_meo_sync():
+    try:
+        connector = _get_gbp_connector()
+        counts = sync_from_connector(connector)
+        db.log_activity("meo_sync", detail=str(counts))
+        return jsonify({"ok": True, "counts": counts})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/reviews/<review_id>/generate_draft", methods=["POST"])
+def api_generate_draft(review_id):
+    from repositories.meo_repo import get_review as _get_review
+    review = _get_review(review_id)
+    if not review:
+        return jsonify({"error": "not found"}), 404
+
+    if not ai_available():
+        # AI未接続時はテンプレート返信を生成
+        rating = review.get("rating", 3)
+        name   = review.get("reviewer_name", "お客様")
+        if rating >= 4:
+            draft = f"{name}様、温かいお言葉をありがとうございます。スタッフ一同、励みになります。またのご来店をお待ちしております。"
+        elif rating == 3:
+            draft = f"{name}様、ご利用いただきありがとうございます。ご意見を参考に、より良いサービスを目指してまいります。"
+        else:
+            draft = f"{name}様、ご不満をおかけし大変申し訳ございません。ご指摘の点を真摯に受け止め、改善に努めます。直接ご連絡いただけますと幸いです。"
+    else:
+        try:
+            import anthropic as _ant
+            client = _ant.Anthropic()
+            rating  = review.get("rating", 3)
+            comment = review.get("comment", "（コメントなし）")
+            name    = review.get("reviewer_name", "お客様")
+            prompt  = (
+                f"Googleビジネスプロフィールのレビューへの返信文を作成してください。\n\n"
+                f"レビュアー名: {name}\n評価: {rating}星\nコメント: {comment}\n\n"
+                f"要件:\n- 丁寧な日本語で200文字以内\n- 感謝または謝罪から始める\n"
+                f"- 具体的なアクションに言及\n- 返信文のみ出力（説明不要）"
+            )
+            resp = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=300,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            draft = resp.content[0].text.strip()
+        except Exception as e:
+            err_str = str(e)
+            # クレジット不足など API エラー時はテンプレートにフォールバック
+            if "credit" in err_str.lower() or "billing" in err_str.lower() or "400" in err_str:
+                rating = review.get("rating", 3)
+                name   = review.get("reviewer_name", "お客様")
+                if rating >= 4:
+                    draft = f"{name}様、温かいお言葉をありがとうございます。スタッフ一同、励みになります。またのご来店をお待ちしております。"
+                elif rating == 3:
+                    draft = f"{name}様、ご利用いただきありがとうございます。ご意見を参考に、より良いサービスを目指してまいります。"
+                else:
+                    draft = f"{name}様、この度はご不満をおかけし大変申し訳ございません。ご指摘を真摯に受け止め、改善に努めます。直接ご連絡いただけますと幸いです。"
+            else:
+                return jsonify({"error": err_str}), 500
+
+    draft_id = add_draft(review_id, draft, source="ai")
+    return jsonify({"ok": True, "draft_id": draft_id, "draft": draft})
+
+
+@app.route("/api/reviews/<review_id>/reply", methods=["POST"])
+def api_review_reply(review_id):
+    data = request.get_json(force=True) or {}
+    reply_text = (data.get("reply") or "").strip()
+    if not reply_text:
+        return jsonify({"error": "reply text required"}), 400
+
+    from repositories.meo_repo import get_review as _get_review
+    review = _get_review(review_id)
+    if not review:
+        return jsonify({"error": "not found"}), 404
+
+    profile = get_profile(review["profile_id"])
+    if not profile:
+        return jsonify({"error": "profile not found"}), 404
+
+    # GBP に送信（モック or 本番）
+    connector = _get_gbp_connector()
+    ok = connector.reply_to_review(
+        profile["gbp_location_id"], review.get("gbp_review_id", ""), reply_text
+    )
+    if ok:
+        set_review_replied(review_id, reply_text)
+        # 下書きがあればsentにする
+        draft_id = data.get("draft_id")
+        if draft_id:
+            mark_draft_sent(int(draft_id))
+        db.log_activity("review_reply", brand=profile.get("brand"),
+                        detail=f"review_id={review_id}")
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "GBP reply failed"}), 500
+
+
+@app.route("/api/drafts/<int:draft_id>/approve", methods=["POST"])
+def api_approve_draft(draft_id):
+    approve_draft(draft_id)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/meo/stats")
+def api_meo_stats():
+    return jsonify(_meo_stats())
+
+
+@app.route("/api/assets")
+def api_assets():
+    brand   = request.args.get("brand", "")
+    atype   = request.args.get("type", "")
+    channel = request.args.get("channel", "")
+    q       = request.args.get("q", "")
+    assets  = db.list_assets(brand=brand, asset_type=atype, channel=channel, q=q)
+    for a in assets:
+        a["tags"] = db.get_asset_tags(a["asset_id"])
+    return jsonify(assets)
+
+
+@app.route("/api/assets/stats")
+def api_asset_stats():
+    return jsonify(db.get_asset_stats())
+
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     from sns.line_api import LINEMessenger
@@ -1424,6 +2026,265 @@ def webhook():
     return "OK"
 
 
+# ── Agent Workspace ──────────────────────────────────────────────────────────
+
+AGENT_ICONS = {
+    "sns_poster":       "📣",
+    "line_responder":   "📱",
+    "lead_manager":     "🎯",
+    "content_creator":  "✍",
+    "analytics":        "📊",
+    "meo_manager":      "📍",
+    "wp_blogger":       "📝",
+    "finance":          "💰",
+    "ceo":              "🏢",
+    "scheduler":        "📅",
+    "reviewer":         "⭐",
+    "escalation":       "🚨",
+}
+
+
+@app.route("/agent-workspace")
+def agent_workspace():
+    import org_database as obd
+    from agents.orchestrator import get_overview
+    try:
+        agents = obd.list_ai_agents()
+        task_counts = obd.get_task_counts_all_agents()
+        for ag in agents:
+            ag["task_counts"] = task_counts.get(ag["id"], {})
+            ag["brands"] = obd.get_agent_brand_assignments(ag["id"])
+        overview = get_overview()
+    except Exception as e:
+        log.warning(f"agent_workspace data error: {e}")
+        agents, overview = [], {}
+    return render_template("agent_workspace.html",
+        agents=agents, overview=overview, agent_icons=AGENT_ICONS)
+
+
+@app.route("/agent-workspace/<agent_id>")
+def agent_workspace_detail(agent_id):
+    import org_database as obd
+    agent = obd.get_agent_with_user(agent_id)
+    if not agent:
+        return "Agent not found", 404
+    try:
+        capabilities     = obd.get_agent_capabilities_list(agent_id)
+        brand_assignments = obd.get_agent_brand_assignments(agent_id)
+        tasks_by_status  = {}
+        for st in ("idle", "queued", "running", "blocked",
+                   "waiting_approval", "completed", "failed", "escalated"):
+            tasks_by_status[st] = obd.list_tasks(agent_id=agent_id, status=st, limit=20)
+        for task in tasks_by_status.get("waiting_approval", []):
+            task["approval"] = obd.get_pending_approval_for_task(task["id"])
+        recent_runs  = obd.list_runs_for_agent(agent_id, limit=10)
+        escalations  = obd.list_escalations_for_agent(agent_id, status="open")
+        all_tasks    = obd.list_tasks(limit=200)
+    except Exception as e:
+        log.warning(f"agent_detail data error: {e}")
+        capabilities, brand_assignments = [], []
+        tasks_by_status = {s: [] for s in ("idle", "queued", "running", "blocked",
+                                            "waiting_approval", "completed", "failed", "escalated")}
+        recent_runs, escalations, all_tasks = [], [], []
+    return render_template("agent_detail.html",
+        agent=agent,
+        capabilities=capabilities,
+        brand_assignments=brand_assignments,
+        tasks=tasks_by_status,
+        recent_runs=recent_runs,
+        escalations=escalations,
+        all_tasks=all_tasks,
+        agent_icons=AGENT_ICONS,
+    )
+
+
+# ── Task API ──────────────────────────────────────────────────────────────────
+
+@app.route("/api/tasks", methods=["POST"])
+def api_create_task():
+    from agents.task_service import create_task
+    d = request.get_json(force=True) or {}
+    try:
+        task_id = create_task(
+            title=d.get("title", ""),
+            mode=d.get("mode", "full_auto"),
+            assigned_to_agent_id=d.get("agent_id", ""),
+            priority=int(d.get("priority", 3)),
+            description=d.get("description", ""),
+            depends_on=d.get("depends_on", []),
+            scheduled_at=d.get("scheduled_at", ""),
+            brand_id=d.get("brand_id", ""),
+        )
+        return jsonify({"ok": True, "task_id": task_id})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/tasks/<task_id>/start", methods=["POST"])
+def api_start_task(task_id):
+    from agents.orchestrator import start_task
+    run_id = start_task(task_id)
+    if run_id:
+        return jsonify({"ok": True, "run_id": run_id})
+    return jsonify({"ok": False, "error": "起動できませんでした（エージェント未割当または状態不正）"}), 400
+
+
+@app.route("/api/tasks/<task_id>/complete", methods=["POST"])
+def api_complete_task(task_id):
+    import org_database as obd
+    from agents.orchestrator import complete_task
+    d = request.get_json(force=True) or {}
+    runs = obd.list_runs_for_task(task_id, limit=1)
+    if not runs:
+        return jsonify({"ok": False, "error": "実行中のrunが見つかりません"}), 400
+    complete_task(task_id, runs[0]["id"],
+                  output_data=d.get("output_data"),
+                  log_entries=d.get("log_entries"),
+                  tokens_used=int(d.get("tokens_used", 0)),
+                  cost_usd=float(d.get("cost_usd", 0.0)))
+    return jsonify({"ok": True})
+
+
+@app.route("/api/tasks/<task_id>/fail", methods=["POST"])
+def api_fail_task(task_id):
+    import org_database as obd
+    from agents.orchestrator import fail_task
+    d = request.get_json(force=True) or {}
+    runs = obd.list_runs_for_task(task_id, limit=1)
+    if not runs:
+        return jsonify({"ok": False, "error": "実行中のrunが見つかりません"}), 400
+    fail_task(task_id, runs[0]["id"], error=d.get("error", "手動で失敗に設定"))
+    return jsonify({"ok": True})
+
+
+@app.route("/api/tasks/<task_id>/request-approval", methods=["POST"])
+def api_request_approval(task_id):
+    from agents.orchestrator import request_approval
+    d = request.get_json(force=True) or {}
+    try:
+        approval_id = request_approval(
+            task_id=task_id,
+            title=d.get("title", "承認リクエスト"),
+            description=d.get("description", ""),
+            approver_user_ids=d.get("approver_user_ids"),
+            expires_in_hours=int(d.get("expires_in_hours", 48)),
+        )
+        return jsonify({"ok": True, "approval_id": approval_id})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/tasks/<task_id>/approve", methods=["POST"])
+def api_approve_task_route(task_id):
+    from agents.orchestrator import approve_task
+    d = request.get_json(force=True) or {}
+    ok = approve_task(task_id,
+                      approver_user_id=d.get("approver_user_id", ""),
+                      comment=d.get("comment", ""))
+    return jsonify({"ok": ok})
+
+
+@app.route("/api/tasks/<task_id>/reject", methods=["POST"])
+def api_reject_task_route(task_id):
+    from agents.orchestrator import reject_task
+    d = request.get_json(force=True) or {}
+    ok = reject_task(task_id,
+                     approver_user_id=d.get("approver_user_id", ""),
+                     comment=d.get("comment", ""))
+    return jsonify({"ok": ok})
+
+
+@app.route("/api/tasks/<task_id>/escalate", methods=["POST"])
+def api_escalate_task(task_id):
+    import org_database as obd
+    from agents.orchestrator import escalate
+    d = request.get_json(force=True) or {}
+    task = obd.get_task(task_id)
+    agent_id = task.get("assigned_to_agent_id", "") if task else ""
+    esc_id = escalate(task_id,
+                      reason=d.get("reason", "手動エスカレーション"),
+                      agent_id=agent_id,
+                      context=d.get("context", {}))
+    return jsonify({"ok": True, "escalation_id": esc_id})
+
+
+@app.route("/api/tasks/<task_id>/requeue", methods=["POST"])
+def api_requeue_task(task_id):
+    from agents.orchestrator import requeue_task
+    ok = requeue_task(task_id)
+    return jsonify({"ok": ok})
+
+
+@app.route("/api/tasks/<task_id>/force-queue", methods=["POST"])
+def api_force_queue(task_id):
+    from agents.task_service import transition
+    ok = transition(task_id, "queued")
+    return jsonify({"ok": ok})
+
+
+# ── Escalation API ────────────────────────────────────────────────────────────
+
+@app.route("/api/escalations/<escalation_id>/resolve", methods=["POST"])
+def api_resolve_escalation(escalation_id):
+    from agents.orchestrator import resolve_escalation
+    d = request.get_json(force=True) or {}
+    ok = resolve_escalation(escalation_id,
+                            note=d.get("note", ""),
+                            requeue=d.get("requeue", True))
+    return jsonify({"ok": ok})
+
+
+# ── Task approve（社長直接承認） ──────────────────────────────────────────────
+
+@app.route("/api/tasks/<task_id>/approve", methods=["POST"])
+def api_task_approve(task_id):
+    try:
+        import org_database as obd
+        obd.update_task_status(task_id, "idle")
+        db.write_audit("task_approved", "agent_task", task_id,
+                       user_name="社長", detail={"action": "approved_via_dashboard"})
+        db.push_notification(
+            title="タスク承認済み",
+            body=f"タスク ({task_id[:8]}…) が承認されました。エージェントが実行します。",
+            link="/agent-workspace",
+            type_="success",
+        )
+    except Exception as e:
+        log.warning(f"task_approve error: {e}")
+    return redirect(url_for("agent_workspace_page"))
+
+
+# ── Orchestrator API ──────────────────────────────────────────────────────────
+
+@app.route("/api/orchestrator/tick", methods=["POST"])
+def api_orchestrator_tick():
+    from agents.orchestrator import tick
+    try:
+        summary = tick()
+        return jsonify({"ok": True, "summary": summary})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/orchestrator/seed", methods=["POST"])
+def api_orchestrator_seed():
+    try:
+        import seed_org
+        seed_org.seed()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/orchestrator/overview")
+def api_orchestrator_overview():
+    from agents.orchestrator import get_overview
+    try:
+        return jsonify(get_overview())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 def startup():
     """アプリ起動時の初期化処理（gunicorn 起動時もここで初期化される）"""
     # 必要なディレクトリを作成
@@ -1433,6 +2294,33 @@ def startup():
         d.mkdir(parents=True, exist_ok=True)
     # DBを初期化
     db.init_db()
+    # os_config.yaml のAgent定義をDBに同期（初回登録のみ）
+    try:
+        os_cfg = load_os_config()
+        for ag in os_cfg.get("agents", []):
+            existing = db.get_agent(ag["id"])
+            if not existing:
+                db.upsert_agent({
+                    "agent_id": ag["id"],
+                    "name":     ag["name"],
+                    "role":     ag.get("role", ""),
+                    "brand":    ag.get("brand"),
+                    "status":   ag.get("status", "active"),
+                    "run_count": 0,
+                })
+        # AI CEO も登録
+        ceo = os_cfg.get("ai_ceo", {})
+        if ceo.get("id") and not db.get_agent(ceo["id"]):
+            db.upsert_agent({
+                "agent_id": ceo["id"],
+                "name":     ceo.get("name", "CEO Agent"),
+                "role":     ceo.get("role", "AI CEO"),
+                "brand":    None,
+                "status":   ceo.get("status", "active"),
+                "run_count": 0,
+            })
+    except Exception as e:
+        log.warning(f"Agents同期スキップ: {e}")
     # YAMLデータをDBに移行（初回のみ）
     try:
         migrated = db.migrate_from_yaml()
@@ -1440,7 +2328,741 @@ def startup():
             log.info(f"YAML→DB移行完了: {migrated}")
     except Exception as e:
         log.warning(f"YAML移行スキップ: {e}")
+    # Asset Brain モックデータを投入（空の場合のみ）
+    try:
+        n = seed_mock_data()
+        if n:
+            log.info(f"Asset Brain: モックデータ {n} 件投入")
+    except Exception as e:
+        log.warning(f"Asset Brain シードスキップ: {e}")
+    # MEO 初期同期（DBが空の場合のみモックデータを投入）
+    try:
+        with db.get_conn() as _conn:
+            _cnt = _conn.execute("SELECT COUNT(*) FROM business_profiles").fetchone()[0]
+        if _cnt == 0:
+            from connectors.gbp_connector import MockGBPConnector
+            from repositories.meo_repo import sync_from_connector as _meo_sync
+            _counts = _meo_sync(MockGBPConnector())
+            log.info(f"MEO モックデータ投入: {_counts}")
+    except Exception as e:
+        log.warning(f"MEO 初期化スキップ: {e}")
+    # Org DB（エージェント実行フレームワーク）を初期シード
+    try:
+        import org_database as obd
+        obd.init_org_db()
+        obd.seed_default_roles()
+        agents = obd.list_ai_agents()
+        if not agents:
+            import seed_org
+            seed_org.seed()
+            log.info("Org DB: 初期シード完了")
+    except Exception as e:
+        log.warning(f"Org DB シードスキップ: {e}")
+    # 起動通知（未読が0件の場合のみ）
+    try:
+        if db.count_unread_notifications() == 0:
+            db.push_notification(
+                title="Brand OS 起動完了",
+                body="ダッシュボードが正常に起動しました。",
+                link="/",
+                type_="info",
+                source="system",
+            )
+    except Exception as e:
+        log.warning(f"起動通知スキップ: {e}")
     log.info("✅ ダッシュボード初期化完了")
+
+
+
+# ══════════════════════════════════════════════════════════════
+# NoiMos AI — 元ネタアーカイブ & 構造抽出
+# ══════════════════════════════════════════════════════════════
+
+FORMATS = ["feed", "story", "reel", "meo", "blog", "line"]
+RISK_FLAG_OPTIONS = [
+    "著作権リスク", "競合模倣", "ブランド不適合", "炎上可能性",
+    "景品表示法", "誇大表現", "コンプライアンス要確認",
+]
+FORMAT_ICONS = {
+    "feed": "🖼", "story": "📸", "reel": "🎬",
+    "meo": "📍", "blog": "📝", "line": "📱",
+}
+
+
+@app.route("/noimos")
+def noimos_list():
+    status_filter = request.args.get("status", "")
+    patterns  = db.list_viral_patterns(status=status_filter)
+    stats     = db.get_noimos_stats()
+    campaigns = db.list_campaigns()
+    return render_template("noimos.html",
+        patterns=patterns, stats=stats, campaigns=campaigns,
+        status_filter=status_filter, format_icons=FORMAT_ICONS,
+    )
+
+
+@app.route("/noimos/new", methods=["GET", "POST"])
+def noimos_new():
+    brands    = load_brands()
+    campaigns = db.list_campaigns()
+    if request.method == "POST":
+        f          = request.form
+        formats    = request.form.getlist("format_suitability")
+        risk_flags = request.form.getlist("risk_flags")
+        pid = db.create_viral_pattern({
+            "title":            f.get("title", "").strip(),
+            "source_type":      f.get("source_type", ""),
+            "source_url":       f.get("source_url", "").strip(),
+            "source_caption":   f.get("source_caption", "").strip(),
+            "metrics_likes":    int(f.get("metrics_likes") or 0),
+            "metrics_comments": int(f.get("metrics_comments") or 0),
+            "metrics_saves":    int(f.get("metrics_saves") or 0),
+            "metrics_views":    int(f.get("metrics_views") or 0),
+            "hook":             f.get("hook", "").strip(),
+            "problem_framing":  f.get("problem_framing", "").strip(),
+            "emotional_arc":    f.get("emotional_arc", "").strip(),
+            "cta":              f.get("cta", "").strip(),
+            "format_suitability": formats,
+            "risk_flags":       risk_flags,
+            "notes":            f.get("notes", "").strip(),
+            "status":           "extracted" if f.get("hook") else "draft",
+        })
+        db.log_activity("noimos_create", detail=f"パターン登録 #{pid}")
+        return redirect(url_for("noimos_detail", pid=pid))
+    return render_template("noimos_new.html",
+        brands=brands, campaigns=campaigns,
+        formats=FORMATS, format_icons=FORMAT_ICONS,
+        risk_flag_options=RISK_FLAG_OPTIONS,
+        source_types=["instagram", "tiktok", "youtube", "twitter", "blog", "other"],
+    )
+
+
+@app.route("/noimos/<int:pid>")
+def noimos_detail(pid):
+    pattern  = db.get_viral_pattern(pid)
+    if not pattern:
+        return redirect(url_for("noimos_list"))
+    examples = db.list_pattern_examples(pid)
+    all_ideas = db.list_content_ideas()
+    ideas_linked = [i for i in all_ideas if i.get("pattern_id") == pid]
+    campaigns = db.list_campaigns()
+    brands    = load_brands()
+    return render_template("noimos_detail.html",
+        pattern=pattern, examples=examples, ideas_linked=ideas_linked,
+        campaigns=campaigns, brands=brands,
+        formats=FORMATS, format_icons=FORMAT_ICONS,
+        risk_flag_options=RISK_FLAG_OPTIONS,
+    )
+
+
+@app.route("/noimos/<int:pid>/extract", methods=["POST"])
+def noimos_extract(pid):
+    f          = request.form
+    formats    = request.form.getlist("format_suitability")
+    risk_flags = request.form.getlist("risk_flags")
+    db.update_viral_pattern(pid, {
+        "hook":             f.get("hook", "").strip(),
+        "problem_framing":  f.get("problem_framing", "").strip(),
+        "emotional_arc":    f.get("emotional_arc", "").strip(),
+        "cta":              f.get("cta", "").strip(),
+        "format_suitability": formats,
+        "risk_flags":       risk_flags,
+        "notes":            f.get("notes", "").strip(),
+        "status":           "extracted",
+    })
+    db.log_activity("noimos_extract", detail=f"構造抽出 #{pid}")
+    return redirect(url_for("noimos_detail", pid=pid))
+
+
+@app.route("/noimos/<int:pid>/add_example", methods=["POST"])
+def noimos_add_example(pid):
+    f = request.form
+    db.add_pattern_example({
+        "pattern_id":      pid,
+        "title":           f.get("title", "").strip(),
+        "source_platform": f.get("source_platform", ""),
+        "source_url":      f.get("source_url", "").strip(),
+        "source_account":  f.get("source_account", "").strip(),
+        "caption":         f.get("caption", "").strip(),
+        "likes":           int(f.get("likes") or 0),
+        "comments":        int(f.get("comments") or 0),
+        "saves":           int(f.get("saves") or 0),
+        "views":           int(f.get("views") or 0),
+        "posted_at":       f.get("posted_at", ""),
+        "notes":           f.get("notes", "").strip(),
+    })
+    return redirect(url_for("noimos_detail", pid=pid))
+
+
+@app.route("/noimos/<int:pid>/convert", methods=["GET", "POST"])
+def noimos_convert(pid):
+    pattern  = db.get_viral_pattern(pid)
+    if not pattern:
+        return redirect(url_for("noimos_list"))
+    brands    = load_brands()
+    campaigns = db.list_campaigns()
+    if request.method == "POST":
+        f              = request.form
+        target_formats = request.form.getlist("target_formats")
+        campaign_id    = int(f.get("campaign_id") or 0) or None
+        iid = db.create_content_idea({
+            "pattern_id":     pid,
+            "campaign_id":    campaign_id,
+            "brand":          f.get("brand", ""),
+            "title":          f.get("title", "").strip(),
+            "hook":           f.get("hook", "").strip(),
+            "body":           f.get("body", "").strip(),
+            "cta":            f.get("cta", "").strip(),
+            "target_formats": target_formats,
+            "tone":           f.get("tone", "").strip(),
+            "notes":          f.get("notes", "").strip(),
+            "status":         "draft",
+        })
+        for fmt in target_formats:
+            db.create_content_variant({
+                "idea_id": iid,
+                "format":  fmt,
+                "caption": f.get(f"caption_{fmt}", "").strip() or None,
+                "hashtags":f.get(f"hashtags_{fmt}", "").strip() or None,
+                "status":  "draft",
+            })
+        db.log_activity("noimos_convert",
+                        detail=f"ブランド変換 pattern#{pid}→idea#{iid}")
+        return redirect(url_for("idea_detail", iid=iid))
+    return render_template("noimos_convert.html",
+        pattern=pattern, brands=brands, campaigns=campaigns,
+        formats=FORMATS, format_icons=FORMAT_ICONS,
+    )
+
+
+# ══════════════════════════════════════════════════════════════
+# Campaign Pipeline — アイデア & バリアント
+# ══════════════════════════════════════════════════════════════
+
+@app.route("/ideas")
+def ideas_list():
+    brand_filter    = request.args.get("brand", "")
+    status_filter   = request.args.get("status", "")
+    campaign_filter = int(request.args.get("campaign_id") or 0)
+    ideas     = db.list_content_ideas(brand=brand_filter, status=status_filter,
+                                       campaign_id=campaign_filter)
+    campaigns = db.list_campaigns()
+    brands    = load_brands()
+    stats     = db.get_noimos_stats()
+    return render_template("ideas.html",
+        ideas=ideas, campaigns=campaigns, brands=brands, stats=stats,
+        brand_filter=brand_filter, status_filter=status_filter,
+        campaign_filter=campaign_filter, format_icons=FORMAT_ICONS,
+    )
+
+
+@app.route("/ideas/<int:iid>")
+def idea_detail(iid):
+    idea     = db.get_content_idea(iid)
+    if not idea:
+        return redirect(url_for("ideas_list"))
+    variants = db.list_content_variants(iid)
+    pattern  = db.get_viral_pattern(idea["pattern_id"]) if idea.get("pattern_id") else None
+    campaign = db.get_campaign(idea["campaign_id"]) if idea.get("campaign_id") else None
+    all_jobs = db.list_publishing_jobs()
+    jobs_for = [j for j in all_jobs if j.get("idea_id") == iid]
+    campaigns = db.list_campaigns()
+    brands    = load_brands()
+    return render_template("idea_detail.html",
+        idea=idea, variants=variants, pattern=pattern,
+        campaign=campaign, campaigns=campaigns, brands=brands,
+        jobs_for=jobs_for, formats=FORMATS, format_icons=FORMAT_ICONS,
+    )
+
+
+@app.route("/ideas/<int:iid>/variants", methods=["POST"])
+def idea_add_variant(iid):
+    f = request.form
+    db.create_content_variant({
+        "idea_id":      iid,
+        "format":       f.get("format", "feed"),
+        "caption":      f.get("caption", "").strip(),
+        "hashtags":     f.get("hashtags", "").strip(),
+        "image_prompt": f.get("image_prompt", "").strip(),
+        "video_prompt": f.get("video_prompt", "").strip(),
+        "duration_sec": int(f.get("duration_sec") or 0) or None,
+        "notes":        f.get("notes", "").strip(),
+    })
+    return redirect(url_for("idea_detail", iid=iid))
+
+
+@app.route("/ideas/<int:iid>/approve", methods=["POST"])
+def idea_approve(iid):
+    db.update_content_idea(iid, {"status": "approved"})
+    db.log_activity("idea_approve", detail=f"アイデア承認 #{iid}")
+    return redirect(url_for("idea_detail", iid=iid))
+
+
+@app.route("/ideas/<int:iid>/reject", methods=["POST"])
+def idea_reject(iid):
+    db.update_content_idea(iid, {"status": "rejected"})
+    return redirect(url_for("ideas_list"))
+
+
+@app.route("/ideas/<int:iid>/request_publish", methods=["POST"])
+def idea_request_publish(iid):
+    idea = db.get_content_idea(iid)
+    if not idea:
+        return redirect(url_for("ideas_list"))
+    f   = request.form
+    vid = int(f.get("variant_id") or 0) or None
+    db.create_publishing_job({
+        "variant_id":  vid,
+        "idea_id":     iid,
+        "campaign_id": idea.get("campaign_id"),
+        "brand":       idea.get("brand"),
+        "platform":    f.get("platform", ""),
+        "scheduled_at":f.get("scheduled_at", ""),
+        "status":      "pending_approval",
+    })
+    db.log_activity("publish_request", brand=idea.get("brand"),
+                    detail=f"承認依頼 idea#{iid}")
+    return redirect(url_for("publishing_queue"))
+
+
+# ══════════════════════════════════════════════════════════════
+# Campaign Pipeline — キャンペーン
+# ══════════════════════════════════════════════════════════════
+
+@app.route("/campaigns")
+def campaigns_list():
+    brand_filter  = request.args.get("brand", "")
+    status_filter = request.args.get("status", "")
+    campaigns = db.list_campaigns(brand=brand_filter, status=status_filter)
+    brands    = load_brands()
+    stats     = db.get_noimos_stats()
+    for c in campaigns:
+        c["ideas"] = db.list_content_ideas(campaign_id=c["id"])
+    return render_template("campaigns.html",
+        campaigns=campaigns, brands=brands, stats=stats,
+        brand_filter=brand_filter, status_filter=status_filter,
+    )
+
+
+@app.route("/campaigns/new", methods=["POST"])
+def campaigns_new():
+    f = request.form
+    cid = db.create_campaign({
+        "title":      f.get("title", "").strip(),
+        "brand":      f.get("brand", ""),
+        "objective":  f.get("objective", ""),
+        "start_date": f.get("start_date", ""),
+        "end_date":   f.get("end_date", ""),
+        "notes":      f.get("notes", "").strip(),
+        "status":     "planning",
+    })
+    db.log_activity("campaign_create", detail=f"キャンペーン作成 #{cid}")
+    return redirect(url_for("campaigns_list"))
+
+
+@app.route("/campaigns/<int:cid>")
+def campaign_detail(cid):
+    campaign = db.get_campaign(cid)
+    if not campaign:
+        return redirect(url_for("campaigns_list"))
+    ideas = db.list_content_ideas(campaign_id=cid)
+    jobs  = [j for j in db.list_publishing_jobs() if j.get("campaign_id") == cid]
+    brands = load_brands()
+    return render_template("campaign_detail.html",
+        campaign=campaign, ideas=ideas, jobs=jobs,
+        brands=brands, format_icons=FORMAT_ICONS,
+    )
+
+
+@app.route("/campaigns/<int:cid>/update", methods=["POST"])
+def campaign_update(cid):
+    f = request.form
+    db.update_campaign(cid, {
+        "title":      f.get("title", "").strip(),
+        "objective":  f.get("objective", ""),
+        "status":     f.get("status", "planning"),
+        "start_date": f.get("start_date", ""),
+        "end_date":   f.get("end_date", ""),
+        "notes":      f.get("notes", "").strip(),
+    })
+    return redirect(url_for("campaign_detail", cid=cid))
+
+
+# ══════════════════════════════════════════════════════════════
+# Campaign Pipeline — 承認キュー
+# ══════════════════════════════════════════════════════════════
+
+@app.route("/publishing")
+def publishing_queue():
+    status_filter = request.args.get("status", "pending_approval")
+    filter_arg    = "" if status_filter == "all" else status_filter
+    jobs   = db.list_publishing_jobs(status=filter_arg)
+    brands = load_brands()
+    stats  = db.get_noimos_stats()
+    enriched = []
+    for j in jobs:
+        j2 = dict(j)
+        if j.get("idea_id"):
+            j2["_idea"] = db.get_content_idea(j["idea_id"])
+        if j.get("variant_id"):
+            j2["_variant"] = db.get_content_variant(j["variant_id"])
+        enriched.append(j2)
+    return render_template("publishing.html",
+        jobs=enriched, brands=brands, stats=stats,
+        status_filter=status_filter,
+    )
+
+
+@app.route("/publishing/<int:jid>/approve", methods=["POST"])
+def publishing_approve(jid):
+    note = request.form.get("note", "")
+    db.update_job_status(jid, "approved", note=note, approved_by="human")
+    db.log_activity("publish_approve", detail=f"承認 job#{jid}")
+    return redirect(url_for("publishing_queue"))
+
+
+@app.route("/publishing/<int:jid>/reject", methods=["POST"])
+def publishing_reject(jid):
+    note = request.form.get("note", "")
+    db.update_job_status(jid, "rejected", note=note, approved_by="human")
+    db.log_activity("publish_reject", detail=f"却下 job#{jid}")
+    return redirect(url_for("publishing_queue"))
+
+
+@app.route("/api/noimos/stats")
+def api_noimos_stats():
+    return jsonify(db.get_noimos_stats())
+
+
+# ══════════════════════════════════════════════════════════════
+# Story Autopilot
+# ══════════════════════════════════════════════════════════════
+
+def _story_repos():
+    from repositories.story_repo import StoryTemplateRepo, StoryRunRepo, SocialAccountRepo, SocialInsightRepo
+    return StoryTemplateRepo(), StoryRunRepo(), SocialAccountRepo(), SocialInsightRepo()
+
+
+@app.route("/story-autopilot")
+def story_autopilot():
+    """Story Autopilot ダッシュボード。"""
+    tmpl_repo, run_repo, acct_repo, insight_repo = _story_repos()
+    brands = load_brands()
+
+    brand_f = request.args.get("brand", "")
+
+    templates = tmpl_repo.list(brand=brand_f, active_only=False)
+    recent_runs = run_repo.list(brand=brand_f, limit=20)
+
+    # ステータス別件数
+    status_counts = run_repo.count_by_status(brand=brand_f)
+    pending_count = status_counts.get("pending_approval", 0)
+
+    # ブランド別インサイトサマリー
+    insight_summary = {}
+    for bid in brands:
+        insight_summary[bid] = insight_repo.summary_by_brand(bid)
+
+    return render_template(
+        "story_autopilot.html",
+        templates=templates,
+        recent_runs=recent_runs,
+        status_counts=status_counts,
+        pending_count=pending_count,
+        brands=brands,
+        brand_filter=brand_f,
+        insight_summary=insight_summary,
+    )
+
+
+@app.route("/story-autopilot/templates")
+def story_templates_page():
+    tmpl_repo, _, _, _ = _story_repos()
+    brands = load_brands()
+    brand_f = request.args.get("brand", "")
+    templates = tmpl_repo.list(brand=brand_f)
+    return render_template("story_templates.html",
+                           templates=templates, brands=brands, brand_filter=brand_f)
+
+
+@app.route("/story-autopilot/templates/new", methods=["GET", "POST"])
+def story_template_new():
+    tmpl_repo, _, _, _ = _story_repos()
+    brands = load_brands()
+    if request.method == "POST":
+        days = request.form.getlist("active_days") or ["mon","tue","wed","thu","fri","sat","sun"]
+        tmpl_repo.create({
+            "brand":        request.form["brand"],
+            "name":         request.form["name"],
+            "description":  request.form.get("description", ""),
+            "story_type":   request.form.get("story_type", "promotion"),
+            "run_mode":     request.form.get("run_mode", "semi_auto"),
+            "active_days":  days,
+            "run_time":     request.form.get("run_time", "09:00"),
+            "frame_count":  int(request.form.get("frame_count", 3)),
+            "topic_prompt": request.form.get("topic_prompt", ""),
+            "asset_source": request.form.get("asset_source", "asset_brain"),
+            "asset_tags":   [t.strip() for t in request.form.get("asset_tags","").split(",") if t.strip()],
+            "is_active":    bool(request.form.get("is_active")),
+        })
+        return redirect(url_for("story_templates_page"))
+    return render_template("story_template_detail.html",
+                           template=None, brands=brands, is_new=True)
+
+
+@app.route("/story-autopilot/templates/<int:tmpl_id>", methods=["GET", "POST"])
+def story_template_detail(tmpl_id):
+    tmpl_repo, _, _, _ = _story_repos()
+    brands = load_brands()
+    tmpl = tmpl_repo.get(tmpl_id)
+    if not tmpl:
+        return "Template not found", 404
+    if request.method == "POST":
+        days = request.form.getlist("active_days") or tmpl["active_days"]
+        tmpl_repo.update(tmpl_id, {
+            "name":         request.form.get("name", tmpl["name"]),
+            "description":  request.form.get("description", ""),
+            "story_type":   request.form.get("story_type", "promotion"),
+            "run_mode":     request.form.get("run_mode", "semi_auto"),
+            "active_days":  days,
+            "run_time":     request.form.get("run_time", "09:00"),
+            "frame_count":  int(request.form.get("frame_count", 3)),
+            "topic_prompt": request.form.get("topic_prompt", ""),
+            "asset_source": request.form.get("asset_source", "asset_brain"),
+            "asset_tags":   [t.strip() for t in request.form.get("asset_tags","").split(",") if t.strip()],
+            "is_active":    1 if request.form.get("is_active") else 0,
+        })
+        return redirect(url_for("story_templates_page"))
+    return render_template("story_template_detail.html",
+                           template=tmpl, brands=brands, is_new=False)
+
+
+@app.route("/story-autopilot/templates/<int:tmpl_id>/delete", methods=["POST"])
+def story_template_delete(tmpl_id):
+    tmpl_repo, _, _, _ = _story_repos()
+    tmpl_repo.delete(tmpl_id)
+    return redirect(url_for("story_templates_page"))
+
+
+@app.route("/story-autopilot/candidates")
+def story_candidates():
+    _, run_repo, _, _ = _story_repos()
+    brands = load_brands()
+    brand_f  = request.args.get("brand", "")
+    status_f = request.args.get("status", "pending_approval")
+    runs = run_repo.list(brand=brand_f, status=status_f, limit=100)
+    counts = run_repo.count_by_status(brand=brand_f)
+    return render_template("story_candidates.html",
+                           runs=runs, counts=counts,
+                           brands=brands, brand_filter=brand_f, status_filter=status_f)
+
+
+@app.route("/story-autopilot/runs")
+def story_runs_history():
+    _, run_repo, _, _ = _story_repos()
+    brands = load_brands()
+    brand_f = request.args.get("brand", "")
+    runs = run_repo.list(brand=brand_f, limit=100)
+    counts = run_repo.count_by_status(brand=brand_f)
+    return render_template("story_candidates.html",
+                           runs=runs, counts=counts,
+                           brands=brands, brand_filter=brand_f, status_filter="",
+                           show_all=True)
+
+
+# ── Story Autopilot API ───────────────────────────────
+
+@app.route("/api/story-autopilot/generate", methods=["POST"])
+def api_story_autopilot_generate():
+    """テンプレートからストーリー候補を生成してDBに保存する。"""
+    data = request.get_json(force=True) or {}
+    tmpl_id  = data.get("template_id")
+    brand    = data.get("brand", "")
+    topic    = data.get("topic", "")
+    run_mode = data.get("run_mode", "semi_auto")
+    story_type = data.get("story_type", "promotion")
+
+    tmpl_repo, run_repo, acct_repo, _ = _story_repos()
+
+    tmpl = tmpl_repo.get(tmpl_id) if tmpl_id else None
+    if tmpl:
+        brand      = brand or tmpl["brand"]
+        run_mode   = tmpl["run_mode"]
+        story_type = tmpl["story_type"]
+        if not topic and tmpl.get("topic_prompt"):
+            topic = tmpl["topic_prompt"]
+
+    # AI生成を試みる（APIキーがない場合はモックフレームを使う）
+    frames = []
+    caption = ""
+    hashtags = ""
+    if ai_available() and topic:
+        try:
+            import anthropic
+            client = anthropic.Anthropic()
+            prompt = f"""
+あなたはInstagramストーリー専門のコンテンツクリエイターです。
+以下のトピックで3枚のストーリーフレームを作成してください。
+タイプ: {story_type}
+トピック: {topic}
+ブランド: {brand}
+
+JSON形式で返してください:
+{{
+  "frames": [
+    {{"emoji":"絵文字","headline":"見出し(20字以内)","subtext":"本文(40字以内)","bg":"purple-blue","type":"hook"}},
+    {{"emoji":"絵文字","headline":"見出し","subtext":"本文","bg":"green-teal","type":"detail"}},
+    {{"emoji":"絵文字","headline":"CTA","subtext":"本文","bg":"orange-red","type":"cta","button":"ボタンテキスト"}}
+  ],
+  "caption": "キャプション本文",
+  "hashtags": "#タグ1 #タグ2 #タグ3"
+}}
+"""
+            msg = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=800,
+                messages=[{"role":"user","content":prompt}],
+            )
+            import re
+            raw = msg.content[0].text
+            m = re.search(r'\{[\s\S]*\}', raw)
+            if m:
+                parsed = json.loads(m.group())
+                frames   = parsed.get("frames", [])
+                caption  = parsed.get("caption", "")
+                hashtags = parsed.get("hashtags", "")
+        except Exception as e:
+            log.warning(f"Story AI生成エラー: {e}")
+
+    if not frames:
+        frames = [
+            {"emoji": "📣", "headline": f"{topic[:20] or 'ストーリー'}", "subtext": "詳細はプロフィールへ", "bg": "purple-blue", "type": "hook"},
+            {"emoji": "💡", "headline": "ポイント解説", "subtext": "もっと知りたい方はDMへ", "bg": "green-teal", "type": "detail"},
+            {"emoji": "✅", "headline": "今すぐチェック", "subtext": "プロフィールのリンクから", "bg": "orange-red", "type": "cta", "button": "詳しく見る"},
+        ]
+
+    # アカウントを探す
+    accts = acct_repo.list(brand=brand)
+    acct_id = accts[0]["id"] if accts else None
+
+    initial_status = "pending_approval" if run_mode in ("semi_auto","human_approval_required") else "pending"
+
+    run_id = run_repo.create({
+        "template_id":       tmpl_id,
+        "brand":             brand,
+        "run_mode":          run_mode,
+        "status":            initial_status,
+        "story_type":        story_type,
+        "topic":             topic,
+        "frames_json":       frames,
+        "caption":           caption,
+        "hashtags":          hashtags,
+        "social_account_id": acct_id,
+    })
+    if tmpl_id:
+        tmpl_repo.touch_last_run(tmpl_id)
+
+    run = run_repo.get(run_id)
+    return jsonify({"ok": True, "run_id": run_id, "status": initial_status, "run": run})
+
+
+@app.route("/api/story-autopilot/runs/<int:run_id>/approve", methods=["POST"])
+def api_story_run_approve(run_id):
+    _, run_repo, acct_repo, _ = _story_repos()
+    run = run_repo.get(run_id)
+    if not run:
+        return jsonify({"error": "not found"}), 404
+
+    note = (request.get_json(force=True) or {}).get("note", "")
+    run_repo.update_status(run_id, "approved", approval_note=note, approved_by="human")
+
+    if run.get("run_mode") == "full_auto" or not note:
+        # 承認後に自動で publish へ
+        _publish_story_run(run_id, run, acct_repo)
+
+    db.log_activity("story_approve", brand=run["brand"], detail=f"story_run#{run_id} 承認")
+    return jsonify({"ok": True})
+
+
+@app.route("/api/story-autopilot/runs/<int:run_id>/reject", methods=["POST"])
+def api_story_run_reject(run_id):
+    _, run_repo, _, _ = _story_repos()
+    run = run_repo.get(run_id)
+    if not run:
+        return jsonify({"error": "not found"}), 404
+    note = (request.get_json(force=True) or {}).get("note", "")
+    run_repo.update_status(run_id, "rejected", approval_note=note, approved_by="human")
+    db.log_activity("story_reject", brand=run["brand"], detail=f"story_run#{run_id} 却下")
+    return jsonify({"ok": True})
+
+
+@app.route("/api/story-autopilot/runs/<int:run_id>/publish", methods=["POST"])
+def api_story_run_publish(run_id):
+    _, run_repo, acct_repo, _ = _story_repos()
+    run = run_repo.get(run_id)
+    if not run:
+        return jsonify({"error": "not found"}), 404
+    result = _publish_story_run(run_id, run, acct_repo)
+    return jsonify(result)
+
+
+def _publish_story_run(run_id: int, run: dict, acct_repo) -> dict:
+    """Story を connector 経由で公開し、DB を更新する。"""
+    from connectors.meta_connector import get_meta_connector
+    _, run_repo, _, _ = _story_repos()
+
+    acct = acct_repo.get(run.get("social_account_id") or "") or {}
+    ig_uid    = acct.get("ig_user_id", run["brand"])
+    provider  = acct.get("provider", "auto")  # autoならトークン有無で自動切替
+
+    connector = get_meta_connector(provider)
+    try:
+        # モック: ダミー画像URLで publish_story を呼ぶ
+        result = connector.publish_story(ig_uid, media_url="https://placehold.co/1080x1920/png")
+        if result.get("error"):
+            run_repo.update_status(run_id, "failed", error_message=result["error"])
+            return {"ok": False, "error": result["error"]}
+        run_repo.update_status(
+            run_id, "published",
+            ig_media_id=result.get("ig_media_id", ""),
+            ig_permalink=result.get("permalink", ""),
+        )
+        db.log_activity("story_publish", brand=run["brand"],
+                        detail=f"story_run#{run_id} 公開 ig={result.get('ig_media_id','')}")
+        return {"ok": True, "ig_media_id": result.get("ig_media_id"), "permalink": result.get("permalink")}
+    except Exception as e:
+        run_repo.update_status(run_id, "failed", error_message=str(e))
+        return {"ok": False, "error": str(e)}
+
+
+@app.route("/api/story-autopilot/accounts/seed", methods=["POST"])
+def api_story_accounts_seed():
+    _, _, acct_repo, _ = _story_repos()
+    acct_repo.seed_mock()
+    return jsonify({"ok": True, "message": "モックアカウントをシードしました"})
+
+
+@app.route("/api/story-autopilot/templates/seed", methods=["POST"])
+def api_story_templates_seed():
+    tmpl_repo, run_repo, acct_repo, _ = _story_repos()
+    acct_repo.seed_mock()
+    tmpl_repo.seed_mock()
+    run_repo.seed_mock()
+    return jsonify({"ok": True, "message": "デモデータをシードしました"})
+
+
+@app.route("/api/story-autopilot/accounts/<brand>")
+def api_story_accounts(brand):
+    _, _, acct_repo, _ = _story_repos()
+    accts = acct_repo.list(brand=brand)
+    return jsonify(accts)
+
+
+@app.route("/api/story-autopilot/insights/<brand>")
+def api_story_insights(brand):
+    _, _, _, insight_repo = _story_repos()
+    days = int(request.args.get("days", 28))
+    return jsonify(insight_repo.summary_by_brand(brand, days))
 
 
 startup()

@@ -1,61 +1,137 @@
 {% extends "base.html" %}
-{% block title %}判断待ち — UPJ Dashboard{% endblock %}
+{% block title %}承認・ログ — Brand OS{% endblock %}
 {% block content %}
 
 <div class="page-header">
   <div>
-    <div class="page-title">⚠️ 判断待ちキュー</div>
-    <div class="page-sub">自動処理できなかった案件。あなたが判断してください。</div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;">APPROVALS & LOG</div>
+    <div class="page-title">⚖ 承認・ログ</div>
+    <div class="page-sub">AI が自動処理できなかった判断・承認待ち案件を一覧表示します</div>
+  </div>
+  <div class="header-actions">
+    <a href="/publishing" class="btn btn-ghost btn-sm">コンテンツ承認 →</a>
+    <a href="/logs" class="btn btn-ghost btn-sm">実行ログ →</a>
   </div>
 </div>
 
 {% set open = decisions | selectattr('resolved', 'falsy') | list %}
 {% set closed = decisions | selectattr('resolved', 'truthy') | list %}
 
-{% if open %}
-<div class="card">
-  <div class="card-title">未対応 ({{ open | length }}件)</div>
-  {% for d in open %}
-  <div style="border-bottom:1px solid var(--border);padding:16px 0;{% if loop.last %}border-bottom:none{% endif %}">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-      <span class="badge badge-warn">{{ d.type }}</span>
-      <span style="font-size:12px;color:var(--muted);">{{ d.created_at }}</span>
-    </div>
-    <div style="font-size:14px;margin-bottom:8px;font-weight:600;">{{ d.reason }}</div>
-    {% if d.detail %}
-    <div style="font-size:12px;color:var(--muted);background:var(--surface2);padding:8px;border-radius:6px;margin-bottom:12px;">
-      {% for k, v in d.detail.items() %}<strong>{{ k }}:</strong> {{ v }}<br>{% endfor %}
-    </div>
-    {% endif %}
-    <form method="POST" action="/decisions/resolve/{{ d._file }}" style="display:flex;gap:10px;align-items:center;">
-      <input type="text" name="note" class="form-input" placeholder="対応内容を一言メモ（任意）" style="flex:1;">
-      <button type="submit" class="btn btn-success">✅ 対応済み</button>
-    </form>
+<!-- ステータスサマリー -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+  <div class="stat-card {{ 'red-top' if open|length > 0 else 'green-top' }}">
+    <div class="stat-label">未対応</div>
+    <div class="stat-value {{ 'red' if open|length > 0 else 'green' }}">{{ open|length }}</div>
+    <div class="stat-meta">{{ '要対応' if open|length > 0 else '全て対応済み' }}</div>
   </div>
-  {% endfor %}
+  <div class="stat-card">
+    <div class="stat-label">対応済み</div>
+    <div class="stat-value green">{{ closed|length }}</div>
+    <div class="stat-meta">累計</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">合計</div>
+    <div class="stat-value blue">{{ decisions|length }}</div>
+    <div class="stat-meta">全判断待ち記録</div>
+  </div>
 </div>
+
+<!-- ═══ 未対応 ═══ -->
+{% if open %}
+<div class="card" style="margin-bottom:20px;border-color:rgba(239,68,68,.2);">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="card-title" style="margin-bottom:0;">未対応の判断待ち</div>
+      <span style="font-size:11px;font-weight:700;background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);padding:2px 10px;border-radius:20px;">{{ open|length }}件</span>
+    </div>
+    <div style="font-size:11.5px;color:var(--muted2);">上から順に対応してください</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    {% for d in open %}
+    <div style="background:rgba(239,68,68,.04);border:1px solid rgba(239,68,68,.15);border-left:3px solid var(--red);border-radius:12px;padding:16px 18px;">
+      <!-- ヘッダー行 -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:18px;">⚡</span>
+        <span style="font-size:10.5px;font-weight:700;background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.25);padding:2px 8px;border-radius:20px;">{{ d.type or '要確認' }}</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto;">{{ (d.created_at or '')[:16] }}</span>
+      </div>
+
+      <!-- 理由 -->
+      <div style="font-size:14px;font-weight:600;color:var(--text);line-height:1.5;margin-bottom:10px;">{{ d.reason }}</div>
+
+      <!-- 詳細 -->
+      {% if d.detail %}
+      <div style="font-size:12px;color:var(--muted2);background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px;line-height:1.7;">
+        {% for k, v in d.detail.items() %}<span style="color:var(--muted);font-size:11px;">{{ k }}:</span> {{ v }}<br>{% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- 対応フォーム -->
+      <form method="POST" action="/decisions/resolve/{{ d.id }}" style="display:flex;gap:8px;align-items:center;">
+        <input type="text" name="note" class="form-input" placeholder="対応メモ（省略可）"
+               style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:12px;font-family:inherit;outline:none;">
+        <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--green2);border-color:rgba(16,185,129,.3);white-space:nowrap;">✅ 対応済みにする</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
 {% else %}
-<div class="alert alert-ok">
-  ✅ 判断待ちはありません。すべて対応済みです。
+<!-- 空状態 -->
+<div style="text-align:center;padding:56px 20px;background:var(--s1);border:1px dashed rgba(16,185,129,.25);border-radius:16px;margin-bottom:24px;">
+  <div style="font-size:56px;margin-bottom:16px;">✅</div>
+  <div style="font-size:18px;font-weight:700;color:var(--green2);margin-bottom:6px;">すべて対応済みです</div>
+  <div style="font-size:13px;color:var(--muted2);margin-bottom:20px;line-height:1.6;">自動化システムが正常に稼働しています。<br>判断が必要な案件は自動的にここに届きます。</div>
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <a href="/agents" class="btn btn-ghost btn-sm">AI Agent 状況を確認</a>
+    <a href="/publishing" class="btn btn-ghost btn-sm">コンテンツ承認キュー</a>
+    <a href="/logs" class="btn btn-ghost btn-sm">実行ログを確認</a>
+  </div>
 </div>
 {% endif %}
 
+<!-- ═══ 対応済み ═══ -->
 {% if closed %}
-<div class="card" style="margin-top:20px;">
-  <div class="card-title">対応済み ({{ closed | length }}件)</div>
-  <table>
-    <thead><tr><th>種類</th><th>内容</th><th>対応メモ</th><th>対応日時</th></tr></thead>
-    <tbody>
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="card-title" style="margin-bottom:0;">対応済みの記録</div>
+      <span style="font-size:11px;color:var(--muted);background:var(--s3);border:1px solid var(--border);padding:2px 8px;border-radius:20px;">{{ closed|length }}件</span>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:6px;">
     {% for d in closed %}
-    <tr>
-      <td><span class="badge badge-ok">{{ d.type }}</span></td>
-      <td style="font-size:13px;">{{ d.reason[:50] }}</td>
-      <td style="font-size:13px;color:var(--muted);">{{ d.resolved_note or '-' }}</td>
-      <td style="font-size:12px;color:var(--muted);">{{ (d.resolved_at or '')[:16] }}</td>
-    </tr>
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--s2);">
+      <span style="font-size:14px;flex-shrink:0;margin-top:1px;">✅</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;">{{ d.reason[:60] }}{% if d.reason|length > 60 %}…{% endif %}</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span style="font-size:10px;color:var(--muted2);">{{ d.type or '確認済み' }}</span>
+          {% if d.resolved_note %}
+          <span style="font-size:10.5px;color:var(--muted2);background:var(--s3);padding:1px 7px;border-radius:5px;">{{ d.resolved_note }}</span>
+          {% endif %}
+          <span style="font-size:10px;color:var(--muted);margin-left:auto;">{{ (d.resolved_at or d.created_at or '')[:10] }}</span>
+        </div>
+      </div>
+    </div>
     {% endfor %}
-    </tbody>
-  </table>
+  </div>
+</div>
+{% endif %}
+
+{% if not decisions %}
+<!-- 完全に空の場合 -->
+<div style="text-align:center;padding:60px 20px;background:var(--s1);border:1px dashed var(--border);border-radius:16px;">
+  <div style="font-size:56px;margin-bottom:16px;opacity:.5;">📬</div>
+  <div style="font-size:18px;font-weight:700;margin-bottom:8px;">まだ判断待ちはありません</div>
+  <div style="font-size:13px;color:var(--muted2);margin-bottom:20px;line-height:1.6;">自動化が判断できない案件が発生すると、<br>ここに通知が届きます。</div>
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <a href="/" class="btn btn-accent btn-sm">司令室へ戻る</a>
+    <a href="/agents" class="btn btn-ghost btn-sm">AI Agent 状況</a>
+  </div>
 </div>
 {% endif %}
 
