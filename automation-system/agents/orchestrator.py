@@ -20,14 +20,15 @@ log = logging.getLogger(__name__)
 
 # ── Main orchestration cycle ───────────────────────────────────
 
-def tick() -> dict:
+def tick(execute: bool = False) -> dict:
     """
     One orchestration step:
       1. idle tasks  → queued | blocked
       2. queued+runnable tasks → assign agent (if unassigned)
+      3. execute=True のとき agent_executor.run_next() で実行まで行う
     Returns a summary dict.
     """
-    summary = {"enqueued": 0, "blocked": 0, "assigned": 0}
+    summary = {"enqueued": 0, "blocked": 0, "assigned": 0, "executed": 0}
 
     # Step 1: advance idle tasks
     for t in db.list_tasks(status="idle", limit=50):
@@ -44,6 +45,12 @@ def tick() -> dict:
         if not t.get("assigned_to_agent_id"):
             if auto_assign(t["id"]):
                 summary["assigned"] += 1
+
+    # Step 3: execute (optional)
+    if execute:
+        from agents.agent_executor import run_next
+        results = run_next(limit=5)
+        summary["executed"] = len(results)
 
     log.info(f"Orchestrator tick complete: {summary}")
     return summary

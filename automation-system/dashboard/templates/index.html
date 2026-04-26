@@ -6,20 +6,19 @@
 {% set greeting = 'おはようございます' if hour < 12 else ('こんにちは' if hour < 18 else 'お疲れさまです') %}
 
 <!-- ══ ヘッダー ══ -->
-<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;">
+<div class="page-header">
   <div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-      <span style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);">COMMAND CENTER</span>
+      <span class="section-label">COMMAND CENTER</span>
       <span class="live-dot" id="live-indicator" style="font-size:10px;">LIVE</span>
     </div>
-    <div style="font-size:23px;font-weight:800;letter-spacing:-.5px;">{{ greeting }}、Satoshi さん</div>
-    <div style="font-size:12.5px;color:var(--muted2);margin-top:4px;">{{ now }}</div>
+    <div class="page-title">{{ greeting }}、Satoshi さん</div>
+    <div class="page-sub">{{ now }}</div>
   </div>
-  <div style="display:flex;gap:9px;align-items:center;">
+  <div class="header-actions">
     {% if ai %}
-    <div style="display:flex;align-items:center;gap:6px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:20px;padding:5px 12px;">
-      <span style="width:5px;height:5px;border-radius:50%;background:var(--green2);box-shadow:0 0 6px var(--green2);animation:glow 2s infinite;"></span>
-      <span style="font-size:11px;color:var(--green2);font-weight:600;">Claude AI</span>
+    <div class="status-chip ok">
+      <span class="status-chip-dot"></span>Claude AI 接続中
     </div>
     {% endif %}
     <a href="/queue/add" class="btn btn-primary btn-sm">+ 投稿追加</a>
@@ -29,47 +28,45 @@
 
 <!-- ══ 優先アクション ══ -->
 {% set urgent_count = stats.decisions_open %}
-<div style="background:linear-gradient(135deg,rgba(7,12,26,.98),rgba(10,16,36,.95));border:1px solid {% if urgent_count > 0 %}rgba(239,68,68,.25){% else %}rgba(16,185,129,.2){% endif %};border-radius:14px;padding:16px 20px;margin-bottom:20px;position:relative;overflow:hidden;">
-  <!-- 上線 -->
-  <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,{% if urgent_count > 0 %}rgba(239,68,68,.7){% else %}rgba(16,185,129,.6){% endif %},transparent);"></div>
-
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:{% if decisions or stats.ig_pending > 5 %}14px{% else %}0{% endif %};">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:13px;font-weight:700;color:var(--text);">
-        {% if urgent_count > 0 %}⚡ 今日対応が必要な項目{% else %}✅ 今日の状況は良好です{% endif %}
-      </span>
-      {% if urgent_count > 0 %}
-      <span style="font-size:10px;font-weight:700;background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);padding:2px 8px;border-radius:20px;">{{ urgent_count }}件</span>
-      {% endif %}
-    </div>
-    <a href="/decisions" style="font-size:11.5px;color:var(--accent2);font-weight:600;text-decoration:none;">すべて見る →</a>
+<div class="purpose-banner{% if urgent_count > 0 %} purpose-banner--urgent{% else %} purpose-banner--ok{% endif %}" style="margin-bottom:20px;">
+  <div class="purpose-banner-icon" style="{% if urgent_count > 0 %}background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.25);{% else %}background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.25);{% endif %}">
+    {% if urgent_count > 0 %}⚡{% else %}✅{% endif %}
   </div>
-
-  {% if decisions %}
-  <div style="display:flex;flex-direction:column;gap:6px;">
-    {% for d in decisions[:4] %}
-    <div style="display:flex;align-items:center;gap:10px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:9px;padding:8px 12px;">
-      <span style="font-size:14px;flex-shrink:0;">⚠️</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:12.5px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ d.reason[:60] }}{% if d.reason|length > 60 %}…{% endif %}</div>
-        <div style="font-size:10.5px;color:var(--muted2);margin-top:2px;">{{ d.type or '要確認' }} · {{ (d.created_at or '')[:10] }}</div>
+  <div class="purpose-banner-body">
+    <div class="purpose-banner-title">
+      {% if urgent_count > 0 %}今日対応が必要な項目
+        <span class="status-chip urgent" style="padding:1px 8px;font-size:10px;">{{ urgent_count }}件</span>
+      {% else %}今日の状況は良好です{% endif %}
+    </div>
+    {% if decisions %}
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;">
+      {% for d in decisions[:4] %}
+      <div style="display:flex;align-items:center;gap:10px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:9px;padding:8px 12px;">
+        <span style="font-size:13px;flex-shrink:0;">⚠️</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12.5px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ d.reason[:60] }}{% if d.reason|length > 60 %}…{% endif %}</div>
+          <div class="text-muted" style="font-size:10.5px;margin-top:2px;">{{ d.type or '要確認' }} · {{ (d.created_at or '')[:10] }}</div>
+        </div>
+        <a href="/decisions" class="btn btn-ghost btn-sm text-red" style="border-color:rgba(239,68,68,.3);flex-shrink:0;">対応する</a>
       </div>
-      <a href="/decisions" class="btn btn-ghost btn-sm" style="color:var(--red);border-color:rgba(239,68,68,.3);flex-shrink:0;">対応する</a>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </div>
-  {% elif stats.ig_pending > 5 %}
-  <div style="display:flex;align-items:center;gap:10px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:8px 12px;">
-    <span style="font-size:14px;">📸</span>
-    <div style="flex:1;">
-      <div style="font-size:12.5px;font-weight:500;color:var(--text);">Instagram キューに {{ stats.ig_pending }} 件が待機中です</div>
-      <div style="font-size:10.5px;color:var(--muted2);margin-top:2px;">投稿スケジュールを確認してください</div>
+    {% elif stats.ig_pending > 5 %}
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:8px 12px;margin-top:10px;">
+      <span style="font-size:14px;">📸</span>
+      <div style="flex:1;">
+        <div style="font-size:12.5px;font-weight:500;color:var(--text);">Instagram キューに {{ stats.ig_pending }} 件が待機中です</div>
+        <div class="purpose-banner-desc">投稿スケジュールを確認してください</div>
+      </div>
+      <a href="/queue" class="btn btn-ghost btn-sm" style="flex-shrink:0;">キューを確認</a>
     </div>
-    <a href="/queue" class="btn btn-ghost btn-sm" style="flex-shrink:0;">キューを確認</a>
+    {% else %}
+    <div class="purpose-banner-desc">自動化システムが正常稼働しています。本日の対応項目はありません。</div>
+    {% endif %}
   </div>
-  {% else %}
-  <div style="font-size:13px;color:var(--green2);">自動化システムが正常稼働しています。本日の対応項目はありません。</div>
-  {% endif %}
+  <div class="purpose-banner-actions">
+    <a href="/decisions" class="btn btn-ghost btn-sm">すべて見る →</a>
+  </div>
 </div>
 
 <!-- ══ AI OS ステータスバナー ══ -->
@@ -327,7 +324,7 @@
   }
 </style>
 
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+<div class="three-col" style="margin-bottom:24px;">
   {% for bid, b in nav_brands.items() %}
   {% set seed = loop.index0 %}
 
@@ -704,7 +701,7 @@
 </div>
 
 <!-- ══ 直近リード + 判断待ち ══ -->
-<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;">
+<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;" class="leads-decisions-row">
 
   <!-- 直近リード -->
   <div class="chart-card">

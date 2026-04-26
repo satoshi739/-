@@ -292,6 +292,17 @@ def followup_job():
         logger.error(f"フォローアップエラー: {e}", exc_info=True)
 
 
+def agent_tick_job():
+    """エージェントタスク実行ジョブ（5分ごと）"""
+    logger.info("=== エージェントタスク実行開始 ===")
+    try:
+        from agents.orchestrator import tick
+        summary = tick(execute=True)
+        logger.info(f"エージェントtick完了: {summary}")
+    except Exception as e:
+        logger.error(f"エージェントtickエラー: {e}", exc_info=True)
+
+
 def generate_weekly_calendar_job():
     """
     週次コンテンツカレンダー自動生成ジョブ（毎週月曜6:00）
@@ -385,6 +396,10 @@ def setup_schedule():
     # Story Autopilot（5分ごとにテンプレートの実行時刻をチェック）
     schedule.every(5).minutes.do(story_autopilot_job)
     logger.info("Story Autopilot: 5分ごと")
+
+    # エージェントタスク実行（5分ごと: キュー内タスクを自動実行）
+    schedule.every(5).minutes.do(agent_tick_job)
+    logger.info("エージェントタスク実行: 5分ごと")
 
 
 def story_autopilot_job():

@@ -597,13 +597,137 @@
     hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
     /* ══════════════════════════════════════════
+       TYPOGRAPHY UTILITIES
+    ══════════════════════════════════════════ */
+    .section-title {
+      font-size: 15px; font-weight: 700; letter-spacing: -.3px; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-label {
+      font-size: 9.5px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .text-muted  { color: var(--muted2); }
+    .text-green  { color: var(--green2); }
+    .text-red    { color: var(--red); }
+    .text-yellow { color: var(--yellow2); }
+    .text-purple { color: var(--purple2); }
+    .text-blue   { color: var(--accent2); }
+
+    /* ══════════════════════════════════════════
+       PAGE PURPOSE BANNER
+    ══════════════════════════════════════════ */
+    .purpose-banner {
+      display: flex; align-items: center; gap: 16px;
+      background: linear-gradient(135deg, rgba(99,102,241,.05) 0%, rgba(10,16,36,.8) 100%);
+      border: 1px solid rgba(99,102,241,.14);
+      border-radius: 14px; padding: 14px 18px; margin-bottom: 24px;
+      position: relative; overflow: hidden;
+    }
+    .purpose-banner::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,.5), transparent);
+    }
+    .purpose-banner-icon {
+      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      background: rgba(99,102,241,.1); border: 1px solid rgba(99,102,241,.2);
+    }
+    .purpose-banner-body { flex: 1; min-width: 0; }
+    .purpose-banner-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .purpose-banner-desc  { font-size: 12px; color: var(--muted2); line-height: 1.55; }
+    .purpose-banner-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+    .purpose-banner--ok     { border-color: rgba(16,185,129,.2); }
+    .purpose-banner--ok::before { background: linear-gradient(90deg, transparent, rgba(16,185,129,.5), transparent); }
+    .purpose-banner--urgent { border-color: rgba(239,68,68,.25); }
+    .purpose-banner--urgent::before { background: linear-gradient(90deg, transparent, rgba(239,68,68,.6), transparent); }
+
+    /* ══════════════════════════════════════════
+       INFO ROW (key-value pairs)
+    ══════════════════════════════════════════ */
+    .info-row {
+      display: flex; gap: 24px; flex-wrap: wrap;
+      padding: 12px 0; border-top: 1px solid var(--border);
+    }
+    .info-item { display: flex; flex-direction: column; gap: 3px; }
+    .info-item-label { font-size: 10px; color: var(--muted); font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+    .info-item-value { font-size: 13px; color: var(--text); font-weight: 600; }
+
+    /* ══════════════════════════════════════════
+       STATUS ROW (horizontal scrollable pills)
+    ══════════════════════════════════════════ */
+    .status-row {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 600;
+      background: var(--s2); border: 1px solid var(--border); color: var(--muted2);
+      white-space: nowrap;
+    }
+    .status-chip.ok     { background: rgba(16,185,129,.08); border-color: rgba(16,185,129,.2); color: var(--green2); }
+    .status-chip.warn   { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.2); color: var(--yellow2); }
+    .status-chip.urgent { background: rgba(239,68,68,.08);  border-color: rgba(239,68,68,.2);  color: var(--red); }
+    .status-chip.ai     { background: rgba(139,92,246,.08); border-color: rgba(139,92,246,.2); color: var(--purple2); }
+    .status-chip.active { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.2); color: var(--accent2); }
+    .status-chip-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor; flex-shrink: 0;
+    }
+    .status-chip.ok .status-chip-dot { animation: livePulse 2s infinite; }
+
+    /* ══════════════════════════════════════════
+       TWO-COLUMN LAYOUT
+    ══════════════════════════════════════════ */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 1100px) { .three-col { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 700px)  { .two-col, .three-col { grid-template-columns: 1fr; } }
+
+    /* ══════════════════════════════════════════
+       MOBILE HEADER BAR
+    ══════════════════════════════════════════ */
+    .mobile-header {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 200;
+      background: rgba(4,7,18,.97); border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      align-items: center; justify-content: space-between; padding: 0 16px;
+    }
+    .hamburger {
+      width: 36px; height: 36px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 5px; cursor: pointer;
+      background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 9px;
+    }
+    .hamburger-line { width: 16px; height: 1.5px; background: var(--muted2); border-radius: 2px; transition: all .2s; }
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6);
+      z-index: 99; backdrop-filter: blur(4px);
+    }
+    .sidebar-overlay.open { display: block; }
+
+    /* ══════════════════════════════════════════
        RESPONSIVE
     ══════════════════════════════════════════ */
     @media (max-width: 960px) {
-      .sidebar { transform: translateX(-100%); }
-      .main { margin-left: 0; padding: 20px 18px; }
+      .mobile-header { display: flex; }
+      .sidebar {
+        transform: translateX(-100%); transition: transform .28s cubic-bezier(.22,1,.36,1);
+        top: 0; z-index: 150;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; padding: 72px 18px 24px; }
       .chart-grid { grid-template-columns: 1fr; }
       .kanban { grid-template-columns: 1fr 1fr; }
+      .page-header { flex-direction: column; gap: 12px; }
+      .header-actions { flex-wrap: wrap; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .kanban { grid-template-columns: 1fr; }
+      .main { padding: 68px 14px 20px; }
+      .leads-decisions-row { grid-template-columns: 1fr !important; }
     }
 
     /* ══════════════════════════════════════════
@@ -795,6 +919,26 @@
   </style>
 </head>
 <body>
+
+<!-- モバイルヘッダー -->
+<div class="mobile-header">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="hamburger" onclick="toggleSidebar()" id="hamburger-btn">
+      <div class="hamburger-line"></div>
+      <div class="hamburger-line"></div>
+      <div class="hamburger-line"></div>
+    </div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:-.3px;">Brand OS</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span id="mobile-clock" style="font-size:11px;color:var(--muted2);"></span>
+    <a href="/decisions" style="position:relative;display:inline-flex;">
+      <span style="font-size:16px;">⚡</span>
+      <span id="mobile-badge" style="display:none;position:absolute;top:-3px;right:-4px;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);"></span>
+    </a>
+  </div>
+</div>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
 <!-- ══════════════════════════════════════════
      SIDEBAR — UPJ Autonomous Brand OS
@@ -1242,6 +1386,8 @@ function refreshStats() {
       const t = new Date();
       liveEl.textContent = `${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')} 更新`;
     }
+    // モバイルバッジ
+    updateMobileBadge && updateMobileBadge(d.decisions_open);
   }).catch(() => {});
 }
 setInterval(refreshStats, 30000); refreshStats();
@@ -1366,6 +1512,40 @@ document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openCmd(); }
   if (e.key === 'Escape' && document.getElementById('cmd-overlay').classList.contains('open')) closeCmd();
 });
+
+// ── モバイルサイドバー ──
+function toggleSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  const isOpen = sb.classList.toggle('open');
+  ov.classList.toggle('open', isOpen);
+  document.body.style.overflow = isOpen ? 'hidden' : '';
+}
+
+// ナビリンクをクリックしたらサイドバーを閉じる（モバイル）
+document.querySelectorAll('.sidebar a').forEach(a => {
+  a.addEventListener('click', () => {
+    if (window.innerWidth <= 960) {
+      document.querySelector('.sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  });
+});
+
+// モバイル時計
+function tickMobile() {
+  const d = new Date();
+  const el = document.getElementById('mobile-clock');
+  if (el) el.textContent = d.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+}
+setInterval(tickMobile, 1000); tickMobile();
+
+// モバイルバッジ更新
+function updateMobileBadge(count) {
+  const el = document.getElementById('mobile-badge');
+  if (el) el.style.display = count > 0 ? 'block' : 'none';
+}
 </script>
 </body>
 </html>
