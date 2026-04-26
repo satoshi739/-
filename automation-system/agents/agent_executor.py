@@ -690,7 +690,7 @@ def _h_weekly_calendar(inp: dict, ctx: dict) -> dict:
     brand     = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
     week_note = inp.get("week_note", "")
     extra     = f"今週の注意: {week_note}" if week_note else ""
-    cal = generate_weekly_calendar(brand=brand, extra=extra)
+    cal = generate_weekly_calendar(brand=brand)
     path = save_weekly_calendar(cal, brand=brand)
     log.info(f"weekly_calendar: brand={brand} saved to {path}")
     return {"ok": True, "brand": brand, "saved_to": str(path), "calendar": cal}
@@ -710,12 +710,10 @@ def _h_line_broadcast(inp: dict, ctx: dict) -> dict:
 
 def _h_generate_blog_post(inp: dict, ctx: dict) -> dict:
     from dashboard.ai import generate_blog_post
-    brand   = inp.get("brand", ctx.get("brand_id", "satoshi-blog"))
-    topic   = inp.get("topic", "")
-    keyword = inp.get("keyword", "")
-    length  = inp.get("length", 1200)
-    result  = generate_blog_post(topic=topic, brand=brand,
-                                  keyword=keyword, length=length)
+    brand      = inp.get("brand", ctx.get("brand_id", "satoshi-blog"))
+    topic      = inp.get("topic", "")
+    word_count = inp.get("length", 1200)
+    result     = generate_blog_post(topic=topic, word_count=word_count)
     log.info(f"generate_blog_post: brand={brand} topic={topic}")
     return {"ok": True, "result": result}
 
@@ -828,7 +826,7 @@ def _h_trend_research(inp: dict, ctx: dict) -> dict:
     brand   = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
     keyword = inp.get("keyword", "")
     count   = inp.get("count", 5)
-    topics  = research_trending_topics(brand=brand, keyword=keyword, count=count)
+    topics  = research_trending_topics(brand=brand, n=count)
     return {"ok": True, "brand": brand, "topics": topics}
 
 
@@ -976,7 +974,7 @@ def _h_generate_reel_script(inp: dict, ctx: dict) -> dict:
     brand  = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
     topic  = inp.get("topic", "")
     length = inp.get("length", 30)
-    result = generate_reel_script_rich(topic=topic, brand=brand, length_sec=length)
+    result = generate_reel_script_rich(topic=topic, brand=brand, duration_sec=length)
     log.info(f"generate_reel_script: brand={brand} topic={topic}")
     return {"ok": True, "brand": brand, "result": result}
 
@@ -986,7 +984,7 @@ def _h_generate_tiktok_content(inp: dict, ctx: dict) -> dict:
     brand  = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
     topic  = inp.get("topic", "")
     target = inp.get("target", "一般ユーザー")
-    result = generate_tiktok_content(topic=topic, brand=brand, target=target)
+    result = generate_tiktok_content(topic=topic, brand=brand)
     log.info(f"generate_tiktok_content: brand={brand}")
     return {"ok": True, "brand": brand, "result": result}
 
@@ -996,7 +994,7 @@ def _h_generate_story_content(inp: dict, ctx: dict) -> dict:
     brand  = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
     theme  = inp.get("theme", "")
     slides = inp.get("slides", 3)
-    result = generate_story_content(theme=theme, brand=brand, slides=slides)
+    result = generate_story_content(topic=theme, brand=brand)
     log.info(f"generate_story_content: brand={brand}")
     return {"ok": True, "brand": brand, "result": result}
 
