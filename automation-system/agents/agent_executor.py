@@ -573,6 +573,7 @@ def _load_os_config() -> dict:
 def _get_agent_config(agent_id: str) -> dict:
     """
     DB の ai_agents レコード + os_config.yaml の tools 定義をマージして返す。
+    agent_id は YAML の id（例: agent-content-upj）と一致している前提。
     """
     agent_row = db.get_ai_agent(agent_id)
     if not agent_row:
@@ -580,19 +581,32 @@ def _get_agent_config(agent_id: str) -> dict:
 
     cfg = _load_os_config()
     yaml_agents: list[dict] = cfg.get("agents", [])
+
+    # YAML ID で直接検索（setup_from_config.py が YAML ID を DB ID として登録する）
     yaml_entry = next((a for a in yaml_agents if a["id"] == agent_id), {})
 
+    # DB の capabilities を優先、なければ YAML の tools を使う
     tools: list[str] = db.get_agent_capabilities_list(agent_id)
     if not tools:
         tools = yaml_entry.get("tools", [])
 
+    # CEO の場合は yaml_agents でなく ai_ceo を参照
+    if not yaml_entry and agent_id == cfg.get("ai_ceo", {}).get("id", "ai-ceo"):
+        ceo = cfg.get("ai_ceo", {})
+        yaml_entry = {
+            "role": ceo.get("role", "AI CEO"),
+            "description": ceo.get("description", ""),
+            "brand": "",
+            "tools": [],
+        }
+
     return {
-        "id":          agent_id,
-        "model":       agent_row.get("model") or yaml_entry.get("model", "claude-haiku-4-5-20251001"),
-        "role":        yaml_entry.get("role", "AI Agent"),
-        "description": yaml_entry.get("description", ""),
-        "brand":       yaml_entry.get("brand", ""),
-        "tools":       tools,
+        "id":            agent_id,
+        "model":         agent_row.get("model") or yaml_entry.get("model", "claude-haiku-4-5-20251001"),
+        "role":          yaml_entry.get("role", "AI Agent"),
+        "description":   yaml_entry.get("description", ""),
+        "brand":         yaml_entry.get("brand", ""),
+        "tools":         tools,
         "system_prompt": agent_row.get("system_prompt") or "",
     }
 

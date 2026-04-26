@@ -528,17 +528,24 @@ def get_ai_ceo_profile() -> dict | None:
 
 def create_ai_agent(user_id: str, agent_type: str, reports_to_id: str = "",
                     model: str = "claude-sonnet-4-6",
-                    system_prompt: str = "", config: dict | None = None) -> str:
-    aid = _uid()
+                    system_prompt: str = "", config: dict | None = None,
+                    agent_id: str = "") -> str:
+    aid = agent_id or _uid()
     with get_conn() as conn:
         conn.execute(
-            """INSERT INTO ai_agents
+            """INSERT OR IGNORE INTO ai_agents
                (id,user_id,agent_type,reports_to_id,model,system_prompt,config,created_at)
                VALUES (?,?,?,?,?,?,?,?)""",
             (
                 aid, user_id, agent_type, reports_to_id or None,
                 model, system_prompt, json.dumps(config or {}), _now(),
             ),
+        )
+        # モデル・システムプロンプトが変わった場合は更新
+        conn.execute(
+            """UPDATE ai_agents SET model=?, system_prompt=?, updated_at=?
+               WHERE id=?""",
+            (model, system_prompt, _now(), aid),
         )
     return aid
 
@@ -934,6 +941,20 @@ def get_agent_capabilities_list(agent_id: str) -> list[str]:
             (agent_id,),
         ).fetchall()
     return [r["capability"] for r in rows]
+
+
+def upsert_agent_capabilities(agent_id: str, capabilities: list[str]) -> None:
+    """ケイパビリティを全件置き換えする（冪等）。"""
+    with get_conn() as conn:
+        conn.execute(
+            "DELETE FROM agent_capabilities WHERE agent_id=?", (agent_id,)
+        )
+        for cap in capabilities:
+            conn.execute(
+                """INSERT INTO agent_capabilities (agent_id, capability, enabled, config)
+                   VALUES (?,?,1,'{}')""",
+                (agent_id, cap),
+            )
 
 
 def get_agent_brand_assignments(agent_id: str) -> list[dict]:
