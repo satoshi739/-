@@ -27,98 +27,217 @@ ai_ceo:
     - "月次レポート生成"
 
 agents:
+
+  # ────────────────────────────────────────────────────
+  # UPJ Content Agent
+  # 担当チャンネル: Instagram / Threads / Facebook / Twitter / WordPress
+  # ────────────────────────────────────────────────────
   - id: "agent-content-upj"
     name: "UPJ Content Agent"
     role: "コンテンツ生成 / UPJ専任"
     brand: "upjapan"
     model: "claude-haiku-4-5-20251001"
     status: "active"
-    description: "UPJブランドのSNSコンテンツ（Instagram・Threads・Facebook・Twitter・WordPress）を自律生成・キュー登録する。"
+    description: "UPJ（Universal Planet Japan）ブランドのSNSコンテンツを自律生成・投稿する。事業設計・コンサルティング色の強いプロフェッショナルなトーンで、Instagram / Threads / Facebook / Twitter / WordPress の全チャンネルをカバーする。"
     tools:
-      - "generate_post"
-      - "queue_push"
-      - "weekly_calendar"
+      # コンテンツ生成
+      - "generate_post"           # 投稿文生成（全プラットフォーム対応）
+      - "generate_reel_script"    # リール台本生成
+      - "generate_story_content"  # Stories テキスト生成
+      - "weekly_calendar"         # 週次コンテンツカレンダー
+      # キュー・投稿
+      - "queue_push"              # コンテンツキューに追加
+      - "post_to_instagram"       # Instagram 直接投稿
+      - "post_to_threads"         # Threads 投稿
+      - "post_to_facebook"        # Facebook 投稿
+      - "post_to_twitter"         # Twitter/X 投稿
+      - "wordpress_draft"         # WordPress 下書き保存
+      # 分析・改善
+      - "performance_fetch"       # 自ブランドのパフォーマンス確認
+      - "trend_research"          # トレンドリサーチ
 
+  # ────────────────────────────────────────────────────
+  # DSC Content Agent
+  # 担当チャンネル: 全チャンネル（Instagram / Threads / Facebook / Twitter / YouTube / TikTok / LINE / WordPress）
+  # ────────────────────────────────────────────────────
   - id: "agent-content-dsc"
     name: "DSC Content Agent"
     role: "コンテンツ生成 / DSC専任"
     brand: "dsc-marketing"
     model: "claude-haiku-4-5-20251001"
     status: "active"
-    description: "DSc Marketingブランドの全チャンネルコンテンツを自律生成・スケジューリングする。"
+    description: "DSc Marketing ブランドの全チャンネルコンテンツを自律生成・投稿する。SNS・LINE・Web集客の導線設計をテーマに、実務寄りで成果重視のトーンを維持する。最もチャンネル数が多いブランドのため、全プラットフォームの投稿スキルを保有する。"
     tools:
-      - "generate_post"
-      - "queue_push"
-      - "weekly_calendar"
-      - "line_broadcast"
+      # コンテンツ生成
+      - "generate_post"            # 投稿文生成
+      - "generate_reel_script"     # リール台本
+      - "generate_tiktok_content"  # TikTok向けコンテンツ
+      - "generate_story_content"   # Stories
+      - "generate_shorts_content"  # YouTube Shorts
+      - "weekly_calendar"          # 週次カレンダー
+      # キュー・投稿
+      - "queue_push"               # キューに追加
+      - "post_to_instagram"        # Instagram 投稿
+      - "post_to_threads"          # Threads 投稿
+      - "post_to_facebook"         # Facebook 投稿
+      - "post_to_twitter"          # Twitter/X 投稿
+      - "post_to_tiktok"           # TikTok 投稿
+      - "wordpress_draft"          # WordPress 下書き
+      - "line_broadcast"           # LINE 一斉配信
+      # 分析・改善
+      - "performance_fetch"        # パフォーマンス確認
+      - "trend_research"           # トレンドリサーチ
 
+  # ────────────────────────────────────────────────────
+  # CFJ Content Agent
+  # 担当チャンネル: Instagram / Facebook / LINE / WordPress
+  # 制約: 金融コンプライアンス厳守
+  # ────────────────────────────────────────────────────
   - id: "agent-content-cfj"
     name: "CFJ Content Agent"
     role: "コンテンツ生成 / CFJ専任"
     brand: "cashflowsupport"
     model: "claude-haiku-4-5-20251001"
     status: "active"
-    description: "cashflowsupport（CFJ）ブランドのコンテンツ生成とLINE配信を担う。金融コンプライアンスを厳守。"
+    description: "cashflowsupport（CFJ）ブランドのコンテンツ生成とLINE配信を担う。ファクタリング・資金繰り相談を扱う金融サービスのため、すべての投稿に compliance_check を必ず実行してから投稿する。誇大広告・断定的表現は絶対に使用しない。"
     tools:
-      - "generate_post"
-      - "queue_push"
-      - "line_broadcast"
+      # コンテンツ生成
+      - "generate_post"           # 投稿文生成（コンプライアンス考慮済み）
+      - "generate_story_content"  # Stories
+      - "compliance_check"        # 金融コンプライアンスチェック（投稿前に必須）
+      # キュー・投稿
+      - "queue_push"              # キューに追加
+      - "post_to_instagram"       # Instagram 投稿
+      - "post_to_facebook"        # Facebook 投稿
+      - "wordpress_draft"         # WordPress 下書き
+      - "line_broadcast"          # LINE 一斉配信
+      # 分析・改善
+      - "performance_fetch"       # パフォーマンス確認
 
+  # ────────────────────────────────────────────────────
+  # BPG Content Agent
+  # 担当チャンネル: Instagram / Threads / Facebook / Twitter / TikTok / LINE / WordPress
+  # 特徴: 日本語・英語・タイ語の多言語対応
+  # ────────────────────────────────────────────────────
   - id: "agent-content-bpg"
     name: "BPG Content Agent"
     role: "コンテンツ生成 / Bangkok Peach専任"
     brand: "bangkok-peach"
     model: "claude-haiku-4-5-20251001"
     status: "active"
-    description: "Bangkok Peach Groupの多言語コンテンツ（日英タイ）を生成・スケジューリングする。"
+    description: "Bangkok Peach Group のコンテンツを日本語・英語・タイ語で生成・投稿する。バンコクを拠点とした事業・観光・ライフスタイルをテーマに、明るく洗練された国際感覚のトーンを維持する。multilingual_post スキルで3言語同時生成が可能。"
     tools:
-      - "generate_post"
-      - "queue_push"
-      - "weekly_calendar"
+      # コンテンツ生成
+      - "generate_post"            # 投稿文生成
+      - "multilingual_post"        # 日英タイ 3言語同時生成
+      - "generate_reel_script"     # リール台本
+      - "generate_tiktok_content"  # TikTok向けコンテンツ
+      - "generate_story_content"   # Stories
+      - "weekly_calendar"          # 週次カレンダー
+      # キュー・投稿
+      - "queue_push"               # キューに追加
+      - "post_to_instagram"        # Instagram 投稿
+      - "post_to_threads"          # Threads 投稿
+      - "post_to_facebook"         # Facebook 投稿
+      - "post_to_twitter"          # Twitter/X 投稿
+      - "post_to_tiktok"           # TikTok 投稿
+      - "wordpress_draft"          # WordPress 下書き
+      - "line_broadcast"           # LINE 一斉配信
+      # 分析・改善
+      - "performance_fetch"        # パフォーマンス確認
+      - "trend_research"           # トレンドリサーチ
 
+  # ────────────────────────────────────────────────────
+  # Blog Agent
+  # 担当チャンネル: WordPress のみ
+  # 特徴: SEO最適化・体験談ライティング
+  # ────────────────────────────────────────────────────
   - id: "agent-blog"
     name: "Blog Agent"
     role: "記事生成 / Satoshi Life Blog専任"
     brand: "satoshi-blog"
     model: "claude-sonnet-4-6"
     status: "active"
-    description: "Satoshi Life Blogの記事を自律生成・WordPress下書き保存する。SEO最適化と体験談ライティングに特化。"
+    description: "Satoshi Life Blog の記事を自律生成・WordPress 下書き保存する。Satoshi（起業家・バンコク在住）の一人称で書く体験談スタイル。SEOキーワードリサーチから記事生成・下書き保存まで一気通貫で実行する。"
     tools:
-      - "generate_blog_post"
-      - "wordpress_draft"
+      # リサーチ
+      - "trend_research"       # トレンドリサーチ（ネタ探し）
+      - "seo_research"         # SEO キーワード調査
+      # 記事生成・公開
+      - "generate_blog_post"   # ブログ記事生成
+      - "wordpress_draft"      # WordPress 下書き保存
+      # 分析
+      - "performance_fetch"    # 記事パフォーマンス確認
+      - "gsc_fetch"            # Search Console でクリック・表示回数確認
 
+  # ────────────────────────────────────────────────────
+  # Sales Agent
+  # 担当: 全ブランドのリード管理・営業フォローアップ
+  # ────────────────────────────────────────────────────
   - id: "agent-sales"
     name: "Sales Agent"
     role: "営業 / リード管理・フォローアップ"
     brand: null
     model: "claude-haiku-4-5-20251001"
     status: "active"
-    description: "全ブランドのリード管理・フォローアップメール生成・LINE返信・ステージ更新を担う。"
+    description: "全ブランドのリード管理・返信ドラフト・フォローアップ・ステージ更新を担う。問い合わせが来たら lead_create で起票し、qualify_lead で優先度を判定し、lead_reply で返信を生成する。重要案件は escalate_lead で Satoshi に通知する。"
     tools:
-      - "lead_reply"
-      - "followup_send"
-      - "stage_update"
+      # リード管理
+      - "lead_create"        # 新規リード起票
+      - "lead_list"          # リード一覧取得・フィルタ
+      - "qualify_lead"       # リード優先度スコアリング
+      - "stage_update"       # 営業ステージ更新
+      # コミュニケーション
+      - "lead_reply"         # 返信ドラフト生成・送信
+      - "followup_send"      # フォローアップ送信
+      - "line_push"          # 個別 LINE 送信
+      # 提案・エスカレーション
+      - "generate_proposal"  # 提案書ドラフト生成
+      - "escalate_lead"      # 重要案件をエスカレーション
 
+  # ────────────────────────────────────────────────────
+  # Analytics Agent
+  # 担当: 全ブランドのパフォーマンス監視・レポート生成
+  # ────────────────────────────────────────────────────
   - id: "agent-analytics"
     name: "Analytics Agent"
     role: "分析 / パフォーマンス監視"
     brand: null
     model: "claude-haiku-4-5-20251001"
     status: "active"
-    description: "全ブランドのSNSパフォーマンス・GA4・GSCデータを監視し、改善提案を生成する。"
+    description: "全ブランドの SNS・GA4・GSC データを収集・分析し、週次・月次レポートを生成する。異常な数値低下を検知したら error_alert で Satoshi に通知する。複数ブランドの比較分析も実施する。"
     tools:
-      - "ga4_fetch"
-      - "performance_fetch"
-      - "trend_research"
+      # データ取得
+      - "performance_fetch"      # SNS パフォーマンス
+      - "ga4_fetch"              # Google Analytics 4
+      - "gsc_fetch"              # Google Search Console
+      - "trend_research"         # トレンドリサーチ
+      # 分析・レポート
+      - "performance_compare"    # ブランド間比較
+      - "generate_report"        # 週次・月次レポート生成
+      - "seo_research"           # SEO調査
+      # 通知
+      - "error_alert"            # 異常検知時の通知
 
+  # ────────────────────────────────────────────────────
+  # Ops Agent
+  # 担当: システム全体の運用・監視・保守
+  # ────────────────────────────────────────────────────
   - id: "agent-ops"
     name: "Ops Agent"
     role: "運用 / 自動化・エラー監視"
     brand: null
     model: "claude-haiku-4-5-20251001"
     status: "active"
-    description: "スケジューラーの監視・エラー検知・判断待ちキューのトリアージ・日次バックアップを担う。"
+    description: "システム全体の運用・監視・保守を担う。スケジューラーの稼働確認、コンテンツキューの状態監視、判断待ちキューのトリアージ、定期バックアップ、古いファイルの整理を行う。異常を検知したら即座に error_alert で通知する。"
     tools:
-      - "scheduler_check"
-      - "decision_triage"
-      - "db_backup"
+      # 監視
+      - "health_check"       # システム全体ヘルスチェック
+      - "scheduler_check"    # スケジューラー稼働確認
+      - "queue_check"        # コンテンツキュー状態確認
+      - "decision_triage"    # 判断待ちキューのトリアージ
+      # 保守
+      - "db_backup"          # データベースバックアップ
+      - "cleanup_files"      # 古いファイル整理
+      # 通知
+      - "error_alert"        # エラー・異常を Satoshi に通知

@@ -258,6 +258,363 @@ TOOL_SCHEMAS: dict[str, dict] = {
             "required": [],
         },
     },
+
+    # ── SNS 直接投稿 ──────────────────────────────────────────
+
+    "post_to_instagram": {
+        "name": "post_to_instagram",
+        "description": "Instagram に画像または動画を直接投稿する（キューを経由しない即時投稿）",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":     {"type": "string", "description": "ブランドID"},
+                "caption":   {"type": "string", "description": "投稿本文＋ハッシュタグ"},
+                "image_url": {"type": "string", "description": "公開アクセス可能な画像URL"},
+                "video_url": {"type": "string", "description": "動画URL（リール）"},
+                "is_reel":   {"type": "boolean", "description": "true でリール投稿"},
+            },
+            "required": ["brand", "caption"],
+        },
+    },
+
+    "post_to_facebook": {
+        "name": "post_to_facebook",
+        "description": "Facebook ページにテキストまたは画像を投稿する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":     {"type": "string", "description": "ブランドID"},
+                "message":   {"type": "string", "description": "投稿テキスト"},
+                "image_url": {"type": "string", "description": "画像URL（省略可）"},
+            },
+            "required": ["brand", "message"],
+        },
+    },
+
+    "post_to_twitter": {
+        "name": "post_to_twitter",
+        "description": "Twitter/X にツイートを投稿する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand": {"type": "string", "description": "ブランドID"},
+                "text":  {"type": "string", "description": "ツイート本文（280文字以内）"},
+            },
+            "required": ["brand", "text"],
+        },
+    },
+
+    "post_to_threads": {
+        "name": "post_to_threads",
+        "description": "Threads にテキストまたは画像を投稿する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":     {"type": "string", "description": "ブランドID"},
+                "text":      {"type": "string", "description": "投稿テキスト"},
+                "image_url": {"type": "string", "description": "画像URL（省略可）"},
+            },
+            "required": ["brand", "text"],
+        },
+    },
+
+    "post_to_tiktok": {
+        "name": "post_to_tiktok",
+        "description": "TikTok に動画を投稿する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":     {"type": "string", "description": "ブランドID"},
+                "video_url": {"type": "string", "description": "動画URL"},
+                "title":     {"type": "string", "description": "タイトル・説明文"},
+            },
+            "required": ["brand", "video_url", "title"],
+        },
+    },
+
+    # ── コンテンツ生成（拡張） ────────────────────────────────
+
+    "generate_reel_script": {
+        "name": "generate_reel_script",
+        "description": "Instagram/TikTok リール用の台本（BGM候補・テロップ・シーン割）を生成する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":  {"type": "string", "description": "ブランドID"},
+                "topic":  {"type": "string", "description": "リールのテーマ"},
+                "length": {"type": "integer", "description": "尺（秒）。省略時 30秒"},
+            },
+            "required": ["brand", "topic"],
+        },
+    },
+
+    "generate_tiktok_content": {
+        "name": "generate_tiktok_content",
+        "description": "TikTok 向けのフック・本編・CTA テキストとハッシュタグを生成する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":  {"type": "string", "description": "ブランドID"},
+                "topic":  {"type": "string", "description": "動画のテーマ"},
+                "target": {"type": "string", "description": "ターゲット層（省略可）"},
+            },
+            "required": ["brand", "topic"],
+        },
+    },
+
+    "generate_story_content": {
+        "name": "generate_story_content",
+        "description": "Instagram Stories 用のテキストオーバーレイ・スタンプ文言を生成する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":   {"type": "string", "description": "ブランドID"},
+                "theme":   {"type": "string", "description": "ストーリーのテーマ"},
+                "slides":  {"type": "integer", "description": "スライド枚数（省略時 3）"},
+            },
+            "required": ["brand", "theme"],
+        },
+    },
+
+    "generate_shorts_content": {
+        "name": "generate_shorts_content",
+        "description": "YouTube Shorts 用の台本とタイトル・説明文を生成する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand": {"type": "string", "description": "ブランドID"},
+                "topic": {"type": "string", "description": "動画テーマ"},
+            },
+            "required": ["brand", "topic"],
+        },
+    },
+
+    "multilingual_post": {
+        "name": "multilingual_post",
+        "description": "日本語・英語・タイ語の3言語で投稿文を同時生成する（Bangkok Peach 用）",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":    {"type": "string", "description": "ブランドID"},
+                "platform": {"type": "string", "description": "投稿先プラットフォーム"},
+                "topic":    {"type": "string", "description": "投稿テーマ"},
+                "languages": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "生成言語リスト（省略時: ['ja','en','th']）",
+                },
+            },
+            "required": ["brand", "topic"],
+        },
+    },
+
+    "compliance_check": {
+        "name": "compliance_check",
+        "description": "金融・医療・法律関連コンテンツのコンプライアンスチェックを行う（CFJ専用）",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "content": {"type": "string", "description": "チェックするテキスト"},
+                "brand":   {"type": "string", "description": "ブランドID"},
+            },
+            "required": ["content", "brand"],
+        },
+    },
+
+    # ── 営業（拡張） ──────────────────────────────────────────
+
+    "lead_create": {
+        "name": "lead_create",
+        "description": "新規リードを起票してファイルに保存する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":        {"type": "string", "description": "ブランドID"},
+                "name":         {"type": "string", "description": "リード名・会社名"},
+                "contact":      {"type": "string", "description": "連絡先（LINE ID / メール / 電話）"},
+                "source":       {"type": "string", "description": "流入元（instagram/line/web等）"},
+                "inquiry":      {"type": "string", "description": "問い合わせ内容"},
+                "line_user_id": {"type": "string", "description": "LINE ユーザーID（省略可）"},
+            },
+            "required": ["brand", "name", "inquiry"],
+        },
+    },
+
+    "lead_list": {
+        "name": "lead_list",
+        "description": "リード一覧を取得する。ステージ・ブランドでフィルタ可能",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":  {"type": "string", "description": "ブランドID（省略時: 全ブランド）"},
+                "stage":  {"type": "string", "description": "ステージフィルタ（省略時: 全ステージ）"},
+                "limit":  {"type": "integer", "description": "取得件数（省略時: 20）"},
+            },
+            "required": [],
+        },
+    },
+
+    "qualify_lead": {
+        "name": "qualify_lead",
+        "description": "リードの問い合わせ内容を分析し、優先度スコアと対応方針を判定する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "lead_id": {"type": "string", "description": "リードID"},
+            },
+            "required": ["lead_id"],
+        },
+    },
+
+    "generate_proposal": {
+        "name": "generate_proposal",
+        "description": "リード情報をもとに提案書ドラフトを生成する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "lead_id": {"type": "string", "description": "リードID"},
+                "brand":   {"type": "string", "description": "提案するブランドID"},
+                "plan":    {"type": "string", "description": "提案プラン名（省略時は自動選定）"},
+            },
+            "required": ["lead_id", "brand"],
+        },
+    },
+
+    "escalate_lead": {
+        "name": "escalate_lead",
+        "description": "重要リードを判断待ちキューに追加し、Satoshi に通知する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "lead_id": {"type": "string", "description": "リードID"},
+                "reason":  {"type": "string", "description": "エスカレーション理由"},
+                "priority": {"type": "string", "description": "urgent / high / normal"},
+            },
+            "required": ["lead_id", "reason"],
+        },
+    },
+
+    "line_push": {
+        "name": "line_push",
+        "description": "特定の LINE ユーザーに個別メッセージを送信する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "user_id": {"type": "string", "description": "LINE ユーザーID"},
+                "message": {"type": "string", "description": "送信メッセージ"},
+            },
+            "required": ["user_id", "message"],
+        },
+    },
+
+    # ── 分析（拡張） ──────────────────────────────────────────
+
+    "gsc_fetch": {
+        "name": "gsc_fetch",
+        "description": "Google Search Console からクリック数・表示回数・上位クエリを取得する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand": {"type": "string", "description": "ブランドID"},
+                "days":  {"type": "integer", "description": "集計日数（省略時: 28）"},
+            },
+            "required": ["brand"],
+        },
+    },
+
+    "generate_report": {
+        "name": "generate_report",
+        "description": "SNS・GA4・GSCデータを統合した週次/月次レポートを生成してファイルに保存する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":  {"type": "string", "description": "ブランドID（省略時: 全ブランド）"},
+                "period": {"type": "string", "description": "weekly / monthly（省略時: weekly）"},
+            },
+            "required": [],
+        },
+    },
+
+    "performance_compare": {
+        "name": "performance_compare",
+        "description": "複数ブランドのSNSパフォーマンスを比較分析する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brands": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "比較するブランドIDリスト（省略時: 全ブランド）",
+                },
+                "days": {"type": "integer", "description": "集計日数（省略時: 30）"},
+            },
+            "required": [],
+        },
+    },
+
+    "seo_research": {
+        "name": "seo_research",
+        "description": "指定テーマのSEOキーワード・検索意図・競合状況をリサーチする",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand":   {"type": "string", "description": "ブランドID"},
+                "topic":   {"type": "string", "description": "リサーチテーマ"},
+                "keyword": {"type": "string", "description": "軸キーワード（省略可）"},
+            },
+            "required": ["brand", "topic"],
+        },
+    },
+
+    # ── 運用（拡張） ──────────────────────────────────────────
+
+    "queue_check": {
+        "name": "queue_check",
+        "description": "コンテンツキューの状態（未投稿件数・ブランド別・プラットフォーム別）を確認する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand": {"type": "string", "description": "ブランドID（省略時: 全ブランド）"},
+            },
+            "required": [],
+        },
+    },
+
+    "health_check": {
+        "name": "health_check",
+        "description": "システム全体のヘルス状態（DB・キュー・スケジューラー・API接続）を確認する",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+
+    "cleanup_files": {
+        "name": "cleanup_files",
+        "description": "投稿済みコンテンツキューや古いログファイルを整理する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "days_old": {"type": "integer", "description": "何日以上前のファイルを対象にするか（省略時: 30）"},
+                "dry_run":  {"type": "boolean", "description": "true で削除せずリストのみ返す"},
+            },
+            "required": [],
+        },
+    },
+
+    "error_alert": {
+        "name": "error_alert",
+        "description": "エラーや異常を検知して Satoshi の LINE に通知する",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "message":  {"type": "string", "description": "通知メッセージ"},
+                "severity": {"type": "string", "description": "critical / warning / info"},
+            },
+            "required": ["message"],
+        },
+    },
 }
 
 
@@ -539,23 +896,585 @@ def _h_db_backup(inp: dict, ctx: dict) -> dict:
     return {"ok": True, "backup_file": str(dest), "note": note}
 
 
+# ── SNS 直接投稿ハンドラー ────────────────────────────────────
+
+def _h_post_to_instagram(inp: dict, ctx: dict) -> dict:
+    from sns.instagram import InstagramPoster
+    brand     = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    caption   = inp.get("caption", "")
+    image_url = inp.get("image_url", "")
+    video_url = inp.get("video_url", "")
+    is_reel   = inp.get("is_reel", False)
+    poster = InstagramPoster()
+    if is_reel and video_url:
+        result = poster.post_reel(video_url, caption)
+    elif image_url:
+        result = poster.post_image(image_url, caption)
+    else:
+        return {"ok": False, "error": "image_url または video_url が必要です"}
+    log.info(f"post_to_instagram: brand={brand} result={result}")
+    return {"ok": True, "brand": brand, "result": result}
+
+
+def _h_post_to_facebook(inp: dict, ctx: dict) -> dict:
+    from sns.facebook import FacebookPoster
+    brand     = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    message   = inp.get("message", "")
+    image_url = inp.get("image_url", "")
+    poster = FacebookPoster(brand=brand)
+    if image_url:
+        result = poster.post_image(image_url, message)
+    else:
+        result = poster.post_text(message)
+    log.info(f"post_to_facebook: brand={brand}")
+    return {"ok": True, "brand": brand, "result": result}
+
+
+def _h_post_to_twitter(inp: dict, ctx: dict) -> dict:
+    from sns.twitter import TwitterPoster
+    brand  = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    text   = inp.get("text", "")
+    poster = TwitterPoster(brand=brand)
+    result = poster.tweet(text)
+    log.info(f"post_to_twitter: brand={brand}")
+    return {"ok": True, "brand": brand, "result": result}
+
+
+def _h_post_to_threads(inp: dict, ctx: dict) -> dict:
+    from sns.threads import ThreadsPoster
+    import os
+    brand     = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    text      = inp.get("text", "")
+    image_url = inp.get("image_url", "")
+    prefix    = brand.upper().replace("-", "_")
+    account_id = os.environ.get(f"{prefix}_THREADS_USER_ID", "")
+    token      = os.environ.get(f"{prefix}_META_ACCESS_TOKEN", "")
+    poster = ThreadsPoster(account_id=account_id, access_token=token)
+    if image_url:
+        result = poster.post_image(image_url, text)
+    else:
+        result = poster.post_text(text)
+    log.info(f"post_to_threads: brand={brand}")
+    return {"ok": True, "brand": brand, "result": result}
+
+
+def _h_post_to_tiktok(inp: dict, ctx: dict) -> dict:
+    from sns.tiktok import TikTokPoster
+    brand     = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    video_url = inp.get("video_url", "")
+    title     = inp.get("title", "")
+    poster = TikTokPoster(brand=brand)
+    result = poster.upload_video_url(video_url, title)
+    log.info(f"post_to_tiktok: brand={brand}")
+    return {"ok": True, "brand": brand, "result": result}
+
+
+# ── コンテンツ生成（拡張）ハンドラー ─────────────────────────
+
+def _h_generate_reel_script(inp: dict, ctx: dict) -> dict:
+    from dashboard.ai import generate_reel_script_rich
+    brand  = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    topic  = inp.get("topic", "")
+    length = inp.get("length", 30)
+    result = generate_reel_script_rich(topic=topic, brand=brand, length_sec=length)
+    log.info(f"generate_reel_script: brand={brand} topic={topic}")
+    return {"ok": True, "brand": brand, "result": result}
+
+
+def _h_generate_tiktok_content(inp: dict, ctx: dict) -> dict:
+    from dashboard.ai import generate_tiktok_content
+    brand  = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    topic  = inp.get("topic", "")
+    target = inp.get("target", "一般ユーザー")
+    result = generate_tiktok_content(topic=topic, brand=brand, target=target)
+    log.info(f"generate_tiktok_content: brand={brand}")
+    return {"ok": True, "brand": brand, "result": result}
+
+
+def _h_generate_story_content(inp: dict, ctx: dict) -> dict:
+    from dashboard.ai import generate_story_content
+    brand  = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    theme  = inp.get("theme", "")
+    slides = inp.get("slides", 3)
+    result = generate_story_content(theme=theme, brand=brand, slides=slides)
+    log.info(f"generate_story_content: brand={brand}")
+    return {"ok": True, "brand": brand, "result": result}
+
+
+def _h_generate_shorts_content(inp: dict, ctx: dict) -> dict:
+    from dashboard.ai import generate_shorts_content
+    brand  = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    topic  = inp.get("topic", "")
+    result = generate_shorts_content(topic=topic, brand=brand)
+    log.info(f"generate_shorts_content: brand={brand}")
+    return {"ok": True, "brand": brand, "result": result}
+
+
+def _h_multilingual_post(inp: dict, ctx: dict) -> dict:
+    brand     = inp.get("brand", ctx.get("brand_id", "bangkok-peach"))
+    platform  = inp.get("platform", "instagram")
+    topic     = inp.get("topic", "")
+    languages = inp.get("languages", ["ja", "en", "th"])
+    client = _client()
+    lang_names = {"ja": "日本語", "en": "英語", "th": "タイ語"}
+    results = {}
+    for lang in languages:
+        lang_name = lang_names.get(lang, lang)
+        prompt = (
+            f"Bangkok Peach Group の{platform}投稿を{lang_name}で書いてください。\n"
+            f"テーマ: {topic}\n"
+            f"ハッシュタグも含めてください。"
+        )
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        results[lang] = resp.content[0].text
+    log.info(f"multilingual_post: brand={brand} langs={languages}")
+    return {"ok": True, "brand": brand, "platform": platform, "posts": results}
+
+
+def _h_compliance_check(inp: dict, ctx: dict) -> dict:
+    content = inp.get("content", "")
+    brand   = inp.get("brand", ctx.get("brand_id", "cashflowsupport"))
+    client  = _client()
+    prompt = f"""以下のコンテンツの金融・法律コンプライアンスチェックをしてください。
+
+ブランド: {brand}
+コンテンツ:
+{content}
+
+チェック項目:
+- 誇大広告・断定的な利益表現がないか
+- 金融商品取引法・貸金業法・景品表示法に抵触しないか
+- 「必ず」「確実に」「誰でも」などNG表現がないか
+- 審査通過を保証するような表現がないか
+
+結果を「OK」または「NG（理由）」で返してください。NGの場合は修正案も添えてください。"""
+
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=800,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    result_text = resp.content[0].text
+    is_ok = result_text.strip().upper().startswith("OK")
+    log.info(f"compliance_check: brand={brand} ok={is_ok}")
+    return {"ok": True, "compliant": is_ok, "result": result_text}
+
+
+# ── 営業（拡張）ハンドラー ────────────────────────────────────
+
+def _h_lead_create(inp: dict, ctx: dict) -> dict:
+    import uuid, yaml as _yaml
+    brand        = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    name         = inp.get("name", "")
+    contact      = inp.get("contact", "")
+    source       = inp.get("source", "unknown")
+    inquiry      = inp.get("inquiry", "")
+    line_user_id = inp.get("line_user_id", "")
+
+    lead_id = str(uuid.uuid4())[:8]
+    ts = datetime.now().isoformat()
+    lead = {
+        "id":           lead_id,
+        "brand":        brand,
+        "name":         name,
+        "contact":      contact,
+        "source":       source,
+        "inquiry":      inquiry,
+        "line_user_id": line_user_id,
+        "stage":        "new",
+        "created_at":   ts,
+        "updated_at":   ts,
+        "notes":        [],
+    }
+    dest_dir = LEADS_DIR / brand
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    fname = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{lead_id}.yaml"
+    with open(dest_dir / fname, "w", encoding="utf-8") as f:
+        _yaml.dump(lead, f, allow_unicode=True, default_flow_style=False)
+    log.info(f"lead_create: {brand}/{fname}")
+    return {"ok": True, "lead_id": lead_id, "file": fname}
+
+
+def _h_lead_list(inp: dict, ctx: dict) -> dict:
+    import yaml as _yaml
+    brand = inp.get("brand", "")
+    stage = inp.get("stage", "")
+    limit = inp.get("limit", 20)
+    leads = []
+    search_root = LEADS_DIR / brand if brand else LEADS_DIR
+    for f in sorted(search_root.rglob("*.yaml"), reverse=True):
+        try:
+            with open(f, encoding="utf-8") as fh:
+                d = _yaml.safe_load(fh) or {}
+            if stage and d.get("stage") != stage:
+                continue
+            leads.append(d)
+            if len(leads) >= limit:
+                break
+        except Exception:
+            pass
+    return {"ok": True, "count": len(leads), "leads": leads}
+
+
+def _h_qualify_lead(inp: dict, ctx: dict) -> dict:
+    lead_id = inp.get("lead_id", "")
+    lead    = _load_lead_from_file(lead_id)
+    if not lead:
+        return {"ok": False, "error": f"Lead {lead_id} が見つかりません"}
+    client = _client()
+    prompt = f"""リードの資格判定をしてください。
+
+ブランド: {lead.get('brand')}
+問い合わせ内容: {lead.get('inquiry')}
+流入元: {lead.get('source')}
+
+以下を JSON で返してください:
+{{
+  "score": 1〜10（10が最高優先度）,
+  "tier": "hot/warm/cold",
+  "next_action": "推奨アクション",
+  "estimated_budget": "予算感（わかれば）",
+  "reason": "判定理由"
+}}"""
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=400,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = resp.content[0].text
+    try:
+        import re
+        m = re.search(r"\{.*\}", raw, re.DOTALL)
+        qual = json.loads(m.group()) if m else {"raw": raw}
+    except Exception:
+        qual = {"raw": raw}
+    log.info(f"qualify_lead: {lead_id} score={qual.get('score')}")
+    return {"ok": True, "lead_id": lead_id, "qualification": qual}
+
+
+def _h_generate_proposal(inp: dict, ctx: dict) -> dict:
+    lead_id = inp.get("lead_id", "")
+    brand   = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    plan    = inp.get("plan", "")
+    lead    = _load_lead_from_file(lead_id)
+    if not lead:
+        return {"ok": False, "error": f"Lead {lead_id} が見つかりません"}
+    client = _client()
+    brand_ctx = _brand_context(brand)
+    prompt = f"""以下のリード向けに提案書ドラフトを作成してください。
+
+{brand_ctx}
+リード情報:
+- 名前: {lead.get('name')}
+- 問い合わせ: {lead.get('inquiry')}
+- プラン希望: {plan or '未指定（最適なものを提案）'}
+
+提案書の構成:
+1. 課題の整理
+2. 提案内容・プラン
+3. 期待効果
+4. 料金・契約内容
+5. 次のステップ
+
+丁寧・簡潔に、400字以内で。"""
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    proposal = resp.content[0].text
+    log.info(f"generate_proposal: lead_id={lead_id} brand={brand}")
+    return {"ok": True, "lead_id": lead_id, "proposal": proposal}
+
+
+def _h_escalate_lead(inp: dict, ctx: dict) -> dict:
+    import yaml as _yaml
+    lead_id  = inp.get("lead_id", "")
+    reason   = inp.get("reason", "")
+    priority = inp.get("priority", "high")
+    lead     = _load_lead_from_file(lead_id)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    entry = {
+        "type":     "lead_escalation",
+        "lead_id":  lead_id,
+        "lead_name": lead.get("name", "") if lead else "",
+        "reason":   reason,
+        "priority": priority,
+        "created_at": datetime.now().isoformat(),
+    }
+    DECISION_DIR.mkdir(parents=True, exist_ok=True)
+    with open(DECISION_DIR / f"{ts}_lead_{lead_id}.yaml", "w", encoding="utf-8") as f:
+        _yaml.dump(entry, f, allow_unicode=True, default_flow_style=False)
+    # Satoshi に LINE 通知
+    owner_id = os.environ.get("OWNER_LINE_USER_ID", "")
+    if owner_id:
+        from sns.line_api import LINEMessenger
+        LINEMessenger().push(
+            owner_id,
+            f"⚠️ リードエスカレーション [{priority.upper()}]\n{lead.get('name','')}\n{reason}"
+        )
+    log.info(f"escalate_lead: {lead_id} priority={priority}")
+    return {"ok": True, "lead_id": lead_id, "priority": priority}
+
+
+def _h_line_push(inp: dict, ctx: dict) -> dict:
+    from sns.line_api import LINEMessenger
+    user_id = inp.get("user_id", "")
+    message = inp.get("message", "")
+    if not user_id or not message:
+        return {"ok": False, "error": "user_id と message が必要です"}
+    ok = LINEMessenger().push(user_id, message)
+    log.info(f"line_push: user_id={user_id} ok={ok}")
+    return {"ok": ok}
+
+
+# ── 分析（拡張）ハンドラー ────────────────────────────────────
+
+def _h_gsc_fetch(inp: dict, ctx: dict) -> dict:
+    from sns.analytics import SearchConsoleClient
+    brand    = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    days     = inp.get("days", 28)
+    env_key  = brand.upper().replace("-", "_") + "_GSC_SITE_URL"
+    client   = SearchConsoleClient(site_url_env=env_key)
+    overview = client.get_overview(days=days)
+    queries  = client.get_top_queries(days=days, limit=10)
+    return {"ok": True, "brand": brand, "overview": overview, "top_queries": queries}
+
+
+def _h_generate_report(inp: dict, ctx: dict) -> dict:
+    import yaml as _yaml
+    brand  = inp.get("brand", "")
+    period = inp.get("period", "weekly")
+    brands = [brand] if brand else ["dsc-marketing", "upjapan", "cashflowsupport", "bangkok-peach"]
+    client = _client()
+    summaries = []
+    for b in brands:
+        try:
+            from sns.performance import get_performance_summary
+            s = get_performance_summary(brand=b, platform="instagram", days=7 if period=="weekly" else 30)
+            summaries.append(f"【{b}】{s}")
+        except Exception:
+            summaries.append(f"【{b}】データ取得エラー")
+
+    prompt = f"""以下のデータをもとに{period}レポートを作成してください。
+
+{chr(10).join(summaries)}
+
+レポート形式:
+- 全体サマリー（3行）
+- ブランド別ハイライト
+- 改善提案（3点）
+- 来週の重点アクション"""
+
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1500,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    report_text = resp.content[0].text
+    ts = datetime.now().strftime("%Y%m%d")
+    report_dir = _BASE / "logs" / "reports"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    fname = f"{ts}_{period}_report.md"
+    (report_dir / fname).write_text(report_text, encoding="utf-8")
+    log.info(f"generate_report: {fname}")
+    return {"ok": True, "period": period, "file": fname, "report": report_text}
+
+
+def _h_performance_compare(inp: dict, ctx: dict) -> dict:
+    from sns.performance import get_performance_summary
+    brands = inp.get("brands", ["dsc-marketing", "upjapan", "cashflowsupport", "bangkok-peach"])
+    days   = inp.get("days", 30)
+    result = {}
+    for b in brands:
+        try:
+            result[b] = get_performance_summary(brand=b, platform="instagram", days=days)
+        except Exception as e:
+            result[b] = f"エラー: {e}"
+    return {"ok": True, "days": days, "comparison": result}
+
+
+def _h_seo_research(inp: dict, ctx: dict) -> dict:
+    brand   = inp.get("brand", ctx.get("brand_id", "dsc-marketing"))
+    topic   = inp.get("topic", "")
+    keyword = inp.get("keyword", "")
+    client  = _client()
+    brand_ctx = _brand_context(brand)
+    prompt = f"""{brand_ctx}
+
+以下のテーマで SEO キーワードリサーチをしてください。
+
+テーマ: {topic}
+軸キーワード: {keyword or '未指定'}
+
+以下を JSON で返してください:
+{{
+  "main_keywords": ["主要KW×5"],
+  "long_tail": ["ロングテールKW×5"],
+  "search_intent": "検索意図の説明",
+  "recommended_title": "推奨記事タイトル",
+  "content_outline": ["見出し案×4"]
+}}"""
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=800,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = resp.content[0].text
+    try:
+        import re
+        m = re.search(r"\{.*\}", raw, re.DOTALL)
+        seo = json.loads(m.group()) if m else {"raw": raw}
+    except Exception:
+        seo = {"raw": raw}
+    return {"ok": True, "brand": brand, "topic": topic, "seo": seo}
+
+
+# ── 運用（拡張）ハンドラー ────────────────────────────────────
+
+def _h_queue_check(inp: dict, ctx: dict) -> dict:
+    brand = inp.get("brand", "")
+    result: dict = {}
+    brands = [brand] if brand else ["dsc-marketing", "upjapan", "cashflowsupport", "bangkok-peach", "satoshi-blog"]
+    platforms = ["instagram", "facebook", "twitter", "threads", "tiktok", "line", "wordpress"]
+    for b in brands:
+        result[b] = {}
+        for p in platforms:
+            q_dir = QUEUE_ROOT / b / p
+            if not q_dir.exists():
+                continue
+            import yaml as _yaml
+            items = []
+            for f in q_dir.glob("*.yaml"):
+                try:
+                    with open(f) as fh:
+                        d = _yaml.safe_load(fh) or {}
+                    items.append(d)
+                except Exception:
+                    pass
+            pending = [i for i in items if not i.get("posted")]
+            if pending:
+                result[b][p] = len(pending)
+    total = sum(sum(v.values()) for v in result.values())
+    return {"ok": True, "total_pending": total, "by_brand": result}
+
+
+def _h_health_check(inp: dict, ctx: dict) -> dict:
+    checks: dict = {}
+    # DB
+    try:
+        import database as main_db
+        stats = main_db.get_stats()
+        checks["database"] = {"ok": True, "posts": stats.get("total_posts", 0)}
+    except Exception as e:
+        checks["database"] = {"ok": False, "error": str(e)}
+    # ANTHROPIC_API_KEY
+    checks["anthropic_api"] = {"ok": bool(os.environ.get("ANTHROPIC_API_KEY"))}
+    # LINE
+    checks["line_api"] = {"ok": bool(os.environ.get("LINE_CHANNEL_ACCESS_TOKEN"))}
+    # Meta
+    checks["meta_api"] = {"ok": bool(os.environ.get("DSC_MARKETING_META_ACCESS_TOKEN"))}
+    # キュー
+    try:
+        q_result = _h_queue_check({}, ctx)
+        checks["content_queue"] = {"ok": True, "pending": q_result.get("total_pending", 0)}
+    except Exception as e:
+        checks["content_queue"] = {"ok": False, "error": str(e)}
+
+    all_ok = all(v.get("ok", False) for v in checks.values())
+    log.info(f"health_check: all_ok={all_ok}")
+    return {"ok": all_ok, "checks": checks}
+
+
+def _h_cleanup_files(inp: dict, ctx: dict) -> dict:
+    import time
+    days_old = inp.get("days_old", 30)
+    dry_run  = inp.get("dry_run", True)
+    cutoff   = time.time() - days_old * 86400
+    removed  = []
+    skipped  = []
+    targets  = list((_BASE / "logs").glob("*.yaml")) + list((_BASE / "logs").glob("*.log"))
+    for f in targets:
+        if f.stat().st_mtime < cutoff:
+            if dry_run:
+                skipped.append(str(f))
+            else:
+                f.unlink()
+                removed.append(str(f))
+    log.info(f"cleanup_files: removed={len(removed)} dry_run={dry_run}")
+    return {"ok": True, "removed": removed, "would_remove": skipped, "dry_run": dry_run}
+
+
+def _h_error_alert(inp: dict, ctx: dict) -> dict:
+    from sns.line_api import LINEMessenger
+    message  = inp.get("message", "")
+    severity = inp.get("severity", "warning")
+    icons    = {"critical": "🚨", "warning": "⚠️", "info": "ℹ️"}
+    icon     = icons.get(severity, "⚠️")
+    owner_id = os.environ.get("OWNER_LINE_USER_ID", "")
+    if not owner_id:
+        return {"ok": False, "error": "OWNER_LINE_USER_ID が未設定です"}
+    full_msg = f"{icon} [{severity.upper()}] {message}"
+    ok = LINEMessenger().push(owner_id, full_msg)
+    log.info(f"error_alert: severity={severity} ok={ok}")
+    return {"ok": ok, "severity": severity}
+
+
 # ── ハンドラーテーブル ─────────────────────────────────────
 TOOL_HANDLERS: dict[str, Any] = {
-    "generate_post":    _h_generate_post,
-    "queue_push":       _h_queue_push,
-    "weekly_calendar":  _h_weekly_calendar,
-    "line_broadcast":   _h_line_broadcast,
-    "generate_blog_post": _h_generate_blog_post,
-    "wordpress_draft":  _h_wordpress_draft,
-    "lead_reply":       _h_lead_reply,
-    "followup_send":    _h_followup_send,
-    "stage_update":     _h_stage_update,
-    "performance_fetch": _h_performance_fetch,
-    "trend_research":   _h_trend_research,
-    "ga4_fetch":        _h_ga4_fetch,
-    "scheduler_check":  _h_scheduler_check,
-    "decision_triage":  _h_decision_triage,
-    "db_backup":        _h_db_backup,
+    # コンテンツ生成（基本）
+    "generate_post":          _h_generate_post,
+    "queue_push":             _h_queue_push,
+    "weekly_calendar":        _h_weekly_calendar,
+    "line_broadcast":         _h_line_broadcast,
+    "generate_blog_post":     _h_generate_blog_post,
+    "wordpress_draft":        _h_wordpress_draft,
+    # コンテンツ生成（拡張）
+    "generate_reel_script":   _h_generate_reel_script,
+    "generate_tiktok_content": _h_generate_tiktok_content,
+    "generate_story_content": _h_generate_story_content,
+    "generate_shorts_content": _h_generate_shorts_content,
+    "multilingual_post":      _h_multilingual_post,
+    "compliance_check":       _h_compliance_check,
+    # SNS 直接投稿
+    "post_to_instagram":      _h_post_to_instagram,
+    "post_to_facebook":       _h_post_to_facebook,
+    "post_to_twitter":        _h_post_to_twitter,
+    "post_to_threads":        _h_post_to_threads,
+    "post_to_tiktok":         _h_post_to_tiktok,
+    # 営業（基本）
+    "lead_reply":             _h_lead_reply,
+    "followup_send":          _h_followup_send,
+    "stage_update":           _h_stage_update,
+    # 営業（拡張）
+    "lead_create":            _h_lead_create,
+    "lead_list":              _h_lead_list,
+    "qualify_lead":           _h_qualify_lead,
+    "generate_proposal":      _h_generate_proposal,
+    "escalate_lead":          _h_escalate_lead,
+    "line_push":              _h_line_push,
+    # 分析（基本）
+    "performance_fetch":      _h_performance_fetch,
+    "trend_research":         _h_trend_research,
+    "ga4_fetch":              _h_ga4_fetch,
+    # 分析（拡張）
+    "gsc_fetch":              _h_gsc_fetch,
+    "generate_report":        _h_generate_report,
+    "performance_compare":    _h_performance_compare,
+    "seo_research":           _h_seo_research,
+    # 運用（基本）
+    "scheduler_check":        _h_scheduler_check,
+    "decision_triage":        _h_decision_triage,
+    "db_backup":              _h_db_backup,
+    # 運用（拡張）
+    "queue_check":            _h_queue_check,
+    "health_check":           _h_health_check,
+    "cleanup_files":          _h_cleanup_files,
+    "error_alert":            _h_error_alert,
 }
 
 
