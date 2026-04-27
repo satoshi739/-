@@ -243,10 +243,12 @@ def president_dashboard():
 
 @app.route("/ceo")
 def ceo_dashboard():
-    from dashboard.mock_service import (
+    from dashboard.real_service import (
         get_morning_brief, get_brand_status, get_agent_status,
         get_task_queue, get_bottlenecks, get_escalations,
         get_ceo_priorities, get_ceo_to_president, get_pending_approvals,
+    )
+    from dashboard.mock_service import (
         get_ai_recommendations, get_anomaly_alerts, get_strategy_notes,
         get_performance_snapshot,
     )
@@ -865,6 +867,63 @@ def api_stats():
     s["updated_at"] = datetime.now().isoformat()
     s["ai_enabled"] = ai_available()
     return jsonify(s)
+
+
+@app.route("/api/ceo/dispatch", methods=["POST"])
+def api_ceo_dispatch():
+    """AI CEO ディスパッチを手動トリガー（ダッシュボードから即時実行）"""
+    try:
+        body = request.get_json(silent=True, force=True) or {}
+        is_dry = body.get("dry_run", False)
+
+        from agents.ceo_executor import run_ceo_dispatch
+        result = run_ceo_dispatch(dry_run=is_dry)
+        return jsonify({"ok": True, **result})
+    except Exception as e:
+        log.error(f"CEO dispatch API error: {e}", exc_info=True)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/ceo/instruct", methods=["POST"])
+def api_ceo_instruct():
+    """社長 → AI CEO への直接指示。CEOが解釈してエージェントにタスクを割り当てる。"""
+    try:
+        body = request.get_json(silent=True, force=True) or {}
+        instruction = (body.get("instruction") or "").strip()
+        if not instruction:
+            return jsonify({"ok": False, "error": "instruction is required"}), 400
+
+        from agents.ceo_executor import run_ceo_dispatch
+        result = run_ceo_dispatch(president_instruction=instruction)
+        return jsonify({"ok": True, **result})
+    except Exception as e:
+        log.error(f"CEO instruct API error: {e}", exc_info=True)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/ceo/status")
+def api_ceo_status():
+    """AI CEO の最新実行状態を返す"""
+    import org_database as org_db
+    import json as _json
+    try:
+        with org_db.get_conn() as conn:
+            row = conn.execute(
+                """SELECT output_data, completed_at, status
+                   FROM agent_runs WHERE agent_id='ai-ceo'
+                   ORDER BY completed_at DESC LIMIT 1""",
+            ).fetchone()
+        if not row:
+            return jsonify({"last_run": None, "tasks_created": 0, "summary": "まだ実行されていません"})
+        data = _json.loads(row["output_data"] or "{}")
+        return jsonify({
+            "last_run":      row["completed_at"],
+            "status":        row["status"],
+            "tasks_created": data.get("tasks_created", 0),
+            "summary":       data.get("summary", ""),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/leads/stage", methods=["POST"])

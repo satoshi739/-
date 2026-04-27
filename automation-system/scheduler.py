@@ -303,6 +303,18 @@ def agent_tick_job():
         logger.error(f"エージェントtickエラー: {e}", exc_info=True)
 
 
+def ceo_dispatch_job():
+    """AI CEO ディスパッチジョブ（毎朝5:30）"""
+    logger.info("=== AI CEO ディスパッチ開始 ===")
+    try:
+        from agents.ceo_executor import run_ceo_dispatch
+        result = run_ceo_dispatch()
+        logger.info(f"AI CEO ディスパッチ完了: {result.get('tasks_created', 0)}タスク作成")
+        logger.info(f"サマリー: {result.get('summary', '')}")
+    except Exception as e:
+        logger.error(f"AI CEO ディスパッチエラー: {e}", exc_info=True)
+
+
 def generate_weekly_calendar_job():
     """
     週次コンテンツカレンダー自動生成ジョブ（毎週月曜6:00）
@@ -400,6 +412,10 @@ def setup_schedule():
     # エージェントタスク実行（5分ごと: キュー内タスクを自動実行）
     schedule.every(5).minutes.do(agent_tick_job)
     logger.info("エージェントタスク実行: 5分ごと")
+
+    # AI CEO ディスパッチ（毎朝5:30: 全ブランド状態を分析しタスクを割り当て）
+    schedule.every().day.at("05:30").do(ceo_dispatch_job)
+    logger.info("AI CEO ディスパッチ: 毎朝5:30")
 
 
 def story_autopilot_job():

@@ -1065,33 +1065,20 @@
   </div>
 
   <!-- ════════════════════════════
-       上段：毎日使う
+       1. 司令室
   ════════════════════════════ -->
   <div class="nav-section">
-    <div class="nav-section-text">毎日使う</div>
+    <div class="nav-section-text">司令室</div>
     <div class="nav-section-line"></div>
   </div>
 
-  <!-- 1. 司令室 -->
-  <div class="nav-group-hd">
-    <span class="nav-group-hd-icon">🎯</span> 司令室
-  </div>
   <a href="/president" class="nav-item-cmd {{ 'active' if request.path=='/president' else '' }}">
     <span class="nav-icon">👑</span>
     <span style="flex:1;">社長ダッシュボード</span>
   </a>
   <a href="/ceo" class="nav-item-cmd {{ 'active' if request.path=='/ceo' else '' }}">
-    <span class="nav-icon">🤖</span>
+    <span class="nav-icon">🏢</span>
     <span style="flex:1;">AI CEO</span>
-  </a>
-  <a href="/chief-of-staff" class="nav-item-cmd {{ 'active' if request.path=='/chief-of-staff' else '' }}"
-     style="background:rgba(99,102,241,.05);border-color:rgba(99,102,241,.1);">
-    <span class="nav-icon">🧠</span>
-    <span style="flex:1;">AI Chief of Staff</span>
-  </a>
-  <a href="/" class="nav-item {{ 'active' if request.path=='/' else '' }}">
-    <span class="nav-icon">⌂</span>
-    <span style="flex:1;">ホーム</span>
   </a>
   <a href="/decisions" class="nav-item {{ 'active' if '/decisions' in request.path else '' }}">
     <span class="nav-icon">⚡</span>
@@ -1099,10 +1086,14 @@
     <span id="decision-badge" class="nav-badge" style="display:none">0</span>
   </a>
 
-  <!-- 2. ブランド運営 -->
-  <div class="nav-group-hd" style="margin-top:6px;">
-    <span class="nav-group-hd-icon">🏷</span> ブランド運営
+  <!-- ════════════════════════════
+       2. ブランド
+  ════════════════════════════ -->
+  <div class="nav-section" style="margin-top:6px;">
+    <div class="nav-section-text">ブランド</div>
+    <div class="nav-section-line"></div>
   </div>
+
   <div class="brand-pills">
     {% for bid, b in nav_brands.items() %}
     <a href="/brands/{{ bid }}" class="brand-pill {{ 'active' if bid in request.path else '' }}">
@@ -1127,34 +1118,27 @@
     {% endfor %}
   </div>
 
-  <!-- 3. AI組織 -->
-  <div class="nav-group-hd" style="margin-top:6px;">
-    <span class="nav-group-hd-icon">🤖</span> AI組織
+  <!-- ════════════════════════════
+       3. AI エージェント
+  ════════════════════════════ -->
+  <div class="nav-section" style="margin-top:6px;">
+    <div class="nav-section-text">AI エージェント</div>
+    <div class="nav-section-line"></div>
   </div>
+
   <a href="/agents" class="nav-item {{ 'active' if request.path=='/agents' else '' }}"
      style="background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.09);margin:1px 8px;border-radius:10px;">
     <span class="nav-icon" style="color:var(--green2);">◎</span>
     <span style="flex:1;">Agent ステータス</span>
     <span class="live-badge"><span class="live-badge-dot"></span>LIVE</span>
   </a>
-  <a href="/agent-workspace" class="nav-item {{ 'active' if '/agent-workspace' in request.path else '' }}"
-     style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.09);margin:1px 8px;border-radius:10px;">
-    <span class="nav-icon" style="color:var(--accent2);">⚙</span>
+  <a href="/agent-workspace" class="nav-item {{ 'active' if '/agent-workspace' in request.path else '' }}">
+    <span class="nav-icon">⚙</span>
     <span style="flex:1;">Agent Workspace</span>
   </a>
-
-  <!-- 4. コンテンツ企画 -->
-  <div class="nav-group-hd" style="margin-top:6px;">
-    <span class="nav-group-hd-icon">✦</span> コンテンツ企画
-  </div>
-  <a href="/campaigns" class="nav-item {{ 'active' if request.path.startswith('/campaigns') else '' }}">
-    <span class="nav-icon">🎯</span> Campaign Pipeline
-  </a>
-  <a href="/ideas" class="nav-item {{ 'active' if request.path.startswith('/ideas') else '' }}">
-    <span class="nav-icon">💡</span> アイデア
-  </a>
-  <a href="/noimos" class="nav-item {{ 'active' if request.path.startswith('/noimos') else '' }}">
-    <span class="nav-icon">🧠</span> NoiMos AI
+  <a href="/story-autopilot" class="nav-item {{ 'active' if request.path.startswith('/story-autopilot') else '' }}">
+    <span class="nav-icon">🤖</span>
+    <span style="flex:1;">Story Autopilot</span>
   </a>
   <a href="/publishing" class="nav-item {{ 'active' if request.path.startswith('/publishing') else '' }}">
     <span class="nav-icon">📤</span>
@@ -1162,114 +1146,37 @@
   </a>
 
   <!-- ════════════════════════════
-       中段：実務
+       4. コンテンツ
   ════════════════════════════ -->
-  <div class="nav-section" style="margin-top:4px;">
-    <div class="nav-section-text">実務</div>
+  <div class="nav-section" style="margin-top:6px;">
+    <div class="nav-section-text">コンテンツ</div>
     <div class="nav-section-line"></div>
   </div>
 
-  <!-- 5. 素材ライブラリ -->
-  <div class="nav-group-hd">
-    <span class="nav-group-hd-icon">🖼</span> 素材ライブラリ
-  </div>
-  <a href="/assets" class="nav-item {{ 'active' if request.path=='/assets' else '' }}">
-    <span class="nav-icon">🧠</span> Asset Brain
-  </a>
-  <a href="/inbox" class="nav-item {{ 'active' if request.path=='/inbox' else '' }}">
-    <span class="nav-icon">📥</span> インボックス
-  </a>
-
-  <!-- 6. MEO / 口コミ -->
-  <div class="nav-group-hd" style="margin-top:4px;">
-    <span class="nav-group-hd-icon">📍</span> MEO / 口コミ
-  </div>
-  <a href="/meo" class="nav-item {{ 'active' if request.path=='/meo' or request.path.startswith('/meo/') else '' }}">
-    <span class="nav-icon">📍</span>
-    <span style="flex:1;">MEO Control Tower</span>
-  </a>
-  <a href="/reviews?tab=unanswered" class="nav-item {{ 'active' if request.path=='/reviews' else '' }}">
-    <span class="nav-icon">💬</span>
-    <span style="flex:1;">Review Center</span>
-    <span id="meo-unanswered-badge" class="nav-badge" style="display:none;">0</span>
-  </a>
-  <a href="/reviews?tab=drafts" class="nav-item">
-    <span class="nav-icon">✦</span>
-    <span style="flex:1;">AI 返信下書き</span>
-    <span id="meo-draft-badge" class="nav-badge" style="display:none;background:rgba(99,102,241,.15);color:var(--accent2);border-color:rgba(99,102,241,.3);">0</span>
-  </a>
-  <a href="/reviews?tab=low_rating" class="nav-item">
-    <span class="nav-icon" style="font-size:11px;color:var(--yellow);">★</span>
-    <span style="flex:1;">低評価レビュー</span>
-  </a>
-
-  <!-- 7. ストーリー / SNS -->
-  <div class="nav-group-hd" style="margin-top:4px;">
-    <span class="nav-group-hd-icon">📱</span> ストーリー / SNS
-  </div>
-  <a href="/story-autopilot" class="nav-item {{ 'active' if request.path.startswith('/story-autopilot') else '' }}"
-     style="background:rgba(139,92,246,.04);border:1px solid rgba(139,92,246,.09);margin:1px 8px;border-radius:10px;">
-    <span class="nav-icon" style="color:var(--purple2);">🤖</span>
-    <span style="flex:1;">Story Autopilot</span>
-  </a>
-  <a href="/stories" class="nav-item {{ 'active' if request.path=='/stories' else '' }}">
-    <span class="nav-icon">📸</span> ストーリー作成
-  </a>
-  <a href="/reels" class="nav-item {{ 'active' if request.path=='/reels' else '' }}">
-    <span class="nav-icon">🎬</span> リール作成
-  </a>
   <a href="/queue" class="nav-item {{ 'active' if request.path=='/queue' else '' }}">
     <span class="nav-icon">▤</span> 投稿キュー
   </a>
   <a href="/calendar" class="nav-item {{ 'active' if request.path=='/calendar' else '' }}">
     <span class="nav-icon">◫</span> 投稿カレンダー
   </a>
-
-  <!-- 8. ブログ / アナリティクス -->
-  <div class="nav-group-hd" style="margin-top:4px;">
-    <span class="nav-group-hd-icon">✒</span> ブログ / Analytics
-  </div>
-  <a href="/blog" class="nav-item {{ 'active' if request.path.startswith('/blog') else '' }}"
-     style="background:rgba(139,92,246,.04);border:1px solid rgba(139,92,246,.09);margin:1px 8px;border-radius:10px;">
-    <span class="nav-icon" style="color:var(--purple2);">✒</span>
+  <a href="/blog" class="nav-item {{ 'active' if request.path.startswith('/blog') else '' }}">
+    <span class="nav-icon">✒</span>
     <span style="flex:1;">Blog Auto Growth</span>
   </a>
-  <a href="/daily-briefs" class="nav-item {{ 'active' if request.path=='/daily-briefs' else '' }}">
-    <span class="nav-icon">☀️</span> Daily Brief 履歴
-  </a>
-  <a href="/anomaly-alerts" class="nav-item {{ 'active' if request.path=='/anomaly-alerts' else '' }}">
-    <span class="nav-icon">⚡</span>
-    <span style="flex:1;">異常検知</span>
-    <span id="anomaly-badge" class="nav-badge" style="display:none;background:rgba(239,68,68,.15);color:var(--red);border-color:rgba(239,68,68,.3);">0</span>
-  </a>
-  <a href="/performance-snapshot" class="nav-item {{ 'active' if request.path=='/performance-snapshot' else '' }}">
-    <span class="nav-icon">◈</span> Performance Snapshot
-  </a>
-  <a href="/generate" class="nav-item {{ 'active' if '/generate' in request.path else '' }}">
-    <span class="nav-icon">✦</span> AI 記事生成
-  </a>
-  <a href="/weekly" class="nav-item {{ 'active' if request.path=='/weekly' else '' }}">
-    <span class="nav-icon">◫</span> 週次カレンダー
-  </a>
-  <a href="/performance" class="nav-item {{ 'active' if request.path=='/performance' else '' }}">
-    <span class="nav-icon">◉</span> パフォーマンス
-  </a>
-  <a href="/analytics" class="nav-item {{ 'active' if request.path=='/analytics' else '' }}">
-    <span class="nav-icon">◈</span> アナリティクス
+  <a href="/meo" class="nav-item {{ 'active' if request.path=='/meo' or request.path.startswith('/meo/') else '' }}">
+    <span class="nav-icon">📍</span>
+    <span style="flex:1;">MEO / 口コミ</span>
+    <span id="meo-unanswered-badge" class="nav-badge" style="display:none;">0</span>
   </a>
 
   <!-- ════════════════════════════
-       下段：管理
+       5. 営業・管理
   ════════════════════════════ -->
-  <div class="nav-section" style="margin-top:4px;">
-    <div class="nav-section-text">管理</div>
+  <div class="nav-section" style="margin-top:6px;">
+    <div class="nav-section-text">営業・管理</div>
     <div class="nav-section-line"></div>
   </div>
 
-  <!-- 9. 承認・ログ -->
-  <div class="nav-group-hd">
-    <span class="nav-group-hd-icon">⚖</span> 承認・ログ
-  </div>
   <a href="/leads/kanban" class="nav-item {{ 'active' if 'kanban' in request.path else '' }}">
     <span class="nav-icon">⊞</span> 営業 Kanban
   </a>
@@ -1281,23 +1188,30 @@
     <span style="flex:1;">通知</span>
     <span class="nav-badge" id="notif-nav-badge" {% if not unread_notif_count %}style="display:none;"{% endif %}>{{ unread_notif_count }}</span>
   </a>
-  <a href="/audit-logs" class="nav-item {{ 'active' if '/audit-logs' in request.path else '' }}">
-    <span class="nav-icon">🗂</span> 監査ログ
-  </a>
   <a href="/logs" class="nav-item {{ 'active' if request.path=='/logs' else '' }}">
     <span class="nav-icon">≡</span> 実行ログ
   </a>
-
-  <!-- 10. 設定 -->
-  <div class="nav-group-hd" style="margin-top:4px;">
-    <span class="nav-group-hd-icon">⚙</span> 設定
-  </div>
   {% for bid, b in nav_brands.items() %}
-  <a href="/settings/{{ bid }}" class="nav-item {{ 'active' if ('settings/'+bid) in request.path else '' }}">
+  <a href="/settings/{{ bid }}" class="nav-item {{ 'active' if ('settings/'+bid) in request.path else '' }}"
+     style="display:{% if 'settings' in request.path %}block{% else %}none{% endif %};" id="settings-link-{{ bid }}">
     <span class="nav-icon" style="color:{{ b.color }};font-size:8px;">●</span>
-    <span style="flex:1;">{{ b.name_short }}</span>
+    <span style="flex:1;">{{ b.name_short }} 設定</span>
   </a>
   {% endfor %}
+  <a href="#" onclick="toggleSettings(event)" class="nav-item {{ 'active' if 'settings' in request.path else '' }}">
+    <span class="nav-icon">⚙</span>
+    <span style="flex:1;">設定</span>
+    <span style="font-size:10px;color:var(--muted);" id="settings-arrow">▸</span>
+  </a>
+  <div id="settings-sub" style="display:{% if 'settings' in request.path %}block{% else %}none{% endif %};">
+    {% for bid, b in nav_brands.items() %}
+    <a href="/settings/{{ bid }}" class="nav-item {{ 'active' if ('settings/'+bid) in request.path else '' }}"
+       style="margin-left:12px;font-size:11px;">
+      <span class="nav-icon" style="color:{{ b.color }};font-size:8px;">●</span>
+      <span style="flex:1;">{{ b.name_short }}</span>
+    </a>
+    {% endfor %}
+  </div>
 
   <!-- Footer -->
   <div class="sidebar-footer">
@@ -1308,6 +1222,21 @@
     <div style="font-size:10px;color:var(--muted);margin-top:5px;" id="clock"></div>
   </div>
 </nav>
+
+<script>
+function toggleSettings(e) {
+  e.preventDefault();
+  var sub = document.getElementById('settings-sub');
+  var arrow = document.getElementById('settings-arrow');
+  if (sub.style.display === 'none') {
+    sub.style.display = 'block';
+    arrow.textContent = '▾';
+  } else {
+    sub.style.display = 'none';
+    arrow.textContent = '▸';
+  }
+}
+</script>
 
 <!-- ══════════════════════════════════════════
      MAIN
@@ -1547,5 +1476,6 @@ function updateMobileBadge(count) {
   if (el) el.style.display = count > 0 ? 'block' : 'none';
 }
 </script>
+{% block scripts %}{% endblock %}
 </body>
 </html>
