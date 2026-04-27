@@ -332,6 +332,52 @@
   </div>
 </div>
 
+<!-- ═══ Railway デプロイ連携 ═══ -->
+<div class="card" style="margin-bottom:24px;border-top:3px solid #7B61FF;">
+  <div class="card-header">
+    <span class="card-title">🚂 Railway 本番環境への同期</span>
+    <span id="railway-status-badge" class="badge badge-warn">未設定</span>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.8;">
+    ここに入力した値を保存すると、<strong>Railway の本番環境変数にも自動同期</strong>できます。<br>
+    Railway ダッシュボード →
+    <a href="https://railway.app/account/tokens" target="_blank" style="color:var(--accent);">トークン発行</a> /
+    プロジェクト URL から Project ID・Service ID を確認してください。
+  </div>
+  <div style="display:grid;grid-template-columns:1fr;gap:12px;">
+    <div class="form-group">
+      <label class="form-label">RAILWAY_API_TOKEN <span style="color:var(--muted);font-weight:normal;">（Railway アカウントトークン）</span></label>
+      <input type="password" name="RAILWAY_API_TOKEN" class="form-input"
+             value="{{ env.get('RAILWAY_API_TOKEN','') }}" placeholder="railway_..." autocomplete="off">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+        <a href="https://railway.app/account/tokens" target="_blank" style="color:var(--accent);">railway.app/account/tokens</a> で発行
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">RAILWAY_PROJECT_ID</label>
+        <input type="text" name="RAILWAY_PROJECT_ID" class="form-input"
+               value="{{ env.get('RAILWAY_PROJECT_ID','') }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Railway プロジェクト URL の末尾のID</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">RAILWAY_SERVICE_ID</label>
+        <input type="text" name="RAILWAY_SERVICE_ID" class="form-input"
+               value="{{ env.get('RAILWAY_SERVICE_ID','') }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">サービス設定ページの URL から取得</div>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <button type="button" onclick="syncToRailway()" id="railway-sync-btn"
+      style="background:linear-gradient(135deg,#7B61FF,#5B43CC);color:#fff;font-weight:700;font-size:13px;
+             padding:9px 20px;border:none;border-radius:10px;cursor:pointer;transition:opacity .2s;">
+      🚂 Railway に今すぐ同期
+    </button>
+    <span id="railway-sync-status" style="font-size:12px;color:var(--muted2);"></span>
+  </div>
+</div>
+
 <!-- 保存ボタン -->
 <div style="position:sticky;bottom:20px;display:flex;gap:12px;">
   <button type="submit" class="btn btn-primary" style="flex:1;justify-content:center;padding:16px;font-size:16px;box-shadow:0 8px 24px rgba(91,138,245,.4);">
@@ -370,6 +416,46 @@ async function testConnection(type, brandId) {
   }
 
   setTimeout(() => { res.style.display = 'none'; }, 5000);
+}
+
+// Railway 同期ステータスバッジ初期化
+(function(){
+  const token = {{ env.get('RAILWAY_API_TOKEN','') | tojson }};
+  const pid   = {{ env.get('RAILWAY_PROJECT_ID','') | tojson }};
+  const sid   = {{ env.get('RAILWAY_SERVICE_ID','') | tojson }};
+  const badge = document.getElementById('railway-status-badge');
+  if (token && pid && sid) {
+    badge.textContent = '設定済み';
+    badge.className = 'badge badge-ok';
+  }
+})();
+
+// Railway 環境変数同期
+async function syncToRailway() {
+  const btn    = document.getElementById('railway-sync-btn');
+  const status = document.getElementById('railway-sync-status');
+  btn.disabled = true;
+  btn.textContent = '同期中…';
+  status.style.color = 'var(--muted2)';
+  status.textContent = 'Railway API に接続中…';
+
+  try {
+    const resp = await fetch('/api/railway/sync', { method: 'POST' });
+    const data = await resp.json();
+    if (data.ok) {
+      status.textContent = `✅ ${data.synced}件の環境変数を Railway に同期しました`;
+      status.style.color = 'var(--green2)';
+    } else {
+      status.textContent = `❌ ${data.error}`;
+      status.style.color = 'var(--red)';
+    }
+  } catch (e) {
+    status.textContent = `❌ 通信エラー: ${e.message}`;
+    status.style.color = 'var(--red)';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🚂 Railway に今すぐ同期';
+  }
 }
 
 // パスワードフィールドの表示切替

@@ -1382,6 +1382,83 @@ def inbox_page():
     return render_template("inbox.html", inbox_data=inbox_data, brands=brands)
 
 
+@app.route("/api/railway/sync", methods=["POST"])
+def api_railway_sync():
+    """現在の .env を Railway 本番環境変数に同期する"""
+    import urllib.request as _req
+    import json as _json
+
+    token      = os.environ.get("RAILWAY_API_TOKEN", "")
+    project_id = os.environ.get("RAILWAY_PROJECT_ID", "")
+    service_id = os.environ.get("RAILWAY_SERVICE_ID", "")
+
+    if not token:
+        return jsonify({"ok": False, "error": "RAILWAY_API_TOKEN が設定されていません。設定を保存してから再試行してください。"})
+    if not project_id:
+        return jsonify({"ok": False, "error": "RAILWAY_PROJECT_ID が設定されていません。"})
+    if not service_id:
+        return jsonify({"ok": False, "error": "RAILWAY_SERVICE_ID が設定されていません。"})
+
+    # .env を読み込む（RAILWAY_* 自身は除外）
+    env_path = AUTO / ".env"
+    skip_keys = {"RAILWAY_API_TOKEN"}
+    variables = {}
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, _, v = line.partition("=")
+            k = k.strip()
+            if k and k not in skip_keys and v.strip():
+                variables[k] = v.strip()
+
+    def _gql(query, vars_=None):
+        body = _json.dumps({"query": query, "variables": vars_ or {}}).encode()
+        r = _req.Request(
+            "https://backboard.railway.app/graphql/v2",
+            data=body,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        )
+        with _req.urlopen(r, timeout=15) as res:
+            return _json.loads(res.read())
+
+    try:
+        # production 環境の ID を取得
+        env_resp = _gql(
+            """query P($id:String!){project(id:$id){environments{edges{node{id name}}}}}""",
+            {"id": project_id},
+        )
+        environments = env_resp["data"]["project"]["environments"]["edges"]
+        env_id = None
+        for e in environments:
+            if e["node"]["name"].lower() in ("production", "prod"):
+                env_id = e["node"]["id"]
+                break
+        if not env_id and environments:
+            env_id = environments[0]["node"]["id"]
+        if not env_id:
+            return jsonify({"ok": False, "error": "Railway の environment が見つかりません。"})
+
+        # 変数を一括 upsert
+        _gql(
+            """mutation U($input:VariableCollectionUpsertInput!){variableCollectionUpsert(input:$input)}""",
+            {"input": {
+                "projectId":     project_id,
+                "environmentId": env_id,
+                "serviceId":     service_id,
+                "variables":     variables,
+            }},
+        )
+
+        log.info(f"Railway sync: {len(variables)}件の環境変数を同期")
+        return jsonify({"ok": True, "synced": len(variables)})
+
+    except Exception as e:
+        log.error(f"Railway sync error: {e}")
+        return jsonify({"ok": False, "error": str(e)[:200]})
+
+
 @app.route("/api/inbox/process", methods=["POST"])
 def api_inbox_process():
     """インボックス手動処理トリガー"""
