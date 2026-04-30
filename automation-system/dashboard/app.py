@@ -245,7 +245,7 @@ def get_channel_data() -> dict:
 
 @app.route("/president")
 def president_dashboard():
-    from dashboard.mock_service import (
+    from dashboard.real_service import (
         get_morning_brief, get_priority_actions, get_pending_approvals,
         get_danger_alerts, get_brand_status, get_agent_status,
         get_recent_runs, get_unreplied, get_media_shortage,
@@ -273,7 +273,7 @@ def ceo_dashboard():
         get_task_queue, get_bottlenecks, get_escalations,
         get_ceo_priorities, get_ceo_to_president, get_pending_approvals,
     )
-    from dashboard.mock_service import (
+    from dashboard.real_service import (
         get_ai_recommendations, get_anomaly_alerts, get_strategy_notes,
         get_performance_snapshot,
     )
@@ -298,14 +298,14 @@ def ceo_dashboard():
 
 @app.route("/blog")
 def blog_candidates():
-    from dashboard.mock_service import get_blog_projects
+    from dashboard.real_service import get_blog_projects
     projects = get_blog_projects()
     return render_template("blog_candidates.html", projects=projects)
 
 
 @app.route("/blog/<int:draft_id>")
 def blog_draft_detail(draft_id):
-    from dashboard.mock_service import get_blog_draft_detail
+    from dashboard.real_service import get_blog_draft_detail
     draft = get_blog_draft_detail(draft_id)
     return render_template("blog_draft_detail.html", draft=draft)
 
@@ -314,7 +314,7 @@ def blog_draft_detail(draft_id):
 
 @app.route("/chief-of-staff")
 def chief_of_staff():
-    from dashboard.mock_service import (
+    from dashboard.real_service import (
         get_ai_recommendations, get_anomaly_alerts, get_strategy_notes,
         get_performance_snapshot, get_daily_briefs_history,
     )
@@ -329,14 +329,14 @@ def chief_of_staff():
 
 @app.route("/daily-briefs")
 def daily_briefs():
-    from dashboard.mock_service import get_daily_briefs_history
+    from dashboard.real_service import get_daily_briefs_history
     briefs = get_daily_briefs_history()
     return render_template("daily_briefs.html", briefs=briefs)
 
 
 @app.route("/anomaly-alerts")
 def anomaly_alerts():
-    from dashboard.mock_service import get_anomaly_alerts
+    from dashboard.real_service import get_anomaly_alerts
     alerts = get_anomaly_alerts()
     return render_template("anomaly_alerts.html", alerts=alerts)
 
@@ -371,7 +371,7 @@ def system_alerts():
 
 @app.route("/performance-snapshot")
 def performance_snapshot():
-    from dashboard.mock_service import get_performance_snapshot
+    from dashboard.real_service import get_performance_snapshot
     snap = get_performance_snapshot()
     return render_template("performance_snapshot.html", snap=snap)
 
