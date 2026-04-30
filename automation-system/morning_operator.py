@@ -383,8 +383,7 @@ def run():
     line_sent = post_line_queue()
 
     # 3. フォローアップ
-    run_followup_check()
-    followup_sent = 0  # followup.pyのログを参照
+    followup_sent = run_followup_check() or 0
 
     # 4. 未対応リード数
     pending_leads = _count_pending_leads()

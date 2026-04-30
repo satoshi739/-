@@ -16,6 +16,12 @@ from __future__ import annotations
 
 import logging
 import os
+os.environ.setdefault("TZ", "Asia/Tokyo")
+import time as _time
+try:
+    _time.tzset()  # type: ignore[attr-defined]
+except AttributeError:
+    pass  # Windowsでは不要
 from pathlib import Path
 
 import schedule

@@ -96,3 +96,4 @@ def run_followup_check():
             logger.info(f"フォローアップ送信: {lead['lead_id']} → {msg_key}")
 
     logger.info(f"フォローアップチェック完了: {sent_count}件送信")
+    return sent_count
