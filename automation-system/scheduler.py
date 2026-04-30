@@ -504,22 +504,40 @@ def generate_weekly_calendar_job():
     logger.info("=== 週次コンテンツカレンダー生成完了 ===")
 
 
+def _jst_to_utc(jst_time: str) -> str:
+    """HH:MM JST を HH:MM UTC に変換（Railway サーバーが UTC のため）"""
+    h, m = map(int, jst_time.split(":"))
+    h = (h - 9) % 24
+    return f"{h:02d}:{m:02d}"
+
+def _jst_weekday_to_utc(day: str, jst_time: str):
+    """JST の曜日+時刻を UTC の曜日+時刻に変換（UTCは9時間前なので曜日がずれる場合あり）"""
+    h, m = map(int, jst_time.split(":"))
+    utc_h = h - 9
+    if utc_h < 0:
+        utc_h += 24
+        days_order = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"]
+        idx = days_order.index(day)
+        day = days_order[(idx - 1) % 7]
+    return day, f"{utc_h:02d}:{m:02d}"
+
+
 def setup_schedule():
     cfg = _load_schedule()
 
-    # Instagram（最適投稿時間を反映）
+    # Instagram（最適投稿時間を反映）- YAML時刻はJSTなのでUTCに変換
     if cfg.get("instagram", {}).get("enabled"):
         post_times = cfg["instagram"].get("post_times", ["12:00"])
-        # suggested_optimal_time があれば採用
         suggested = cfg["instagram"].get("suggested_optimal_time")
         if suggested and suggested not in post_times:
             post_times = [suggested]
             logger.info(f"最適投稿時間を採用: {suggested}")
         for t in post_times:
-            schedule.every().day.at(t).do(post_to_instagram)
-            logger.info(f"Instagram投稿スケジュール設定: 毎日 {t}")
+            utc_t = _jst_to_utc(t)
+            schedule.every().day.at(utc_t).do(post_to_instagram)
+            logger.info(f"Instagram投稿スケジュール設定: 毎日 {t} JST ({utc_t} UTC)")
 
-    # LINE一斉配信
+    # LINE一斉配信 - YAML時刻はJSTなのでUTCに変換
     line_cfg = cfg.get("line_broadcast", {})
     if line_cfg.get("enabled"):
         weekday_map = {
@@ -533,8 +551,9 @@ def setup_schedule():
         }
         t = line_cfg.get("time", "10:00")
         for day in line_cfg.get("weekdays", ["monday"]):
-            weekday_map[day].at(t).do(broadcast_line)
-            logger.info(f"LINE配信スケジュール設定: 毎週{day} {t}")
+            utc_day, utc_t = _jst_weekday_to_utc(day, t)
+            weekday_map[utc_day].at(utc_t).do(broadcast_line)
+            logger.info(f"LINE配信スケジュール設定: 毎週{day} {t} JST ({utc_day} {utc_t} UTC)")
 
     # フォローアップ（2時間ごとにチェック）
     schedule.every(2).hours.do(followup_job)
@@ -544,17 +563,17 @@ def setup_schedule():
     schedule.every(1).hours.do(lambda: sync_from_drive())
     logger.info("Google Drive同期: 1時間ごと")
 
-    # 朝のオペレーター（毎朝5:00に全自動処理＋LINEサマリー送信）
-    schedule.every().day.at("05:00").do(morning_run)
-    logger.info("朝のオペレーター: 毎朝5:00")
+    # 朝のオペレーター（毎朝5:00 JST = 20:00 UTC前日）
+    schedule.every().day.at("20:00").do(morning_run)
+    logger.info("朝のオペレーター: 毎朝5:00 JST (20:00 UTC)")
 
-    # インサイト取得（毎朝6:00: 前日投稿のデータが確定してから取得）
-    schedule.every().day.at("06:00").do(fetch_instagram_insights)
-    logger.info("インサイト取得: 毎朝6:00")
+    # インサイト取得（毎朝6:00 JST = 21:00 UTC前日）
+    schedule.every().day.at("21:00").do(fetch_instagram_insights)
+    logger.info("インサイト取得: 毎朝6:00 JST (21:00 UTC)")
 
-    # 週次コンテンツカレンダー生成（毎週月曜6:30）
-    schedule.every().monday.at("06:30").do(generate_weekly_calendar_job)
-    logger.info("週次カレンダー生成: 毎週月曜6:30")
+    # 週次コンテンツカレンダー生成（毎週月曜6:30 JST = 日曜21:30 UTC）
+    schedule.every().sunday.at("21:30").do(generate_weekly_calendar_job)
+    logger.info("週次カレンダー生成: 毎週月曜6:30 JST (日曜21:30 UTC)")
 
     # 写真インボックスチェック（1時間ごと）
     # media/inbox/{brand}/ に写真を入れると自動でキューに追加される
@@ -573,14 +592,15 @@ def setup_schedule():
     schedule.every(5).minutes.do(agent_tick_job)
     logger.info("エージェントタスク実行: 5分ごと")
 
-    # AI CEO ディスパッチ（毎朝5:30: 全ブランド状態を分析しタスクを割り当て）
-    schedule.every().day.at("05:30").do(ceo_dispatch_job)
-    logger.info("AI CEO ディスパッチ: 毎朝5:30")
+    # AI CEO ディスパッチ（毎朝5:30 JST = 20:30 UTC前日）
+    schedule.every().day.at("20:30").do(ceo_dispatch_job)
+    logger.info("AI CEO ディスパッチ: 毎朝5:30 JST (20:30 UTC)")
 
-    schedule.every().day.at("08:30").do(blog_auto_post_job)
-    schedule.every().day.at("12:30").do(blog_auto_post_job)
-    schedule.every().day.at("18:00").do(blog_auto_post_job)
-    logger.info("ブログ自動投稿: 毎日 08:30 / 12:30 / 18:00")
+    # ブログ自動投稿 JST→UTC変換: 08:30→23:30, 12:30→03:30, 18:00→09:00
+    schedule.every().day.at("23:30").do(blog_auto_post_job)
+    schedule.every().day.at("03:30").do(blog_auto_post_job)
+    schedule.every().day.at("09:00").do(blog_auto_post_job)
+    logger.info("ブログ自動投稿: 08:30/12:30/18:00 JST (23:30/03:30/09:00 UTC)")
 
     # 死活監視 heartbeat（毎分: logs/scheduler.heartbeat を更新）
     schedule.every(1).minutes.do(_touch_heartbeat)
