@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}社長ダッシュボード — UPJ{% endblock %}
+{% block title %}経営ビュー — Brand OS{% endblock %}
 {% block content %}
 
 <style>
@@ -195,12 +195,12 @@
     <div style="font-size:11px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;">
       President Dashboard &nbsp;·&nbsp; {{ brief.date }}
     </div>
-    <div class="page-title">👑 社長ダッシュボード</div>
+    <div class="page-title">経営ビュー</div>
     <div class="page-sub">会社全体の状況と今日の優先アクションをひと目で確認</div>
   </div>
   <div class="header-actions">
     <span class="live-dot" id="live-indicator">LIVE</span>
-    <a href="/ceo" class="btn btn-ghost btn-sm">🤖 AI CEO 画面</a>
+    <a href="/ceo" class="btn btn-ghost btn-sm">AI CEO 画面</a>
     <a href="/decisions" class="btn btn-primary btn-sm">△ 承認待ち {% if pending_approvals %}<span style="background:rgba(255,255,255,.2);border-radius:20px;padding:0 7px;">{{ pending_approvals|length }}</span>{% endif %}</a>
   </div>
 </div>
@@ -238,7 +238,7 @@
 <div style="margin-bottom:20px;">
   {% for a in danger_alerts %}
   <div class="alert-item alert-level-{{ a.level }}">
-    <span>{% if a.level == 'alert' %}🚨{% elif a.level == 'warn' %}⚠️{% else %}ℹ️{% endif %}</span>
+    <span>{% if a.level == 'alert' %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{% elif a.level == 'warn' %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{% else %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>{% endif %}</span>
     <span>{{ a.text }}</span>
   </div>
   {% endfor %}
@@ -252,7 +252,7 @@
   <div style="grid-column: span 2;">
     <div class="card" style="margin-bottom:0;">
       <div class="section-header">
-        <span class="section-title">🎯 今日の優先アクション</span>
+        <span class="section-title">今日の優先アクション</span>
         <span style="font-size:11px;color:var(--muted);">{{ priority_actions|length }}件</span>
       </div>
       {% if priority_actions %}
@@ -264,7 +264,7 @@
         </a>
         {% endfor %}
       {% else %}
-        <div class="empty-cta">本日の優先アクションはありません 🎉<br><a href="/">ホームに戻る</a></div>
+        <div class="empty-cta">本日の優先アクションはありません<br><a href="/">ホームに戻る</a></div>
       {% endif %}
     </div>
   </div>
@@ -302,7 +302,7 @@
     <!-- 未返信 -->
     <div class="card" style="margin-bottom:0;">
       <div class="section-header">
-        <span class="section-title">💬 未返信</span>
+        <span class="section-title">未返信</span>
         <a href="/leads" class="section-action">対応する</a>
       </div>
       <div class="unreplied-chips">
@@ -329,7 +329,7 @@
 <!-- ══ ブランド別状況 ══ -->
 <div class="card">
   <div class="section-header">
-    <span class="section-title">🏢 ブランド別状況</span>
+    <span class="section-title">ブランド別状況</span>
     <a href="/brands" class="section-action" style="display:none">ブランド一覧</a>
   </div>
   <div class="brand-grid">
@@ -376,7 +376,7 @@
   <!-- 素材不足 -->
   <div class="card" style="margin-bottom:0;">
     <div class="section-header">
-      <span class="section-title">📸 素材不足</span>
+      <span class="section-title">素材不足</span>
       <a href="/inbox" class="section-action">インボックス</a>
     </div>
     {% if media_shortage %}
@@ -399,7 +399,7 @@
   <!-- 投稿不足 -->
   <div class="card" style="margin-bottom:0;">
     <div class="section-header">
-      <span class="section-title">📉 投稿不足</span>
+      <span class="section-title">投稿不足</span>
       <a href="/queue" class="section-action">キューを確認</a>
     </div>
     {% if post_shortage %}
@@ -451,13 +451,13 @@
 
 <!-- AI Chief of Staff バナー -->
 <div style="margin:20px 0; padding:18px 22px; background:linear-gradient(135deg, rgba(99,102,241,.08), rgba(139,92,246,.05)); border:1px solid rgba(99,102,241,.2); border-radius:var(--radius); display:flex; align-items:center; gap:16px;">
-  <div style="font-size:26px;">🧠</div>
+  <div style="display:flex;align-items:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg></div>
   <div style="flex:1;">
     <div style="font-size:14px; font-weight:700; margin-bottom:3px;">AI Chief of Staff で全社判断サポートを見る</div>
     <div style="font-size:12px; color:var(--muted2);">ブランド別おすすめアクション・異常検知・戦略ノートをまとめて確認</div>
   </div>
   <div style="display:flex; gap:8px; flex-shrink:0;">
-    <a href="/anomaly-alerts" class="btn btn-ghost btn-sm">⚡ 異常検知</a>
+    <a href="/anomaly-alerts" class="btn btn-ghost btn-sm">異常検知</a>
     <a href="/performance-snapshot" class="btn btn-ghost btn-sm">◈ スナップショット</a>
     <a href="/chief-of-staff" class="btn btn-primary btn-sm">開く →</a>
   </div>
@@ -468,7 +468,7 @@
 <!-- ══ エージェント稼働状況 ══ -->
 <div class="card">
   <div class="section-header">
-    <span class="section-title">🤖 エージェント稼働状況</span>
+    <span class="section-title">エージェント稼働状況</span>
     <a href="/logs" class="section-action">ログを見る</a>
   </div>
   <div class="agent-grid">
@@ -492,7 +492,7 @@
 <!-- ══ 直近の自動実行結果 ══ -->
 <div class="card">
   <div class="section-header">
-    <span class="section-title">⚡ 直近の自動実行</span>
+    <span class="section-title">直近の自動実行</span>
     <a href="/logs" class="section-action">全ログ</a>
   </div>
   {% if recent_runs %}
