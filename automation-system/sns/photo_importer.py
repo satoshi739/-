@@ -16,12 +16,14 @@ from __future__ import annotations
 """
 
 import logging
+import mimetypes
 import os
 import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
 
+import requests
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -36,7 +38,29 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".heic"}
 VIDEO_EXTS = {".mp4", ".mov", ".m4v"}
 
 
-# ─── Google Drive アップロード ────────────────────────────────
+# ─── WordPress メディアアップロード ──────────────────────────
+
+def _upload_to_wordpress_media(file_path: Path, brand: str) -> str:
+    """ファイルをWordPressメディアライブラリにアップロードして公開URLを返す"""
+    from sns.wordpress import WordPressPoster
+    wp = WordPressPoster(brand=brand)
+    if not wp.wp_url:
+        raise ValueError(f"WordPress URL未設定: {brand}")
+    ct = mimetypes.guess_type(str(file_path))[0] or "image/jpeg"
+    headers = {
+        **wp._auth(),
+        "Content-Disposition": f'attachment; filename="{file_path.name}"',
+        "Content-Type": ct,
+    }
+    with open(file_path, "rb") as f:
+        r = requests.post(f"{wp.wp_url}/wp-json/wp/v2/media", headers=headers, data=f, timeout=60)
+    r.raise_for_status()
+    url = r.json().get("source_url", "")
+    logger.info(f"WordPressメディアアップロード完了: {file_path.name} → {url}")
+    return url
+
+
+# ─── Google Drive アップロード（フォールバック）─────────────
 
 def _upload_to_drive(file_path: Path, brand: str) -> str:
     """
@@ -203,22 +227,26 @@ def _process_single_file(file_path: Path, brand: str, dry_run: bool = False) -> 
         logger.info(f"[DRY RUN] ハッシュタグ: {hashtags[:60]}...")
         return True
 
-    # 2. Google Drive にアップロード
+    # 2. 画像URLを取得（WordPress優先 → Google Driveフォールバック）
+    public_url = ""
     try:
-        public_url = _upload_to_drive(file_path, brand)
-    except Exception as e:
-        logger.error(f"Drive アップロード失敗: {e}")
-        # アップロード失敗時はキューにエラーフラグ付きで保存
-        _save_queue_entry(
-            brand=brand,
-            file_name=file_path.name,
-            media_type="reel" if is_reel else "image",
-            url="",
-            caption=full_caption,
-            topic=topic,
-            error=str(e),
-        )
-        return False
+        public_url = _upload_to_wordpress_media(file_path, brand)
+    except Exception as wp_err:
+        logger.warning(f"WordPress アップロード失敗: {wp_err} → Drive を試みます")
+        try:
+            public_url = _upload_to_drive(file_path, brand)
+        except Exception as drive_err:
+            logger.error(f"全アップロード失敗: Drive={drive_err}")
+            _save_queue_entry(
+                brand=brand,
+                file_name=file_path.name,
+                media_type="reel" if is_reel else "image",
+                url="",
+                caption=full_caption,
+                topic=topic,
+                error=str(drive_err),
+            )
+            return False
 
     # 3. キューに追加
     _save_queue_entry(
