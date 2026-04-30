@@ -168,7 +168,29 @@ def run():
 
         log.info(f"  [{yaml_id}] {name} tools={tools}")
 
-    # ── 7. DB 確認 ───────────────────────────────────────────
+    # ── 7. データ修正マイグレーション ────────────────────────
+    import re
+    import sqlite3
+    try:
+        with main_db.get_conn() as mconn:
+            rows = mconn.execute(
+                "SELECT id, filename FROM queue_items WHERE scheduled_at LIKE '2099%'"
+            ).fetchall()
+            fixed = 0
+            for row_id, filename in rows:
+                m = re.search(r'(\d{4}-\d{2}-\d{2})', filename or '')
+                if m:
+                    mconn.execute(
+                        "UPDATE queue_items SET scheduled_at=? WHERE id=?",
+                        (m.group(1) + ' 18:00', row_id),
+                    )
+                    fixed += 1
+            if fixed:
+                log.info(f"  queue_items 2099日付修正: {fixed}件")
+    except Exception as e:
+        log.warning(f"  queue_items マイグレーションスキップ: {e}")
+
+    # ── 8. DB 確認 ───────────────────────────────────────────
     with db.get_conn() as conn:
         agent_count = conn.execute("SELECT COUNT(*) FROM ai_agents").fetchone()[0]
         brand_count = conn.execute("SELECT COUNT(*) FROM brands").fetchone()[0]
