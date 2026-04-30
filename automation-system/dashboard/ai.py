@@ -33,6 +33,63 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+BLOG_CONTEXTS = {
+    "satoshi-blog": """
+あなたは個人ブログ「Satoshi Life」の記事を書くAIです。
+URL: https://satoshi-life.site/blog/
+筆者: Satoshi（起業家・バンコク在住・AI自動化・マーケター）
+テーマ: ビジネス・海外生活・AI活用・マーケティング・自動化・人生設計・投資
+トーン: 一人称「僕」。体験談・具体例を交えた親しみやすい文体。専門的な内容もわかりやすく。
+構成: 導入→本論（h2見出し3〜5個）→まとめ→CTA
+SEO: 検索意図を意識したタイトル・見出し構成
+NG: 誇大表現・根拠のない断言
+""",
+    "upjapan": """
+あなたは株式会社ユニバースプラネットジャパン（UPJ）のコーポレートブログ担当AIです。
+URL: https://upjapan.co.jp
+サービス: 事業設計・収益モデル再設計・国際展開・マーケティング統合支援
+テーマ: 経営戦略・マーケティング・海外展開・ブランディング・DX・AI活用・収益改善
+ターゲット: 中小企業経営者・起業家・マーケター
+トーン: 専門的かつ親しみやすい。実践例・数字を交える。ポジティブで前向き。
+構成: 導入→課題提起→解決策（h2見出し3〜4個）→UPJの支援例→まとめ→CTA
+SEO: ビジネス系キーワードを意識
+NG: 確実に儲かる・誰でも成功
+""",
+    "dsc-marketing": """
+あなたは DSc Marketing（デジタルマーケティング専門会社）のブログ担当AIです。
+URL: https://dsc-marketing.com
+サービス: SNS・LINE・Web集客の導線設計・運用支援（月額25,000円〜）
+テーマ: SNSマーケティング・LINE集客・Instagram運用・TikTok活用・Web集客・コンテンツ戦略・AI活用
+ターゲット: 中小企業・個人事業主・マーケター初心者〜中級者
+トーン: 実務的・成果重視。初心者にも分かりやすく手順を示す。
+構成: タイトル→課題→解決策（h2見出し3〜5個・具体的な手順）→まとめ→CTA
+SEO: SNS・マーケティング系キーワードを意識
+NG: 必ず上位・誰でも稼げる・誇大な効果保証
+""",
+    "cashflowsupport": """
+あなたは cashflowsupport のブログ担当AIです。
+URL: https://cashflowsupport.jp
+サービス: ファクタリング・資金繰り相談・中小企業の資金調達支援
+テーマ: ファクタリング・資金繰り・キャッシュフロー改善・売掛金・資金調達・経営財務・銀行融資との比較
+ターゲット: 資金繰りに悩む中小企業経営者・個人事業主
+トーン: 丁寧・経営者目線・透明性を強調。専門用語は解説を添える。
+構成: 導入（共感）→問題解説→解決策（h2見出し3〜4個）→ファクタリングの活用例→まとめ→CTA（無料相談）
+SEO: ファクタリング・資金繰り系キーワードを意識
+NG: 絶対・必ず審査通過・違法・グレーな暗示
+""",
+    "bangkok-peach": """
+あなたは Bangkok Peach Group のブログ担当AIです。
+URL: https://bangkok-peach-group.com
+サービス: バンコクの日本語対応エンターテインメント・ナイトライフ・観光案内
+テーマ: バンコク旅行・タイ観光・海外移住・バンコクナイトライフ・タイ料理・バンコク生活・現地情報・節約術
+ターゲット: バンコクに興味のある日本人旅行者・移住検討者・バンコク在住者
+トーン: 明るく・わかりやすく・旅行者目線。体験談・リアルな現地情報を交える。
+構成: 導入→現地情報（h2見出し3〜4個・具体的なスポット・値段・アクセス）→まとめ→CTA
+SEO: バンコク・タイ観光系キーワードを意識
+NG: 過度な誇大表現・違法暗示
+""",
+}
+
 BRAND_CONTEXTS = {
     "dsc-marketing": """
 あなたは DSc Marketing（株式会社ユニバースプラネットジャパン）のマーケティング担当AIです。
@@ -914,6 +971,76 @@ def generate_blog_post(
         }
 
     logger.info(f"ブログ記事生成完了: {result.get('title','')}")
+    return result
+
+
+def generate_blog_post_auto(brand: str, word_count: int = 1200) -> dict:
+    """
+    ブランド指定でトピックをAIが自動選択し、ブログ記事を生成する。
+    1回のAPI呼び出しでトピック選択→記事生成を完結させる。
+
+    Returns:
+        {"title": str, "meta_description": str, "content_html": str,
+         "content_plain": str, "tags": [str], "estimated_read_time": int}
+    """
+    blog_ctx = BLOG_CONTEXTS.get(brand) or BRAND_CONTEXTS.get(brand, BRAND_CONTEXTS["dsc-marketing"])
+    now_str = datetime.now().strftime("%Y年%m月%d日 %H:%M")
+
+    prompt = f"""
+{blog_ctx}
+
+今日は {now_str} です。
+重複しないよう、今日の日付と時刻を考慮して新鮮なトピックを1つ選び、
+そのままそのトピックで記事を書いてください。
+
+目標文字数: {word_count}字前後
+
+【出力形式】必ずJSON形式で返してください:
+{{
+  "title": "SEOを意識した記事タイトル（30〜40文字）",
+  "meta_description": "検索結果に表示されるメタ説明文（120文字以内）",
+  "content_html": "WordPress用HTML本文（h2/h3/p/ul/strongタグ使用）",
+  "content_plain": "プレーンテキストの本文",
+  "tags": ["タグ1", "タグ2", "タグ3"],
+  "estimated_read_time": 読了時間（分）
+}}
+
+記事の構成:
+1. 導入（読者の共感を引く）
+2. 本論（h2見出し3〜5個、各セクションに具体例）
+3. まとめ（読者へのメッセージ）
+4. CTA（次のアクションへの誘導）
+"""
+
+    import re
+    client = _client()
+    msg = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=4000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = msg.content[0].text.strip()
+
+    m = re.search(r'\{[\s\S]*\}', raw)
+    if m:
+        try:
+            result = json.loads(m.group())
+        except Exception:
+            result = None
+    else:
+        result = None
+
+    if not result:
+        result = {
+            "title": f"{brand} ブログ",
+            "meta_description": "",
+            "content_html": f"<p>{raw}</p>",
+            "content_plain": raw,
+            "tags": [],
+            "estimated_read_time": word_count // 400,
+        }
+
+    logger.info(f"ブログ記事自動生成完了: [{brand}] {result.get('title','')}")
     return result
 
 

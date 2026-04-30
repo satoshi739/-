@@ -438,6 +438,37 @@ def ceo_dispatch_job():
         _alert_owner(f"ジョブ失敗: {e}", dedup_key="job_fail")
 
 
+BLOG_BRANDS = ["satoshi-blog", "upjapan", "dsc-marketing", "cashflowsupport", "bangkok-peach"]
+
+
+def blog_auto_post_job():
+    """全ブランドのブログ記事をAI生成して即公開（1日3回実行）"""
+    logger.info("=== ブログ自動投稿開始 ===")
+    from dashboard.ai import generate_blog_post_auto
+    from sns.wordpress import WordPressPoster
+    import database as db
+
+    for brand in BLOG_BRANDS:
+        try:
+            result = generate_blog_post_auto(brand=brand)
+            wp = WordPressPoster(brand=brand)
+            wp_result = wp.create_post(
+                title=result["title"],
+                content=result["content_html"],
+                status="publish",
+            )
+            logger.info(f"ブログ公開: [{brand}] {result['title']} → {wp_result.get('url','')}")
+            db.log_activity(
+                "blog_post", brand=brand, platform="wordpress",
+                detail=f"{result['title']} ({result.get('estimated_read_time',0)}分読)",
+            )
+        except Exception as e:
+            logger.error(f"ブログ投稿エラー [{brand}]: {e}", exc_info=True)
+            _alert_owner(f"ブログ投稿失敗 [{brand}]: {e}", dedup_key=f"blog_fail_{brand}")
+
+    logger.info("=== ブログ自動投稿完了 ===")
+
+
 def generate_weekly_calendar_job():
     """
     週次コンテンツカレンダー自動生成ジョブ（毎週月曜6:00）
@@ -539,6 +570,11 @@ def setup_schedule():
     # AI CEO ディスパッチ（毎朝5:30: 全ブランド状態を分析しタスクを割り当て）
     schedule.every().day.at("05:30").do(ceo_dispatch_job)
     logger.info("AI CEO ディスパッチ: 毎朝5:30")
+
+    schedule.every().day.at("08:30").do(blog_auto_post_job)
+    schedule.every().day.at("12:30").do(blog_auto_post_job)
+    schedule.every().day.at("18:00").do(blog_auto_post_job)
+    logger.info("ブログ自動投稿: 毎日 08:30 / 12:30 / 18:00")
 
     # 死活監視 heartbeat（毎分: logs/scheduler.heartbeat を更新）
     schedule.every(1).minutes.do(_touch_heartbeat)
