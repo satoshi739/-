@@ -15,6 +15,7 @@ from __future__ import annotations
   動画: .mp4 .mov .m4v  （reel_ プレフィックスで明示可）
 """
 
+import base64
 import logging
 import mimetypes
 import os
@@ -33,6 +34,20 @@ INBOX_DIR = ROOT / "media" / "inbox"
 PROCESSED_DIR = ROOT / "media" / "processed"
 QUEUE_DIR = ROOT / "content_queue" / "instagram"
 CREDS_PATH = ROOT / "credentials.json"
+
+
+def _ensure_credentials() -> None:
+    """GOOGLE_CREDENTIALS_B64 環境変数から credentials.json を復元する（Railway用）"""
+    if CREDS_PATH.exists():
+        return
+    b64 = os.environ.get("GOOGLE_CREDENTIALS_B64", "")
+    if not b64:
+        return
+    try:
+        CREDS_PATH.write_bytes(base64.b64decode(b64))
+        logger.info("credentials.json を環境変数から復元しました")
+    except Exception as e:
+        logger.warning(f"credentials.json の復元に失敗: {e}")
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".heic"}
 VIDEO_EXTS = {".mp4", ".mov", ".m4v"}
@@ -69,6 +84,7 @@ def _upload_to_drive(file_path: Path, brand: str) -> str:
     Returns:
         公開URL（"https://drive.google.com/uc?export=download&id=..."）
     """
+    _ensure_credentials()
     folder_id = os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "")
     if not folder_id:
         raise ValueError("GOOGLE_DRIVE_FOLDER_ID が .env に設定されていません")
