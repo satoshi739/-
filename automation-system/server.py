@@ -102,12 +102,8 @@ def _heartbeat_monitor_loop() -> None:
         time.sleep(_MONITOR_INTERVAL)
 
 
-# TODO (gunicorn化時): app の module-level で
-# _start_heartbeat_monitor() を呼ぶように変更する。
-# multi-worker の場合は worker_id=0 のみが起動するよう
-# fcntl ロックや env var (GUNICORN_WORKER_ID) で制御する。
-# 現状の __main__ 内呼び出しでは、gunicorn 起動時に
-# 監視スレッドが一本も立ち上がらない(無音の監視停止)。
+# Railway本番では dashboard/app.py の startup() が同等の監視を担う。
+# このserver.pyはローカル直接起動（python server.py）専用。
 def _start_heartbeat_monitor() -> None:
     t = threading.Thread(
         target=_heartbeat_monitor_loop,

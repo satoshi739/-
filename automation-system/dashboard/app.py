@@ -9,6 +9,8 @@ import sys
 import json
 import logging
 import secrets
+import subprocess
+import threading
 import time as _time
 from datetime import datetime, timedelta
 from functools import wraps
@@ -2504,6 +2506,67 @@ def api_orchestrator_overview():
         return jsonify({"error": str(e)}), 500
 
 
+# ── heartbeat 監視 ──────────────────────────────────────────────
+_HB_FILE      = LOGS_DIR / "scheduler.heartbeat"
+_HB_ALERTS    = LOGS_DIR / "alerts.log"
+_HB_DEDUP     = LOGS_DIR / ".dashboard_alert_scheduler_dead.sent"
+_HB_THRESHOLD = 600   # 10分超で異常
+_HB_INTERVAL  = 300   # 5分ごとにチェック
+
+
+def _hb_alert(message: str) -> None:
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        with open(_HB_ALERTS, "a", encoding="utf-8") as fh:
+            fh.write(f"[{ts}] [dashboard_check] {message}\n")
+    except Exception as exc:
+        log.error("alerts.log 書き込み失敗: %s", exc)
+    try:
+        safe = message.replace('"', "'")[:100]
+        subprocess.run(
+            ["osascript", "-e", f'display notification "{safe}" with title "dashboard_check alert"'],
+            timeout=5, capture_output=True,
+        )
+    except Exception:
+        pass
+    log.warning("ALERT: %s", message)
+
+
+def _hb_check() -> None:
+    if not _HB_FILE.exists():
+        if not _HB_DEDUP.exists():
+            _HB_DEDUP.touch()
+            _hb_alert("scheduler停止検知 (heartbeatファイルなし)")
+        return
+    age = _time.time() - _HB_FILE.stat().st_mtime
+    if age > _HB_THRESHOLD:
+        if not _HB_DEDUP.exists():
+            _HB_DEDUP.touch()
+            _hb_alert(f"scheduler停止検知 (age: {int(age // 60)}分)")
+    else:
+        if _HB_DEDUP.exists():
+            _HB_DEDUP.unlink()
+            log.info("scheduler heartbeat 回復を確認")
+
+
+def _hb_monitor_loop() -> None:
+    while True:
+        try:
+            _hb_check()
+        except Exception as exc:
+            log.error("heartbeat監視ループで予期せぬ例外: %s", exc)
+        _time.sleep(_HB_INTERVAL)
+
+
+def _start_hb_monitor() -> None:
+    t = threading.Thread(target=_hb_monitor_loop, name="hb-monitor", daemon=True)
+    t.start()
+    log.info("heartbeat監視を開始 (threshold=%ds, interval=%ds)", _HB_THRESHOLD, _HB_INTERVAL)
+
+
+# ────────────────────────────────────────────────────────────────
+
+
 def startup():
     """アプリ起動時の初期化処理（gunicorn 起動時もここで初期化される）"""
     # 必要なディレクトリを作成
@@ -2513,6 +2576,8 @@ def startup():
         d.mkdir(parents=True, exist_ok=True)
     # DBを初期化
     db.init_db()
+    # heartbeat 監視スレッドを起動（gunicorn worker が落ちてもdaemon threadなので自動終了）
+    _start_hb_monitor()
     # os_config.yaml のAgent定義をDBに同期（初回登録のみ）
     try:
         os_cfg = load_os_config()
