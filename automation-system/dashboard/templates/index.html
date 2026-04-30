@@ -354,7 +354,7 @@
       </div>
       <a href="/leads" class="cc-panel-link">詳細 →</a>
     </div>
-    {% set has_lead_data = monthly.values | sum > 0 %}
+    {% set has_lead_data = monthly['values'] | sum > 0 %}
     {% if not has_lead_data %}<div class="sample-badge" style="margin:12px 20px 0;">Sample</div>{% endif %}
     <div class="cc-panel-chart" style="height:180px;position:relative;">
       <canvas id="leadChart"></canvas>
@@ -376,7 +376,8 @@
     <div class="cc-panel-body">
       {% set stage_labels = {'L1':'初回接触','L2':'ヒアリング','L3':'提案中','L4':'クロージング','L5':'契約済み'} %}
       {% set stage_colors = {'L1':'#c9a227','L2':'#e8c84a','L3':'#10b981','L4':'#34d399','L5':'#6ee7b7'} %}
-      {% set max_val = [funnel.values() | max, 1] | max %}
+      {% set funnel_vals = [funnel.L1, funnel.L2, funnel.L3, funnel.L4, funnel.L5] %}
+      {% set max_val = [funnel_vals | max, 1] | max %}
       <div class="pipeline-stage" style="padding-top:0;">
         <div class="pipeline-label" style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);font-weight:700;">ステージ</div>
         <div style="flex:1;font-size:10px;color:var(--muted);">件数</div>
@@ -392,7 +393,7 @@
         <div class="pipeline-count">{{ cnt }}</div>
       </div>
       {% endfor %}
-      {% if funnel.values() | sum == 0 %}
+      {% if funnel_vals | sum == 0 %}
       <div class="empty-state" style="padding:20px 0 8px;">
         <div class="empty-desc">リードデータがまだありません</div>
         <a href="/leads" class="btn btn-ghost btn-sm" style="margin-top:8px;">リードを追加 →</a>
@@ -419,7 +420,7 @@
       <div class="brand-grid">
         {% for bid, b in brands.items() %}
         {% set brand_color = b.color | default('#c9a227') %}
-        {% set ch_count = b.channels.values() | selectattr('bool') | list | length if b.channels else 0 %}
+        {% set ch_count = b.channels | length if b.channels else 0 %}
         <a href="/brands/{{ bid }}" class="brand-row">
           <div class="brand-dot" style="--bd-color:{{ brand_color }};"></div>
           <div style="flex:1;min-width:0;">
@@ -565,7 +566,7 @@
       </div>
       <a href="/analytics" class="cc-panel-link">分析 →</a>
     </div>
-    {% set has_ch_data = channels.values | sum > 0 if channels.values else false %}
+    {% set has_ch_data = channels['values'] | sum > 0 if channels['values'] else false %}
     {% if not has_ch_data %}<div class="sample-badge" style="margin:12px 20px 0;">Sample</div>{% endif %}
     <div class="cc-panel-chart" style="height:180px;position:relative;">
       <canvas id="channelChart"></canvas>

@@ -2,6 +2,15 @@
 {% block title %}投稿追加 — UPJ Dashboard{% endblock %}
 {% block content %}
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}{% for category, message in messages %}
+<div style="margin-bottom:16px;padding:12px 18px;border-radius:10px;display:flex;align-items:center;gap:10px;font-size:13px;{% if category=='success' %}background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--green2);{% else %}background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);{% endif %}">
+  {% if category=='success' %}<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>{% else %}<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>{% endif %}
+  {{ message }}
+</div>
+{% endfor %}{% endif %}
+{% endwith %}
+
 <div class="page-header">
   <div>
     <div class="page-title">＋ 投稿を追加</div>
