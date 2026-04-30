@@ -87,9 +87,11 @@ def _alert_owner(message: str, dedup_key: str = "") -> None:
 
     try:
         owner_id = os.environ.get("OWNER_LINE_USER_ID", "")
-        if owner_id:
+        alert_token = os.environ.get("ALERT_LINE_CHANNEL_ACCESS_TOKEN", "")
+        alert_secret = os.environ.get("ALERT_LINE_CHANNEL_SECRET", "")
+        if owner_id and alert_token and alert_secret:
             from sns.line_api import LINEMessenger
-            messenger = LINEMessenger()
+            messenger = LINEMessenger(token=alert_token, secret=alert_secret)
             if messenger.enabled:
                 messenger.push(owner_id, f"[scheduler alert]\n{message}")
     except Exception as exc:
