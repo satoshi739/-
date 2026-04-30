@@ -4,6 +4,7 @@
 ブラウザで http://localhost:8080 を開く
 """
 
+import hmac
 import os
 import sys
 import json
@@ -18,7 +19,7 @@ from pathlib import Path
 from collections import defaultdict
 
 import yaml
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for, send_from_directory
+from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for, send_from_directory
 from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -36,9 +37,28 @@ from repositories.asset_repo import (
     get_recommended_by_brand, get_missing_alerts,
 )
 
+def _validate_auth_config() -> None:
+    """起動時に認証設定を検証する。本番環境では必須項目が未設定なら終了。"""
+    is_production = bool(
+        os.environ.get("RAILWAY_ENVIRONMENT")
+        or os.environ.get("FLASK_ENV") == "production"
+    )
+    required = {
+        "ADMIN_USER":     os.environ.get("ADMIN_USER", ""),
+        "ADMIN_PASSWORD": os.environ.get("ADMIN_PASSWORD", ""),
+        "SESSION_SECRET": os.environ.get("SESSION_SECRET", ""),
+    }
+    missing = [k for k, v in required.items() if not v]
+    if missing and is_production:
+        print(f"[FATAL] 本番環境で認証環境変数が未設定: {', '.join(missing)}", flush=True)
+        sys.exit(1)
+    if missing:
+        print(f"[WARNING] 認証環境変数が未設定 (開発環境のみ許容): {', '.join(missing)}", flush=True)
+
+_validate_auth_config()
+
 app = Flask(__name__)
-# セッション用シークレットキー（.envの FLASK_SECRET_KEY で上書き可）
-app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+app.secret_key = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
 log = logging.getLogger(__name__)
 
 ROOT         = Path(__file__).parent.parent.parent
@@ -67,15 +87,12 @@ PLATFORM_ICONS = {
 
 # ── 認証 ──────────────────────────────────────────────────
 
+_EXEMPT_PATHS = ("/login", "/static", "/favicon.ico", "/health", "/webhook")
+
+
 @app.before_request
 def require_login():
-    """DASHBOARD_PASSWORD が設定されている場合、ログイン必須"""
-    pw = os.environ.get("DASHBOARD_PASSWORD", "")
-    if not pw:
-        return  # パスワード未設定 → 認証スキップ
-    # ログイン不要なパス
-    exempt = ("/login", "/static", "/favicon.ico", "/health", "/webhook")
-    if any(request.path.startswith(e) for e in exempt):
+    if any(request.path.startswith(e) for e in _EXEMPT_PATHS):
         return
     if not session.get("logged_in"):
         return redirect(url_for("login", next=request.path))
@@ -85,13 +102,17 @@ def require_login():
 def login():
     error = None
     if request.method == "POST":
-        pw_input = request.form.get("password", "")
-        pw_env   = os.environ.get("DASHBOARD_PASSWORD", "")
-        if pw_env and pw_input == pw_env:
+        user_input = request.form.get("username", "").encode()
+        pw_input   = request.form.get("password", "").encode()
+        expected_user = os.environ.get("ADMIN_USER", "").encode()
+        expected_pw   = os.environ.get("ADMIN_PASSWORD", "").encode()
+        user_ok = bool(expected_user) and hmac.compare_digest(user_input, expected_user)
+        pw_ok   = bool(expected_pw)   and hmac.compare_digest(pw_input,   expected_pw)
+        if user_ok and pw_ok:
             session["logged_in"] = True
             next_url = request.args.get("next") or url_for("index")
             return redirect(next_url)
-        error = "パスワードが違います"
+        error = "ユーザー名またはパスワードが違います"
     return render_template("login.html", error=error)
 
 
@@ -378,16 +399,19 @@ def performance_snapshot():
 
 @app.route("/")
 def index():
-    stats    = get_stats()
-    recent   = db.list_leads(outcome="active", limit=6)
-    decisions= db.list_decisions(resolved=False)[:5]
-    funnel   = get_funnel_data()
-    monthly  = get_monthly_leads()
-    channels = get_channel_data()
-    now_str  = datetime.now().strftime("%Y年%m月%d日（%A）%H:%M")
+    stats      = get_stats()
+    recent     = db.list_leads(outcome="active", limit=6)
+    decisions  = db.list_decisions(resolved=False)[:5]
+    funnel     = get_funnel_data()
+    monthly    = get_monthly_leads()
+    channels   = get_channel_data()
+    activities = db.list_activity(limit=12)
+    brands     = load_brands()
+    now_str    = datetime.now().strftime("%Y年%m月%d日（%A）%H:%M")
     return render_template("index.html",
         stats=stats, recent=recent, decisions=decisions,
         funnel=funnel, monthly=monthly, channels=channels,
+        activities=activities, brands=brands,
         now=now_str, ai=ai_available())
 
 
@@ -507,15 +531,21 @@ def queue_add():
         if sched:
             entry["scheduled_at"] = sched
 
-        # DBに保存（主ストア）
-        entry["filename"] = f"{ts}_manual.yaml"
-        db.enqueue(entry)
+        # マイクロ秒でファイル名の衝突を防止
+        ts = datetime.now().strftime("%Y-%m-%d_%H%M%S%f")
+        fname = f"{ts}_manual.yaml"
+        entry["filename"] = fname
+        row_id = db.enqueue(entry)
+        if row_id == -1:
+            flash("登録に失敗しました。同じ内容が既に存在する可能性があります。", "error")
+            return redirect(url_for("queue_add"))
         db.log_activity("queue_add", brand=brand, platform=ch,
                         detail=f"手動追加: {entry.get('caption','')[:40] or entry.get('title','')[:40] or entry.get('message','')[:40]}")
         # YAMLにも保存（スケジューラーとの後方互換）
-        save_yaml(QUEUE_ROOT / brand / ch, f"{ts}_manual.yaml", entry)
-        if ch == "instagram": save_yaml(IG_QUEUE, f"{ts}_manual.yaml", entry)
-        if ch == "line":      save_yaml(LINE_QUEUE, f"{ts}_manual.yaml", entry)
+        save_yaml(QUEUE_ROOT / brand / ch, fname, entry)
+        if ch == "instagram": save_yaml(IG_QUEUE, fname, entry)
+        if ch == "line":      save_yaml(LINE_QUEUE, fname, entry)
+        flash(f"{ch} への投稿を登録しました。", "success")
         return redirect(url_for("queue_page"))
     return render_template("queue_add.html", ai=ai_available(), brands=brands,
                            platform_icons=PLATFORM_ICONS)
@@ -1748,18 +1778,19 @@ def api_schedule_week(brand_id):
 
         if platform == "instagram":
             full_caption = f"{caption}\n\n{hashtags}".strip() if hashtags else caption
-            entry = {**base, "media_type": fmt, "caption": full_caption, "image_url": ""}
+            entry = {**base, "media_type": fmt, "caption": full_caption, "image_url": "", "filename": fname}
             save_yaml(QUEUE_ROOT / brand_id / platform, fname, entry)
             save_yaml(IG_QUEUE, fname, entry)
         elif platform == "line":
-            entry = {**base, "message": item.get("message_draft", caption)}
+            entry = {**base, "message": item.get("message_draft", caption), "filename": fname}
             save_yaml(QUEUE_ROOT / brand_id / platform, fname, entry)
             save_yaml(LINE_QUEUE, fname, entry)
         else:
             full_caption = f"{caption}\n\n{hashtags}".strip() if hashtags else caption
-            entry = {**base, "text": full_caption}
+            entry = {**base, "text": full_caption, "filename": fname}
             save_yaml(QUEUE_ROOT / brand_id / platform, fname, entry)
 
+        db.enqueue(entry)
         scheduled += 1
 
     return jsonify({"ok": True, "scheduled": scheduled})

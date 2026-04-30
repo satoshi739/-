@@ -76,6 +76,7 @@
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
+    input[type="text"],
     input[type="password"] {
       width: 100%;
       padding: 12px 16px;
@@ -89,6 +90,7 @@
       transition: border-color .2s, box-shadow .2s;
       margin-bottom: 20px;
     }
+    input[type="text"]:focus,
     input[type="password"]:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(99,102,241,.2);
@@ -132,7 +134,7 @@
     <div class="logo">
       <div class="logo-icon"><span style="display:inline-flex;align-items:center;"><i data-lucide="building"></i></span></div>
       <h1>UPJ Dashboard</h1>
-      <p>管理者パスワードを入力してください</p>
+      <p>管理者アカウントでログインしてください</p>
     </div>
 
     {% if error %}
@@ -140,9 +142,12 @@
     {% endif %}
 
     <form method="POST">
+      <label for="username">ユーザー名</label>
+      <input type="text" id="username" name="username"
+             placeholder="admin" autofocus autocomplete="username">
       <label for="password">パスワード</label>
       <input type="password" id="password" name="password"
-             placeholder="••••••••" autofocus autocomplete="current-password">
+             placeholder="••••••••" autocomplete="current-password">
       <button type="submit">ログイン</button>
     </form>
 
@@ -150,7 +155,6 @@
   </div>
 
   <script>
-    // Enterキーでsubmit
     document.getElementById('password').addEventListener('keydown', e => {
       if (e.key === 'Enter') e.target.form.submit();
     });

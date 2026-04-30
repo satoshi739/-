@@ -1,693 +1,740 @@
 {% extends "base.html" %}
 {% block title %}司令室 — Brand OS{% endblock %}
 {% block content %}
-
 {% set hour = now[:2]|int if now|length > 1 else 9 %}
 {% set greeting = 'おはようございます' if hour < 12 else ('こんにちは' if hour < 18 else 'お疲れさまです') %}
 
-<!-- ══ ヘッダー ══ -->
-<div class="page-header">
-  <div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-      <span class="section-label">COMMAND CENTER</span>
-      <span class="live-dot" id="live-indicator" style="font-size:10px;">LIVE</span>
+<style>
+/* ═══════════════════════════════════════════
+   COMMAND CENTER — Black × Gold Executive UI
+═══════════════════════════════════════════ */
+
+.cc-header {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  margin-bottom: 28px; gap: 16px; flex-wrap: wrap;
+}
+.cc-header-left {}
+.cc-eyebrow {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 6px;
+}
+.cc-live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green2); box-shadow: 0 0 0 2px rgba(52,211,153,.25);
+  animation: livePulse 2s infinite;
+}
+.cc-title {
+  font-size: 26px; font-weight: 800; letter-spacing: -.5px;
+  color: var(--text); line-height: 1.2;
+}
+.cc-subtitle { font-size: 12.5px; color: var(--muted2); margin-top: 4px; }
+.cc-header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ── KPI Row ── */
+.kpi-row {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px;
+  margin-bottom: 24px;
+}
+@media (max-width:1100px) { .kpi-row { grid-template-columns: repeat(3,1fr); } }
+@media (max-width:700px)  { .kpi-row { grid-template-columns: repeat(2,1fr); } }
+
+.kpi-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px 18px;
+  position: relative; overflow: hidden;
+  transition: transform .18s, box-shadow .18s, border-color .18s;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0,0,0,.5);
+  border-color: var(--border2);
+}
+.kpi-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--kpi-color, var(--accent));
+  opacity: .7;
+}
+.kpi-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted2); margin-bottom: 10px;
+}
+.kpi-value {
+  font-size: 32px; font-weight: 800; letter-spacing: -1px;
+  color: var(--text); line-height: 1;
+}
+.kpi-sub {
+  font-size: 11px; color: var(--muted2); margin-top: 8px;
+  display: flex; align-items: center; gap: 5px;
+}
+.kpi-icon {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  opacity: .08; font-size: 40px;
+}
+.kpi-trend-up   { color: var(--green2); }
+.kpi-trend-down { color: var(--red); }
+.kpi-trend-flat { color: var(--muted); }
+
+/* ── Main Grid ── */
+.cc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.cc-grid-3 {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+@media (max-width:960px) {
+  .cc-grid, .cc-grid-3 { grid-template-columns: 1fr; }
+}
+
+/* ── Panel ── */
+.cc-panel {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.cc-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.cc-panel-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--muted2);
+  display: flex; align-items: center; gap: 7px;
+}
+.cc-panel-title svg { color: var(--accent); }
+.cc-panel-link {
+  font-size: 11px; color: var(--accent); text-decoration: none; opacity: .8;
+  transition: opacity .15s;
+}
+.cc-panel-link:hover { opacity: 1; }
+.cc-panel-body { padding: 16px 20px; }
+.cc-panel-chart { padding: 16px 20px; }
+
+/* ── Activity Feed ── */
+.activity-item {
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 10px 0; border-bottom: 1px solid rgba(201,162,39,.06);
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0; margin-top: 5px;
+  box-shadow: 0 0 5px rgba(201,162,39,.4);
+}
+.activity-dot.ok   { background: var(--green2); box-shadow: 0 0 5px rgba(52,211,153,.4); }
+.activity-dot.warn { background: var(--yellow2); box-shadow: 0 0 5px rgba(232,200,74,.4); }
+.activity-dot.err  { background: var(--red); box-shadow: 0 0 5px rgba(239,68,68,.4); }
+.activity-text { font-size: 12.5px; color: var(--text); line-height: 1.5; flex: 1; min-width: 0; }
+.activity-meta { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+/* ── Lead Pipeline ── */
+.pipeline-stage {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 0; border-bottom: 1px solid rgba(201,162,39,.06);
+}
+.pipeline-stage:last-child { border-bottom: none; }
+.pipeline-label { font-size: 11.5px; color: var(--muted2); width: 80px; flex-shrink: 0; }
+.pipeline-bar-wrap {
+  flex: 1; height: 6px; background: rgba(255,255,255,.05);
+  border-radius: 3px; overflow: hidden;
+}
+.pipeline-bar {
+  height: 100%; border-radius: 3px;
+  background: var(--bar-color, var(--accent));
+  transition: width .6s cubic-bezier(.16,1,.3,1);
+}
+.pipeline-count {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  width: 28px; text-align: right; flex-shrink: 0;
+}
+
+/* ── AI Recommendations ── */
+.ai-rec-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid rgba(201,162,39,.06);
+}
+.ai-rec-item:last-child { border-bottom: none; }
+.ai-rec-icon {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--c-ai-bg); font-size: 14px;
+}
+.ai-rec-text { flex: 1; min-width: 0; }
+.ai-rec-title { font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.ai-rec-desc  { font-size: 11px; color: var(--muted2); line-height: 1.5; }
+.ai-rec-badge {
+  font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+  background: var(--c-ai-bg); color: var(--c-ai); border: 1px solid rgba(212,175,55,.2);
+  letter-spacing: .5px; white-space: nowrap; margin-top: 4px; display: inline-block;
+}
+
+/* ── Brand Cards ── */
+.brand-grid { display: flex; flex-direction: column; gap: 10px; }
+.brand-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 10px; text-decoration: none; color: inherit;
+  transition: border-color .15s, background .15s;
+}
+.brand-row:hover { border-color: var(--border2); background: var(--s3); }
+.brand-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 0 6px var(--bd-color, var(--accent));
+  background: var(--bd-color, var(--accent));
+}
+.brand-name { font-size: 12.5px; font-weight: 700; flex: 1; }
+.brand-ch   { font-size: 10.5px; color: var(--muted2); }
+.brand-queue-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  background: rgba(201,162,39,.1); color: var(--accent);
+  border: 1px solid rgba(201,162,39,.2);
+}
+
+/* ── Empty State ── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 32px 20px; text-align: center;
+  gap: 8px;
+}
+.empty-icon { opacity: .25; margin-bottom: 4px; }
+.empty-title { font-size: 13px; font-weight: 600; color: var(--muted2); }
+.empty-desc  { font-size: 11px; color: var(--muted); }
+.sample-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+  padding: 2px 8px; border-radius: 4px; text-transform: uppercase;
+  background: rgba(201,162,39,.1); color: var(--accent);
+  border: 1px solid rgba(201,162,39,.25); margin-bottom: 4px;
+  display: inline-block;
+}
+
+/* ── Decision Alert ── */
+.decision-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid rgba(201,162,39,.06);
+}
+.decision-item:last-child { border-bottom: none; }
+.decision-icon {
+  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(239,68,68,.1);
+}
+.decision-reason {
+  font-size: 12.5px; color: var(--text); line-height: 1.5; flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.decision-meta { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+/* ── Status Banner ── */
+.status-banner {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 20px; border-radius: var(--radius);
+  margin-bottom: 24px;
+  border: 1px solid;
+}
+.status-banner.ok {
+  background: rgba(16,185,129,.05);
+  border-color: rgba(16,185,129,.2);
+}
+.status-banner.warn {
+  background: rgba(239,68,68,.05);
+  border-color: rgba(239,68,68,.2);
+}
+.status-banner-icon {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.status-banner.ok   .status-banner-icon { background: rgba(16,185,129,.12); }
+.status-banner.warn .status-banner-icon { background: rgba(239,68,68,.12); }
+.status-banner-text { flex: 1; }
+.status-banner-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.status-banner-sub   { font-size: 11px; color: var(--muted2); margin-top: 2px; }
+</style>
+
+<!-- ══ HEADER ══ -->
+<div class="cc-header">
+  <div class="cc-header-left">
+    <div class="cc-eyebrow">
+      <div class="cc-live-dot"></div>
+      COMMAND CENTER
     </div>
-    <div class="page-title">{{ greeting }}、Satoshi さん</div>
-    <div class="page-sub">{{ now }}</div>
+    <div class="cc-title">{{ greeting }}、Satoshi さん</div>
+    <div class="cc-subtitle">{{ now }}</div>
   </div>
-  <div class="header-actions">
-    {% if ai %}
-    <div class="status-chip ok">
-      <span class="status-chip-dot"></span>Claude AI 接続中
+  <div class="cc-header-right">
+    {% if ai %}<div class="status-chip ok"><span class="status-chip-dot"></span>Claude AI 接続中</div>{% endif %}
+    <div class="status-chip {% if scheduler_status_ok %}ok{% else %}warn{% endif %}">
+      <span class="status-chip-dot"></span>スケジューラー {{ scheduler_status }}
     </div>
-    {% endif %}
     <a href="/queue/add" class="btn btn-primary btn-sm">+ 投稿追加</a>
     <a href="/president" class="btn btn-ghost btn-sm">経営ビュー →</a>
   </div>
 </div>
 
-<!-- ══ 優先アクション ══ -->
+<!-- ══ STATUS BANNER ══ -->
 {% set urgent_count = stats.decisions_open %}
-<div class="purpose-banner{% if urgent_count > 0 %} purpose-banner--urgent{% else %} purpose-banner--ok{% endif %}" style="margin-bottom:20px;">
-  <div class="purpose-banner-icon" style="{% if urgent_count > 0 %}background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.25);{% else %}background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.25);{% endif %}">
-    {% if urgent_count > 0 %}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{% else %}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{% endif %}
-  </div>
-  <div class="purpose-banner-body">
-    <div class="purpose-banner-title">
-      {% if urgent_count > 0 %}今日対応が必要な項目
-        <span class="status-chip urgent" style="padding:1px 8px;font-size:10px;">{{ urgent_count }}件</span>
-      {% else %}今日の状況は良好です{% endif %}
-    </div>
-    {% if decisions %}
-    <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;">
-      {% for d in decisions[:4] %}
-      <div style="display:flex;align-items:center;gap:10px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:9px;padding:8px 12px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--yellow2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:12.5px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ d.reason[:60] }}{% if d.reason|length > 60 %}…{% endif %}</div>
-          <div class="text-muted" style="font-size:10.5px;margin-top:2px;">{{ d.type or '要確認' }} · {{ (d.created_at or '')[:10] }}</div>
-        </div>
-        <a href="/decisions" class="btn btn-ghost btn-sm text-red" style="border-color:rgba(239,68,68,.3);flex-shrink:0;">対応する</a>
-      </div>
-      {% endfor %}
-    </div>
-    {% elif stats.ig_pending > 5 %}
-    <div style="display:flex;align-items:center;gap:10px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:8px 12px;margin-top:10px;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      <div style="flex:1;">
-        <div style="font-size:12.5px;font-weight:500;color:var(--text);">Instagram キューに {{ stats.ig_pending }} 件が待機中です</div>
-        <div class="purpose-banner-desc">投稿スケジュールを確認してください</div>
-      </div>
-      <a href="/queue" class="btn btn-ghost btn-sm" style="flex-shrink:0;">キューを確認</a>
-    </div>
+<div class="status-banner {% if urgent_count > 0 %}warn{% else %}ok{% endif %}">
+  <div class="status-banner-icon">
+    {% if urgent_count > 0 %}
+    <svg width="16" height="16" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     {% else %}
-    <div class="purpose-banner-desc">自動化システムが正常稼働しています。本日の対応項目はありません。</div>
+    <svg width="16" height="16" fill="none" stroke="var(--green2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
     {% endif %}
   </div>
-  <div class="purpose-banner-actions">
-    <a href="/decisions" class="btn btn-ghost btn-sm">すべて見る →</a>
+  <div class="status-banner-text">
+    <div class="status-banner-title">
+      {% if urgent_count > 0 %}要対応: {{ urgent_count }}件の未解決アイテム{% else %}全システム正常稼働中{% endif %}
+    </div>
+    <div class="status-banner-sub">
+      {% if urgent_count > 0 %}今日中に対応が必要な決裁・アラートがあります{% else %}自動化システムが正常に動作しています。本日の対応項目はありません{% endif %}
+    </div>
   </div>
+  {% if urgent_count > 0 %}<a href="/decisions" class="btn btn-ghost btn-sm" style="border-color:rgba(239,68,68,.3);color:var(--red);">対応する →</a>{% endif %}
 </div>
 
-<!-- ══ AI OS ステータスバナー ══ -->
-<style>
-  .os-banner {
-    display: flex; align-items: center; gap: 0;
-    background: linear-gradient(135deg, rgba(7,12,26,.98) 0%, rgba(10,16,36,.95) 100%);
-    border: 1px solid rgba(99,102,241,.2);
-    border-radius: 16px; padding: 16px 20px;
-    margin-bottom: 20px; overflow: hidden;
-    position: relative;
-    box-shadow: 0 0 40px rgba(99,102,241,.08);
-  }
-  .os-banner::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(99,102,241,.7), rgba(139,92,246,.6), transparent);
-  }
-  .os-tier {
-    display: flex; align-items: center; gap: 10px;
-    padding: 0 20px; flex-shrink: 0;
-  }
-  .os-tier:not(:last-child) {
-    border-right: 1px solid var(--border);
-  }
-  .os-tier-avatar {
-    width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 16px;
-  }
-  .os-tier-label {
-    font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; margin-bottom: 2px;
-  }
-  .os-tier-name { font-size: 13px; font-weight: 700; }
-  .os-tier-role { font-size: 10.5px; color: var(--muted2); }
-  .os-arrow {
-    font-size: 12px; color: var(--muted); padding: 0 8px; flex-shrink: 0;
-  }
-  .os-agents-wrap {
-    display: flex; align-items: center; gap: 7px;
-    flex: 1; flex-wrap: wrap; padding-left: 20px;
-  }
-  .os-agent-dot {
-    display: flex; align-items: center; gap: 5px;
-    padding: 4px 10px; border-radius: 12px; font-size: 10.5px; font-weight: 600;
-    background: rgba(255,255,255,.04); border: 1px solid var(--border);
-    color: var(--muted2); white-space: nowrap;
-  }
-  .os-agent-dot-led {
-    width: 5px; height: 5px; border-radius: 50%;
-    background: var(--green2); box-shadow: 0 0 5px var(--green2);
-    animation: livePulse 2.5s infinite;
-    flex-shrink: 0;
-  }
-  .os-banner-link {
-    margin-left: auto; flex-shrink: 0;
-    font-size: 11.5px; color: var(--accent2); text-decoration: none; font-weight: 600;
-    padding: 5px 12px; border-radius: 8px;
-    background: rgba(99,102,241,.07); border: 1px solid rgba(99,102,241,.2);
-    transition: background .15s;
-  }
-  .os-banner-link:hover { background: rgba(99,102,241,.15); }
-</style>
-
-<div class="os-banner">
-  <!-- President -->
-  <div class="os-tier" style="padding-left:0;">
-    <div class="os-tier-avatar" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);"><i data-lucide="user"></i></div>
-    <div>
-      <div class="os-tier-label" style="color:var(--accent2);">President</div>
-      <div class="os-tier-name">Satoshi</div>
-      <div class="os-tier-role">Founder / Owner</div>
+<!-- ══ KPI CARDS ══ -->
+<div class="kpi-row">
+  <div class="kpi-card" style="--kpi-color:var(--accent);">
+    <div class="kpi-label">アクティブリード</div>
+    <div class="kpi-value">{{ stats.leads_active }}</div>
+    <div class="kpi-sub">
+      <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span>今月 +{{ stats.leads_new_month }} 件</span>
     </div>
   </div>
-
-  <span class="os-arrow">→</span>
-
-  <!-- AI CEO -->
-  <div class="os-tier">
-    <div class="os-tier-avatar" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);"><i data-lucide="bot"></i></div>
-    <div>
-      <div class="os-tier-label" style="color:var(--green2);">AI CEO</div>
-      <div class="os-tier-name">CEO Agent</div>
-      <div class="os-tier-role" style="display:flex;align-items:center;gap:4px;">
-        <span style="width:5px;height:5px;border-radius:50%;background:var(--green2);box-shadow:0 0 5px var(--green2);display:inline-block;animation:livePulse 2s infinite;"></span>
-        Online
-      </div>
-    </div>
-  </div>
-
-  <span class="os-arrow">→</span>
-
-  <!-- Agents -->
-  <div class="os-agents-wrap">
-    <span style="font-size:9.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap;">Agents</span>
-    {% set agent_names = [
-      ('<span style="display:inline-flex;align-items:center;"><i data-lucide="sparkles"></i></span>','UPJ','#5b8af5'),
-      ('<span style="display:inline-flex;align-items:center;"><i data-lucide="sparkles"></i></span>','DSC','#34d399'),
-      ('<span style="display:inline-flex;align-items:center;"><i data-lucide="sparkles"></i></span>','CFJ','#fbbf24'),
-      ('<span style="display:inline-flex;align-items:center;"><i data-lucide="sparkles"></i></span>','BPG','#f472b6'),
-      ('/','Blog','#a78bfa'),
-      ('◎','Sales','#f59e0b'),
-      ('<span style="display:inline-flex;align-items:center;"><i data-lucide="layout-grid"></i></span>','Analytics','#06b6d4'),
-      ('<span style="display:inline-flex;align-items:center;"><i data-lucide="settings"></i></span>','Ops','#8b5cf6'),
-    ] %}
-    {% for icon, name, color in agent_names %}
-    <div class="os-agent-dot">
-      <div class="os-agent-dot-led" style="background:{{ color }};box-shadow:0 0 5px {{ color }};"></div>
-      <span style="color:{{ color }};">{{ icon }}</span>
-      {{ name }}
-    </div>
-    {% endfor %}
-  </div>
-
-  <a href="/agents" class="os-banner-link">OS管理 →</a>
-</div>
-
-<!-- ══ ブランド別ステータスカード ══ -->
-<div class="three-col" style="margin-bottom:24px;">
-  {% for bid, b in nav_brands.items() %}
-  <a href="/brands/{{ bid }}" class="card" style="display:flex;flex-direction:column;gap:14px;padding:20px;border-top:3px solid {{ b.color }};text-decoration:none;color:inherit;transition:transform .2s,box-shadow .2s;"
-     onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 32px rgba(0,0,0,.4)'"
-     onmouseout="this.style.transform='';this.style.boxShadow=''">
-
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="width:9px;height:9px;border-radius:50%;background:{{ b.color }};box-shadow:0 0 6px {{ b.color }};flex-shrink:0;"></span>
-        <div>
-          <div style="font-size:16px;font-weight:800;letter-spacing:-.3px;">{{ b.name_short }}</div>
-          <div style="font-size:10.5px;color:var(--muted);margin-top:1px;">{{ b.name }}</div>
-        </div>
-      </div>
-      <span style="font-size:11px;color:var(--muted);"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></span>
-    </div>
-
-    <div style="display:flex;gap:5px;flex-wrap:wrap;">
-      {% for p in ['instagram','threads','facebook','twitter','youtube','tiktok','line','wordpress'] %}
-      {% if b.channels.get(p) %}
-      <span style="font-size:12px;opacity:.65;" title="{{ p }}">{{ nav_platform_icons.get(p,'') }}</span>
-      {% endif %}
-      {% endfor %}
-    </div>
-
-    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:{{ b.color }};">
-      <i data-lucide="sparkles" style="width:13px;height:13px;"></i> 一括生成する
-    </div>
-
-  </a>
-  {% endfor %}
-</div>
-
-<!-- ══ KPI グリッド ══ -->
-<style>
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-  .kpi-card {
-    background: var(--s1);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px 18px 14px;
-    position: relative;
-    overflow: hidden;
-    transition: transform .2s, border-color .2s, box-shadow .2s;
-    cursor: default;
-  }
-  .kpi-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--border2);
-    box-shadow: 0 8px 24px rgba(0,0,0,.3);
-  }
-  .kpi-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--kpi-color, var(--accent));
-    opacity: .8;
-  }
-  .kpi-card::after {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 80px; height: 80px;
-    background: radial-gradient(circle at top right, var(--kpi-color, var(--accent)) 0%, transparent 70%);
-    opacity: .06;
-    pointer-events: none;
-  }
-  .kpi-icon {
-    font-size: 18px;
-    margin-bottom: 10px;
-    display: block;
-    line-height: 1;
-  }
-  .kpi-label {
-    font-size: 10.5px;
-    font-weight: 600;
-    color: var(--muted);
-    letter-spacing: .6px;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .kpi-value {
-    font-size: 30px;
-    font-weight: 800;
-    letter-spacing: -1px;
-    color: var(--kpi-color, var(--text));
-    line-height: 1;
-    margin-bottom: 6px;
-  }
-  .kpi-value.mrr { font-size: 22px; }
-  .kpi-meta {
-    font-size: 11px;
-    color: var(--muted2);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .kpi-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 20px;
-    background: rgba(255,255,255,.06);
-  }
-
-  /* チャートエリア */
-  .chart-row {
-    display: grid;
-    grid-template-columns: 1.6fr 1fr;
-    gap: 14px;
-    margin-bottom: 14px;
-  }
-  .chart-card {
-    background: var(--s1);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px 20px;
-  }
-  .chart-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-  .chart-card-title {
-    font-size: 13px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .chart-card-action {
-    font-size: 11.5px;
-    color: var(--accent2);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color .15s;
-  }
-  .chart-card-action:hover { color: var(--text); }
-
-  /* パイプライン */
-  .funnel-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255,255,255,.04);
-  }
-  .funnel-row:last-child { border: none; }
-  .funnel-step {
-    width: 22px; height: 22px;
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700;
-    flex-shrink: 0;
-  }
-  .funnel-label { font-size: 12.5px; color: var(--muted2); flex: 1; }
-  .funnel-bar-wrap {
-    width: 80px;
-    height: 5px;
-    background: rgba(255,255,255,.05);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-  .funnel-bar { height: 100%; border-radius: 3px; transition: width .6s ease; }
-  .funnel-count {
-    font-size: 13px;
-    font-weight: 700;
-    min-width: 20px;
-    text-align: right;
-  }
-
-  /* リードテーブル */
-  .lead-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255,255,255,.04);
-    cursor: pointer;
-    transition: background .15s;
-    border-radius: 8px;
-    margin: 0 -8px;
-    padding-left: 8px; padding-right: 8px;
-  }
-  .lead-row:last-child { border: none; }
-  .lead-row:hover { background: rgba(255,255,255,.03); }
-  .lead-avatar {
-    width: 32px; height: 32px;
-    border-radius: 9px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700;
-    flex-shrink: 0;
-    color: #fff;
-  }
-  .lead-info { flex: 1; min-width: 0; }
-  .lead-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-  .lead-sub  { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-  /* 判断待ち */
-  .decision-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255,255,255,.04);
-  }
-  .decision-row:last-child { border: none; }
-  .decision-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--yellow2);
-    margin-top: 5px;
-    flex-shrink: 0;
-    box-shadow: 0 0 6px var(--yellow2);
-  }
-</style>
-
-<!-- KPI 6枚 -->
-<div class="kpi-grid">
-
-  <!-- 投稿待ち -->
-  <a href="/queue" style="text-decoration:none;">
-  <div class="kpi-card" style="--kpi-color:#6366f1;">
-    <span class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
-    <div class="kpi-label">投稿待ち</div>
-    <div class="kpi-value" data-stat="ig_pending">{{ stats.ig_pending }}</div>
-    <div class="kpi-meta">
-      <span>Instagram キュー</span>
-      {% if stats.ig_pending > 0 %}<span class="kpi-badge" style="color:#6366f1;">待機中</span>{% endif %}
-    </div>
-  </div>
-  </a>
-
-  <!-- LINE配信待ち -->
-  <a href="/queue" style="text-decoration:none;">
-  <div class="kpi-card" style="--kpi-color:#06b6d4;">
-    <span class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-    <div class="kpi-label">LINE配信待ち</div>
-    <div class="kpi-value" data-stat="line_pending">{{ stats.line_pending }}</div>
-    <div class="kpi-meta">キュー内</div>
-  </div>
-  </a>
-
-  <!-- 対応中リード -->
-  <a href="/leads" style="text-decoration:none;">
-  <div class="kpi-card" style="--kpi-color:#f59e0b;">
-    <span class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-    <div class="kpi-label">対応中リード</div>
-    <div class="kpi-value" data-stat="leads_active">{{ stats.leads_active }}</div>
-    <div class="kpi-meta">
-      今月
-      <span class="kpi-badge" style="color:#f59e0b;">+{{ stats.leads_new_month }}件</span>
-    </div>
-  </div>
-  </a>
-
-  <!-- 成約累計 -->
-  <a href="/leads" style="text-decoration:none;">
-  <div class="kpi-card" style="--kpi-color:#10b981;">
-    <span class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-    <div class="kpi-label">成約累計</div>
+  <div class="kpi-card" style="--kpi-color:var(--green2);">
+    <div class="kpi-label">契約済み</div>
     <div class="kpi-value">{{ stats.leads_contracted }}</div>
-    <div class="kpi-meta">
-      成約率
-      <span class="kpi-badge" style="color:#10b981;">{{ stats.cvr }}%</span>
+    <div class="kpi-sub">CVR
+      <strong style="color:var(--green2);">{{ stats.cvr }}%</strong>
     </div>
   </div>
-  </a>
-
-  <!-- MRR -->
-  <div class="kpi-card" style="--kpi-color:#34d399;">
-    <span class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
-    <div class="kpi-label">MRR</div>
-    <div class="kpi-value mrr">¥{{ "{:,}".format(stats.mrr) }}</div>
-    <div class="kpi-meta">月次経常収益</div>
+  <div class="kpi-card" style="--kpi-color:#c084fc;">
+    <div class="kpi-label">投稿キュー (IG)</div>
+    <div class="kpi-value">{{ stats.ig_pending }}</div>
+    <div class="kpi-sub">LINE: {{ stats.line_pending }} 件待機</div>
   </div>
-
-  <!-- 判断待ち -->
-  <a href="/decisions" style="text-decoration:none;">
-  <div class="kpi-card" style="--kpi-color:{% if stats.decisions_open > 0 %}#ef4444{% else %}#34d399{% endif %};">
-    <span class="kpi-icon">{% if stats.decisions_open > 0 %}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{% else %}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{% endif %}</span>
-    <div class="kpi-label">判断待ち</div>
-    <div class="kpi-value" data-stat="decisions_open">{{ stats.decisions_open }}</div>
-    <div class="kpi-meta">
-      {% if stats.decisions_open > 0 %}
-      <span class="kpi-badge" style="color:#ef4444;background:rgba(239,68,68,.1);">要対応</span>
+  <div class="kpi-card" style="--kpi-color:{% if stats.decisions_open > 0 %}var(--red){% else %}var(--green2){% endif %};">
+    <div class="kpi-label">未解決アクション</div>
+    <div class="kpi-value">{{ stats.decisions_open }}</div>
+    <div class="kpi-sub">
+      {% if stats.decisions_open == 0 %}
+      <svg width="11" height="11" fill="none" stroke="var(--green2)" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      <span style="color:var(--green2);">すべて対応済み</span>
       {% else %}
-      <span style="color:#34d399;">すべて完了</span>
+      <span style="color:var(--red);">要対応</span>
       {% endif %}
     </div>
   </div>
-  </a>
-
+  <div class="kpi-card" style="--kpi-color:var(--yellow2);">
+    <div class="kpi-label">MRR</div>
+    <div class="kpi-value mrr">{% if stats.mrr > 0 %}¥{{ '{:,}'.format(stats.mrr) }}{% else %}—{% endif %}</div>
+    <div class="kpi-sub">月次定期収益</div>
+  </div>
 </div>
 
-<!-- ══ チャート + パイプライン ══ -->
-<div class="chart-row">
-
-  <!-- 月別リード推移 -->
-  <div class="chart-card">
-    <div class="chart-card-header">
-      <div class="chart-card-title">
-        <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;box-shadow:0 0 6px var(--accent);"></span>
-        月別リード推移
+<!-- ══ ROW 1: チャート2枚 ══ -->
+<div class="cc-grid">
+  <!-- リードトレンド -->
+  <div class="cc-panel">
+    <div class="cc-panel-head">
+      <div class="cc-panel-title">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+        リード獲得トレンド（直近6ヶ月）
       </div>
-      <a href="/analytics" class="chart-card-action">詳細 →</a>
+      <a href="/leads" class="cc-panel-link">詳細 →</a>
     </div>
-    <div style="height:175px;"><canvas id="leadChart"></canvas></div>
+    {% set has_lead_data = monthly.values | sum > 0 %}
+    {% if not has_lead_data %}<div class="sample-badge" style="margin:12px 20px 0;">Sample</div>{% endif %}
+    <div class="cc-panel-chart" style="height:180px;position:relative;">
+      <canvas id="leadChart"></canvas>
+      {% if not has_lead_data %}
+      <div style="position:absolute;bottom:20px;right:20px;font-size:10px;color:var(--muted);opacity:.6;">サンプルデータを表示中</div>
+      {% endif %}
+    </div>
   </div>
 
-  <!-- 営業パイプライン -->
-  <div class="chart-card">
-    <div class="chart-card-header">
-      <div class="chart-card-title">
-        <span style="width:6px;height:6px;border-radius:50%;background:var(--green2);display:inline-block;box-shadow:0 0 6px var(--green2);"></span>
-        営業パイプライン
+  <!-- チャンネル別 / ファネル -->
+  <div class="cc-panel">
+    <div class="cc-panel-head">
+      <div class="cc-panel-title">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        リードパイプライン
       </div>
-      <a href="/leads/kanban" class="chart-card-action">カンバン →</a>
+      <a href="/leads/kanban" class="cc-panel-link">かんばん →</a>
     </div>
-    {% set funnel_items = [
-      ('1','未コンタクト', funnel.L1,    '#5a6490','rgba(90,100,144,.15)'),
-      ('2','コンタクト済', funnel.L2,    '#818cf8','rgba(129,140,248,.15)'),
-      ('3','商談中',       funnel.L3,    '#34d399','rgba(52,211,153,.15)'),
-      ('4','提案済み',     funnel.L4,    '#fbbf24','rgba(251,191,36,.15)'),
-      ('5','契約済み',     funnel['L5'], '#10b981','rgba(16,185,129,.15)'),
-    ] %}
-    {% set total = [funnel.L1+funnel.L2+funnel.L3+funnel.L4+funnel['L5'], 1]|max %}
-    <div>
-      {% for step, label, count, color, bg in funnel_items %}
-      <div class="funnel-row">
-        <div class="funnel-step" style="background:{{ bg }};color:{{ color }};">{{ step }}</div>
-        <div class="funnel-label">{{ label }}</div>
-        <div class="funnel-bar-wrap">
-          <div class="funnel-bar" style="background:{{ color }};width:{{ [count/total*100,2]|max }}%;"></div>
+    <div class="cc-panel-body">
+      {% set stage_labels = {'L1':'初回接触','L2':'ヒアリング','L3':'提案中','L4':'クロージング','L5':'契約済み'} %}
+      {% set stage_colors = {'L1':'#c9a227','L2':'#e8c84a','L3':'#10b981','L4':'#34d399','L5':'#6ee7b7'} %}
+      {% set max_val = [funnel.values() | max, 1] | max %}
+      <div class="pipeline-stage" style="padding-top:0;">
+        <div class="pipeline-label" style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);font-weight:700;">ステージ</div>
+        <div style="flex:1;font-size:10px;color:var(--muted);">件数</div>
+        <div style="width:28px;text-align:right;font-size:10px;color:var(--muted);">#</div>
+      </div>
+      {% for stage, label in stage_labels.items() %}
+      {% set cnt = funnel.get(stage, 0) %}
+      <div class="pipeline-stage">
+        <div class="pipeline-label">{{ label }}</div>
+        <div class="pipeline-bar-wrap">
+          <div class="pipeline-bar" style="--bar-color:{{ stage_colors[stage] }};width:{{ [(cnt / max_val * 100)|int, 3]|max if max_val > 0 else 0 }}%;"></div>
         </div>
-        <div class="funnel-count" style="color:{{ color }};">{{ count }}</div>
+        <div class="pipeline-count">{{ cnt }}</div>
       </div>
       {% endfor %}
+      {% if funnel.values() | sum == 0 %}
+      <div class="empty-state" style="padding:20px 0 8px;">
+        <div class="empty-desc">リードデータがまだありません</div>
+        <a href="/leads" class="btn btn-ghost btn-sm" style="margin-top:8px;">リードを追加 →</a>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
 
-<!-- ══ 直近リード + 判断待ち ══ -->
-<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;" class="leads-decisions-row">
+<!-- ══ ROW 2: ブランド + AI推奨 + アクティビティ ══ -->
+<div class="cc-grid-3">
 
-  <!-- 直近リード -->
-  <div class="chart-card">
-    <div class="chart-card-header">
-      <div class="chart-card-title">
-        <span style="width:6px;height:6px;border-radius:50%;background:var(--yellow2);display:inline-block;box-shadow:0 0 6px var(--yellow2);"></span>
-        直近のリード
+  <!-- ブランド別ステータス -->
+  <div class="cc-panel">
+    <div class="cc-panel-head">
+      <div class="cc-panel-title">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        ブランド別ステータス
       </div>
-      <a href="/leads" class="chart-card-action">すべて →</a>
+      <a href="/brands" class="cc-panel-link">管理 →</a>
     </div>
-    {% if recent %}
-    {% for l in recent %}
-    <div class="lead-row" onclick="location.href='/leads/{{ l.lead_id }}'">
-      <div class="lead-avatar" style="background:{% if l.brand=='dsc-marketing' %}rgba(16,185,129,.25){% elif l.brand=='upjapan' %}rgba(99,102,241,.25){% else %}rgba(245,158,11,.25){% endif %};">
-        {{ (l.name or '?')[0] }}
+    <div class="cc-panel-body">
+      {% if brands %}
+      <div class="brand-grid">
+        {% for bid, b in brands.items() %}
+        {% set brand_color = b.color | default('#c9a227') %}
+        {% set ch_count = b.channels.values() | selectattr('bool') | list | length if b.channels else 0 %}
+        <a href="/brands/{{ bid }}" class="brand-row">
+          <div class="brand-dot" style="--bd-color:{{ brand_color }};"></div>
+          <div style="flex:1;min-width:0;">
+            <div class="brand-name">{{ b.name_short | default(bid) }}</div>
+            <div class="brand-ch">{{ b.name | default('') | truncate(28, true, '…') }}</div>
+          </div>
+          {% if b.channels %}
+          <div class="brand-queue-badge">
+            {{ b.channels.keys() | list | length }} ch
+          </div>
+          {% endif %}
+          <svg width="12" height="12" fill="none" stroke="var(--muted)" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        {% endfor %}
       </div>
-      <div class="lead-info">
-        <div class="lead-name">{{ l.name or '（名前なし）' }}</div>
-        <div class="lead-sub">{{ l.next_action or l.brand or '-' }}</div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon"><svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+        <div class="empty-title">ブランドがありません</div>
+        <div class="empty-desc">brands.yaml に追加してください</div>
       </div>
-      <span class="badge badge-{{ l.stage|lower if l.stage else 'l1' }}">{{ l.stage or 'L1' }}</span>
+      {% endif %}
     </div>
-    {% endfor %}
-    {% else %}
-    <div style="text-align:center;padding:32px 20px;color:var(--muted);">
-      <div style="margin-bottom:8px;opacity:.4;display:flex;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-      <div style="font-size:12px;">リードはまだありません</div>
-      <a href="/leads" style="font-size:11.5px;color:var(--accent2);margin-top:8px;display:inline-block;">リードを追加 →</a>
-    </div>
-    {% endif %}
   </div>
 
-  <!-- 判断待ち -->
-  <div class="chart-card">
-    <div class="chart-card-header">
-      <div class="chart-card-title">
-        <span style="width:6px;height:6px;border-radius:50%;background:{% if decisions %}var(--yellow2){% else %}var(--green2){% endif %};display:inline-block;box-shadow:0 0 6px {% if decisions %}var(--yellow2){% else %}var(--green2){% endif %};"></span>
-        判断待ち
+  <!-- AI Chief of Staff 推奨アクション -->
+  <div class="cc-panel">
+    <div class="cc-panel-head">
+      <div class="cc-panel-title">
+        <svg width="13" height="13" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        AI 推奨アクション
       </div>
-      <a href="/decisions" class="chart-card-action">すべて →</a>
+      <span style="font-size:10px;color:var(--accent);opacity:.7;">Chief of Staff</span>
     </div>
-    {% if decisions %}
-    {% for d in decisions %}
-    <div class="decision-row">
-      <div class="decision-dot"></div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:12.5px;font-weight:500;line-height:1.5;margin-bottom:5px;">
-          {{ d.reason[:44] }}{% if d.reason|length > 44 %}…{% endif %}
+    <div class="cc-panel-body">
+      {% set recs = [] %}
+      {% if stats.ig_pending == 0 %}{% set _ = recs.append({'icon':'📸','title':'Instagramキューが空です','desc':'今日の投稿を追加してエンゲージメントを維持しましょう','badge':'優先','link':'/queue/add'}) %}{% endif %}
+      {% if stats.decisions_open > 0 %}{% set _ = recs.append({'icon':'⚡','title':stats.decisions_open|string + '件の未対応アクション','desc':'決裁待ちのアイテムがあります。確認して対応してください','badge':'要対応','link':'/decisions'}) %}{% endif %}
+      {% if stats.leads_active == 0 %}{% set _ = recs.append({'icon':'🎯','title':'リードを獲得しましょう','desc':'アクティブなリードがありません。SNS投稿やDM活動を増やしましょう','badge':'成長機会','link':'/leads'}) %}{% endif %}
+      {% if stats.mrr == 0 %}{% set _ = recs.append({'icon':'💰','title':'MRRを記録しましょう','desc':'月次定期収益の記録が未設定です。finance-systemに売上を入力してください','badge':'設定','link':'/brands'}) %}{% endif %}
+      {% if stats.ig_pending > 10 %}{% set _ = recs.append({'icon':'🚀','title':'キューが充実しています','desc':stats.ig_pending|string + '件の投稿が待機中。スケジュールを確認して最適化しましょう','badge':'確認推奨','link':'/queue'}) %}{% endif %}
+      {% if recs %}
+        {% for r in recs[:4] %}
+        <div class="ai-rec-item">
+          <div class="ai-rec-icon">{{ r.icon }}</div>
+          <div class="ai-rec-text">
+            <div class="ai-rec-title">{{ r.title }}</div>
+            <div class="ai-rec-desc">{{ r.desc }}</div>
+            <a href="{{ r.link }}" class="ai-rec-badge">{{ r.badge }} →</a>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="badge badge-warn" style="font-size:10px;">{{ d.type or '要確認' }}</span>
-          <span style="font-size:10px;color:var(--muted);">{{ (d.created_at or '')[:10] }}</span>
+        {% endfor %}
+      {% else %}
+        <div class="ai-rec-item">
+          <div class="ai-rec-icon">✅</div>
+          <div class="ai-rec-text">
+            <div class="ai-rec-title">すべて順調です</div>
+            <div class="ai-rec-desc">今日の推奨アクションはありません。システムが正常稼働しています。</div>
+          </div>
         </div>
-      </div>
+      {% endif %}
     </div>
-    {% endfor %}
-    {% else %}
-    <div style="text-align:center;padding:32px 20px;">
-      <div style="margin-bottom:8px;display:flex;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-      <div style="font-size:13px;color:var(--green2);font-weight:600;">すべて対応済み</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;">自動処理が完了しています</div>
-    </div>
-    {% endif %}
   </div>
+
+  <!-- 最近のアクティビティ -->
+  <div class="cc-panel">
+    <div class="cc-panel-head">
+      <div class="cc-panel-title">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        最近のアクティビティ
+      </div>
+      <a href="/logs" class="cc-panel-link">すべて →</a>
+    </div>
+    <div class="cc-panel-body" style="padding-top:8px;">
+      {% if activities %}
+        {% for a in activities[:8] %}
+        <div class="activity-item">
+          <div class="activity-dot {% if a.status == 'ok' %}ok{% elif a.status == 'warn' %}warn{% elif a.status == 'error' %}err{% endif %}"></div>
+          <div class="activity-text">
+            <div>{{ a.action | replace('_',' ') }}{% if a.detail %} — {{ a.detail[:32] }}{% if a.detail|length > 32 %}…{% endif %}{% endif %}</div>
+            <div class="activity-meta">
+              {% if a.brand %}{{ a.brand }} · {% endif %}
+              {% if a.platform %}{{ a.platform }} · {% endif %}
+              {{ (a.created_at or '')[-8:][:5] }}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-icon"><svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <div class="empty-title">アクティビティなし</div>
+          <div class="empty-desc">システム操作のログがここに表示されます</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ ROW 3: 未対応 + チャンネル分布 ══ -->
+<div class="cc-grid">
+
+  <!-- 未対応アクション -->
+  <div class="cc-panel">
+    <div class="cc-panel-head">
+      <div class="cc-panel-title">
+        <svg width="13" height="13" fill="none" stroke="var(--red)" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        未対応アクション
+      </div>
+      <a href="/decisions" class="cc-panel-link">すべて →</a>
+    </div>
+    <div class="cc-panel-body">
+      {% if decisions %}
+        {% for d in decisions %}
+        <div class="decision-item">
+          <div class="decision-icon">
+            <svg width="13" height="13" fill="none" stroke="var(--red)" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div class="decision-reason">{{ d.reason or '—' }}</div>
+            <div class="decision-meta">{{ d.type or '要確認' }} · {{ (d.created_at or '')[:10] }}</div>
+          </div>
+          <a href="/decisions" class="btn btn-ghost btn-sm" style="font-size:10px;padding:4px 10px;border-color:rgba(239,68,68,.3);color:var(--red);flex-shrink:0;">対応</a>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-icon"><svg width="32" height="32" fill="none" stroke="var(--green2)" stroke-width="1.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="empty-title" style="color:var(--green2);">すべて対応済み</div>
+          <div class="empty-desc">現在、未対応のアクションはありません</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- チャンネル分布 -->
+  <div class="cc-panel">
+    <div class="cc-panel-head">
+      <div class="cc-panel-title">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        リード流入チャンネル
+      </div>
+      <a href="/analytics" class="cc-panel-link">分析 →</a>
+    </div>
+    {% set has_ch_data = channels.values | sum > 0 if channels.values else false %}
+    {% if not has_ch_data %}<div class="sample-badge" style="margin:12px 20px 0;">Sample</div>{% endif %}
+    <div class="cc-panel-chart" style="height:180px;position:relative;">
+      <canvas id="channelChart"></canvas>
+    </div>
+  </div>
+
 </div>
 
 <script>
-// ── KPI カウントアップ ──
-function countUp(el, target, duration = 900) {
-  const isMRR = el.classList.contains('mrr');
-  const start  = performance.now();
-  const from   = 0;
-  const suffix = isMRR ? '' : '';
-  (function tick(now) {
-    const p = Math.min((now - start) / duration, 1);
-    const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
-    const val  = Math.round(from + (target - from) * ease);
-    el.textContent = isMRR ? '¥' + val.toLocaleString() : val;
-    if (p < 1) requestAnimationFrame(tick);
-    else el.textContent = isMRR ? '¥' + target.toLocaleString() : target;
-  })(start);
-}
+/* ═══════════════════════════════════
+   Charts — Black × Gold palette
+═══════════════════════════════════ */
+const GOLD_PALETTE = [
+  'rgba(201,162,39,.85)',
+  'rgba(232,200,74,.75)',
+  'rgba(16,185,129,.75)',
+  'rgba(52,211,153,.7)',
+  'rgba(192,132,252,.7)',
+  'rgba(251,191,36,.65)',
+];
+const GOLD_BORDER = [
+  'rgba(201,162,39,1)',
+  'rgba(232,200,74,1)',
+  'rgba(16,185,129,1)',
+  'rgba(52,211,153,1)',
+  'rgba(192,132,252,1)',
+  'rgba(251,191,36,1)',
+];
 
-document.addEventListener('DOMContentLoaded', () => {
-  // 各KPIカードの数値をカウントアップ
-  document.querySelectorAll('.kpi-value').forEach(el => {
-    const raw = el.textContent.replace(/[¥,]/g, '').trim();
-    const num = parseInt(raw, 10);
-    if (!isNaN(num) && num > 0) {
-      el.textContent = el.classList.contains('mrr') ? '¥0' : '0';
-      // 少し遅延させて順番に登場させる
-      const idx = [...document.querySelectorAll('.kpi-value')].indexOf(el);
-      setTimeout(() => countUp(el, num), idx * 80);
+const chartDefaults = {
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#0c0c0c',
+      borderColor: 'rgba(201,162,39,.3)',
+      borderWidth: 1,
+      titleColor: '#9a8660',
+      bodyColor: '#f0e8d8',
+      padding: 12,
     }
-  });
-});
+  }
+};
 
-// ── チャート ──
+/* ── Lead Chart ── */
 const monthlyData = {{ monthly | tojson }};
-const ctx = document.getElementById('leadChart');
-if (ctx) {
-  const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 175);
-  gradient.addColorStop(0,   'rgba(99,102,241,.45)');
-  gradient.addColorStop(1,   'rgba(99,102,241,.02)');
-  new Chart(ctx, {
+const hasLeadData = monthlyData.values.some(v => v > 0);
+const displayMonthly = hasLeadData ? monthlyData : {
+  labels: ['11月','12月','1月','2月','3月','4月'],
+  values: [3, 5, 4, 7, 6, 9]
+};
+
+const leadCtx = document.getElementById('leadChart');
+if (leadCtx) {
+  const ctx2d = leadCtx.getContext('2d');
+  const grad = ctx2d.createLinearGradient(0, 0, 0, 160);
+  grad.addColorStop(0, 'rgba(201,162,39,.35)');
+  grad.addColorStop(1, 'rgba(201,162,39,.02)');
+  new Chart(leadCtx, {
     type: 'bar',
     data: {
-      labels: monthlyData.labels.map(m => m.slice(5) + '月'),
+      labels: hasLeadData
+        ? displayMonthly.labels.map(m => m.slice(5) + '月')
+        : displayMonthly.labels,
       datasets: [{
-        data: monthlyData.values,
-        backgroundColor: gradient,
-        borderColor: 'rgba(99,102,241,.9)',
+        data: displayMonthly.values,
+        backgroundColor: grad,
+        borderColor: 'rgba(201,162,39,.9)',
         borderWidth: 1.5,
         borderRadius: 6,
         borderSkipped: false,
-        hoverBackgroundColor: 'rgba(99,102,241,.7)',
       }]
     },
     options: {
+      ...chartDefaults,
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        ...chartDefaults.plugins,
         tooltip: {
-          backgroundColor: '#0c1228',
-          borderColor: 'rgba(99,102,241,.4)',
-          borderWidth: 1,
-          titleColor: '#8892b0',
-          bodyColor: '#e8eaf6',
-          padding: 12,
-          callbacks: {
-            label: ctx => ` ${ctx.raw} 件`
-          }
+          ...chartDefaults.plugins.tooltip,
+          callbacks: { label: c => ` ${c.raw} 件` + (hasLeadData ? '' : ' (Sample)') }
         }
       },
       scales: {
         x: {
-          ticks: { color: '#5a6490', font: { size: 11 } },
-          grid: { display: false },
-          border: { display: false }
+          ticks: { color: '#564e3c', font: { size: 11 } },
+          grid: { display: false }, border: { display: false }
         },
         y: {
-          ticks: { color: '#5a6490', stepSize: 1, font: { size: 11 } },
-          grid: { color: 'rgba(255,255,255,.04)', drawBorder: false },
-          border: { display: false },
-          beginAtZero: true
+          ticks: { color: '#564e3c', stepSize: 1, font: { size: 11 } },
+          grid: { color: 'rgba(201,162,39,.05)', drawBorder: false },
+          border: { display: false }, beginAtZero: true
         }
       }
     }
   });
 }
+
+/* ── Channel Chart ── */
+const chData = {{ channels | tojson }};
+const hasChData = chData.values && chData.values.some(v => v > 0);
+const displayCh = hasChData ? chData : {
+  labels: ['Instagram','LINE','紹介','Web','その他'],
+  values: [40, 25, 20, 10, 5]
+};
+
+const chCtx = document.getElementById('channelChart');
+if (chCtx) {
+  new Chart(chCtx, {
+    type: 'doughnut',
+    data: {
+      labels: displayCh.labels,
+      datasets: [{
+        data: displayCh.values,
+        backgroundColor: GOLD_PALETTE,
+        borderColor: GOLD_BORDER,
+        borderWidth: 1,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      ...chartDefaults,
+      responsive: true, maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: {
+          display: true,
+          position: 'right',
+          labels: {
+            color: '#9a8660', font: { size: 11 }, padding: 10,
+            boxWidth: 10, boxHeight: 10, borderRadius: 3,
+          }
+        },
+        tooltip: {
+          ...chartDefaults.plugins.tooltip,
+          callbacks: {
+            label: c => ` ${c.label}: ${c.raw}${hasChData ? '' : ' (Sample)'}`
+          }
+        }
+      }
+    }
+  });
+}
+
+/* ── Pipeline bar animation ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const bars = document.querySelectorAll('.pipeline-bar');
+  bars.forEach((bar, i) => {
+    const w = bar.style.width;
+    bar.style.width = '0';
+    setTimeout(() => { bar.style.width = w; }, 100 + i * 80);
+  });
+
+  /* KPI カウントアップ */
+  document.querySelectorAll('.kpi-value').forEach((el, idx) => {
+    if (el.classList.contains('mrr')) return;
+    const raw = parseInt(el.textContent.replace(/[¥,—]/g, '').trim(), 10);
+    if (isNaN(raw) || raw === 0) return;
+    el.textContent = '0';
+    setTimeout(() => {
+      const start = performance.now();
+      (function tick(now) {
+        const p    = Math.min((now - start) / 800, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(raw * ease);
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = raw;
+      })(start);
+    }, idx * 100);
+  });
+});
 </script>
 {% endblock %}

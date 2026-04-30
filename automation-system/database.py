@@ -879,13 +879,16 @@ def _new_lead_id() -> str:
 # ══════════════════════════════════════════
 
 def enqueue(data: dict) -> int:
-    """投稿をキューに追加。id を返す。"""
+    """投稿をキューに追加。id を返す。-1 は登録失敗（重複等）。"""
+    import time as _t
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     hashtags = data.get("hashtags")
     if isinstance(hashtags, list):
         hashtags = " ".join(hashtags)
-    with get_conn() as conn:
-        cur = conn.execute("""
+    filename = data.get("filename") or f"{datetime.now().strftime('%Y%m%d_%H%M%S%f')}.yaml"
+
+    def _insert(conn, fname):
+        return conn.execute("""
             INSERT OR IGNORE INTO queue_items
                 (brand,channel,media_type,caption,text,message,title,content,
                  image_url,video_url,hashtags,scheduled_at,posted,source,
@@ -899,9 +902,16 @@ def enqueue(data: dict) -> int:
             data.get("image_url"), data.get("video_url"),
             hashtags, data.get("scheduled_at"),
             data.get("source", "manual"), data.get("topic"),
-            data.get("filename"), now,
+            fname, now,
         ))
-    return cur.lastrowid
+
+    with get_conn() as conn:
+        cur = _insert(conn, filename)
+        if cur.rowcount == 0:
+            # UNIQUE衝突 → マイクロ秒サフィックスでリトライ
+            filename = filename.replace(".yaml", f"_{int(_t.time()*1000000)}.yaml")
+            cur = _insert(conn, filename)
+    return cur.lastrowid if cur.rowcount > 0 else -1
 
 
 def list_queue(brand: str = "", channel: str = "",
