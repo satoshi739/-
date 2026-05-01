@@ -189,7 +189,7 @@ def inject_globals():
 def load_brands() -> dict:
     if not BRANDS_CFG.exists():
         return {}
-    return yaml.safe_load(BRANDS_CFG.read_text(encoding="utf-8")).get("brands", {})
+    return (yaml.safe_load(BRANDS_CFG.read_text(encoding="utf-8")) or {}).get("brands", {})
 
 
 def load_os_config() -> dict:

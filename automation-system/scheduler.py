@@ -364,11 +364,11 @@ def check_scheduled_posts():
                             continue  # 認証情報未設定 — アラート送信済み
                         mt = data.get("media_type", "image")
                         if mt == "reel":
-                            poster.post_reel(video_url=data["video_url"], caption=data.get("caption",""), cover_url=data.get("cover_url",""))
+                            poster.post_reel(video_url=data.get("video_url",""), caption=data.get("caption",""), cover_url=data.get("cover_url",""))
                         elif mt == "carousel":
                             poster.post_carousel(slides=data.get("slides",[]), caption=data.get("caption",""))
                         else:
-                            poster.post_image(image_url=data["image_url"], caption=data.get("caption",""))
+                            poster.post_image(image_url=data.get("image_url",""), caption=data.get("caption",""))
                         _mark_posted(f)
                         logger.info(f"予約Instagram投稿完了: {f.name}")
 
@@ -508,13 +508,19 @@ def generate_weekly_calendar_job():
 
 def _jst_to_utc(jst_time: str) -> str:
     """HH:MM JST を HH:MM UTC に変換（Railway サーバーが UTC のため）"""
-    h, m = map(int, jst_time.split(":"))
+    parts = jst_time.split(":")
+    if len(parts) < 2:
+        return "00:00"
+    h, m = int(parts[0]), int(parts[1])
     h = (h - 9) % 24
     return f"{h:02d}:{m:02d}"
 
 def _jst_weekday_to_utc(day: str, jst_time: str):
     """JST の曜日+時刻を UTC の曜日+時刻に変換（UTCは9時間前なので曜日がずれる場合あり）"""
-    h, m = map(int, jst_time.split(":"))
+    parts = jst_time.split(":")
+    if len(parts) < 2:
+        return "00:00"
+    h, m = int(parts[0]), int(parts[1])
     utc_h = h - 9
     if utc_h < 0:
         utc_h += 24

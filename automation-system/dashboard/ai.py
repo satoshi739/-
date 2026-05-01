@@ -29,7 +29,8 @@ def _extract_json(raw: str) -> dict | None:
     """Claude応答からJSONを抽出する（複数戦略）。失敗時はNoneを返す。"""
     # 戦略1: コードフェンス内のJSONを取得
     if "```" in raw:
-        block = raw.split("```")[1]
+        parts = raw.split("```")
+        block = parts[1] if len(parts) >= 2 else ""
         if block.startswith("json"):
             block = block[4:]
         try:
@@ -484,7 +485,8 @@ JSONのみ返す。
     raw = resp.content[0].text.strip()
     try:
         if "```" in raw:
-            raw = raw.split("```")[1]
+            _parts = raw.split("```")
+            raw = _parts[1] if len(_parts) >= 2 else raw
             if raw.startswith("json"):
                 raw = raw[4:]
         return json.loads(raw.strip())
@@ -524,7 +526,8 @@ def summarize_inquiry(subject: str, body: str) -> dict:
     raw = resp.content[0].text.strip()
     try:
         if "```" in raw:
-            raw = raw.split("```")[1]
+            _parts = raw.split("```")
+            raw = _parts[1] if len(_parts) >= 2 else raw
             if raw.startswith("json"):
                 raw = raw[4:]
         return json.loads(raw.strip())

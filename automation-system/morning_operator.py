@@ -172,12 +172,12 @@ def post_instagram_queue() -> int:
                 try:
                     media_type = data.get("media_type", "image")
                     if media_type == "reel":
-                        poster.post_reel(video_url=data["video_url"],
-                                         caption=data["caption"],
+                        poster.post_reel(video_url=data.get("video_url",""),
+                                         caption=data.get("caption",""),
                                          cover_url=data.get("cover_url",""))
                     else:
-                        poster.post_image(image_url=data["image_url"],
-                                          caption=data["caption"])
+                        poster.post_image(image_url=data.get("image_url",""),
+                                          caption=data.get("caption",""))
                     data["posted"] = True
                     f.write_text(
                         yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False),
@@ -262,9 +262,9 @@ def post_line_queue() -> int:
                         pass
                 try:
                     if data.get("image_url"):
-                        messenger.broadcast_with_image(data["message"], data["image_url"])
+                        messenger.broadcast_with_image(data.get("message",""), data["image_url"])
                     else:
-                        messenger.broadcast(data["message"])
+                        messenger.broadcast(data.get("message",""))
                     data["posted"] = True
                     f.write_text(
                         yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False),

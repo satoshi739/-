@@ -162,6 +162,8 @@ def webhook():
         abort(400)
 
     data = request.get_json()
+    if data is None:
+        abort(400)
     scenarios = _load_scenarios()
 
     for event in data.get("events", []):
@@ -174,8 +176,8 @@ def webhook():
             _handle_follow(user_id, scenarios)
 
         # --- メッセージ受信 ---
-        elif event_type == "message" and event["message"]["type"] == "text":
-            text = event["message"]["text"]
+        elif event_type == "message" and event.get("message", {}).get("type") == "text":
+            text = event["message"].get("text", "")
             reply_token = event.get("replyToken", "")
             _handle_message(user_id, text, reply_token, scenarios)
 
@@ -195,6 +197,8 @@ def webhook_bpg():
         abort(400)
 
     data = request.get_json()
+    if data is None:
+        abort(400)
     scenarios = _load_scenarios()
 
     for event in data.get("events", []):
