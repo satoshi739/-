@@ -6,40 +6,43 @@
   <title>ログイン — UPJ Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js"></script>
   <style>
     :root {
-      --bg:      #0a0a0f;
-      --s1:      #111118;
-      --s2:      #18181f;
-      --border:  #2a2a35;
-      --accent:  #6366f1;
-      --accent2: #818cf8;
-      --text:    #e2e8f0;
-      --muted:   #64748b;
+      --bg:      #050505;
+      --s1:      #090909;
+      --s2:      #101010;
+      --border:  rgba(201,162,39,.11);
+      --border2: rgba(201,162,39,.26);
+      --accent:  #c9a227;
+      --accent2: #e8c84a;
+      --text:    #f0e8d8;
+      --muted:   #564e3c;
+      --muted2:  #9a8660;
       --radius:  12px;
-      --danger:  #f87171;
+      --danger:  #ef4444;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', sans-serif;
+      font-family: 'Inter', -apple-system, 'Hiragino Sans', sans-serif;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       background-image:
-        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(99,102,241,.15) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 30% at 80% 80%, rgba(129,140,248,.08) 0%, transparent 50%);
+        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(201,162,39,.10) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 80% 80%, rgba(201,162,39,.05) 0%, transparent 50%);
     }
     .card {
       background: var(--s1);
-      border: 1px solid var(--border);
+      border: 1px solid var(--border2);
       border-radius: 20px;
       padding: 48px 40px;
       width: 100%;
       max-width: 400px;
-      box-shadow: 0 24px 80px rgba(0,0,0,.5);
+      box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(201,162,39,.06);
     }
     .logo {
       text-align: center;
@@ -48,32 +51,34 @@
     .logo-icon {
       width: 56px;
       height: 56px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      background: linear-gradient(135deg, #c9a227, #e8c84a);
       border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 28px;
       margin: 0 auto 16px;
-      box-shadow: 0 8px 24px rgba(99,102,241,.4);
+      box-shadow: 0 8px 24px rgba(201,162,39,.35);
+      color: #000;
     }
     .logo h1 {
       font-size: 20px;
       font-weight: 700;
       letter-spacing: -0.3px;
+      color: var(--text);
     }
     .logo p {
       font-size: 13px;
-      color: var(--muted);
+      color: var(--muted2);
       margin-top: 4px;
     }
     label {
       display: block;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted2);
       margin-bottom: 8px;
-      letter-spacing: 0.5px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
     }
     input[type="text"],
@@ -93,18 +98,19 @@
     input[type="text"]:focus,
     input[type="password"]:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(99,102,241,.2);
+      box-shadow: 0 0 0 3px rgba(201,162,39,.15);
     }
+    input::placeholder { color: var(--muted); }
     button[type="submit"] {
       width: 100%;
       padding: 13px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      background: linear-gradient(135deg, #c9a227, #e8c84a);
       border: none;
       border-radius: 10px;
-      color: #fff;
+      color: #000;
       font-family: inherit;
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       transition: opacity .2s, transform .1s;
       letter-spacing: 0.2px;
@@ -112,8 +118,8 @@
     button[type="submit"]:hover { opacity:.9; transform:translateY(-1px); }
     button[type="submit"]:active { transform:translateY(0); }
     .error {
-      background: rgba(248,113,113,.1);
-      border: 1px solid rgba(248,113,113,.3);
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
       color: var(--danger);
       border-radius: 8px;
       padding: 10px 14px;
@@ -155,6 +161,7 @@
   </div>
 
   <script>
+    lucide.createIcons();
     document.getElementById('password').addEventListener('keydown', e => {
       if (e.key === 'Enter') e.target.form.submit();
     });

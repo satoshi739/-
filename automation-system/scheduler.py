@@ -215,7 +215,8 @@ def fetch_instagram_insights():
 
     try:
         data = yaml.safe_load(PERF_LOG_PATH.read_text(encoding="utf-8")) or []
-    except Exception:
+    except Exception as exc:
+        logger.error("performance_log.yaml 読み込み失敗: %s", exc)
         return
 
     poster = InstagramPoster()
@@ -300,7 +301,8 @@ def check_scheduled_posts():
     brands_cfg = Path(__file__).parent / "config" / "brands.yaml"
     try:
         brands = yaml.safe_load(brands_cfg.read_text(encoding="utf-8")).get("brands", {})
-    except Exception:
+    except Exception as exc:
+        logger.error("brands.yaml 読み込み失敗: %s", exc)
         return
 
     # 各プラットフォームの初期化は使用時に行う（未使用プラットフォームでのキー不在エラーを防ぐ）

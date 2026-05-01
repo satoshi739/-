@@ -59,6 +59,8 @@ _validate_auth_config()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
+app.config["SESSION_COOKIE_SAMESITE"] = "Strict"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
 log = logging.getLogger(__name__)
 
 ROOT         = Path(__file__).parent.parent.parent
@@ -85,9 +87,15 @@ PLATFORM_ICONS = {
     "tiktok":"TK","line":"LINE","wordpress":"WP",
 }
 
-# ── 認証 ──────────────────────────────────────────────────
+# ── 認証 + CSRF保護 ──────────────────────────────────────────────────
 
 _EXEMPT_PATHS = ("/login", "/static", "/favicon.ico", "/health", "/webhook")
+
+
+def _get_csrf_token() -> str:
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+    return session["csrf_token"]
 
 
 @app.before_request
@@ -96,6 +104,20 @@ def require_login():
         return
     if not session.get("logged_in"):
         return redirect(url_for("login", next=request.path))
+    # CSRF: POSTリクエストのOrigin/Refererを検証
+    if request.method == "POST":
+        origin  = request.headers.get("Origin", "")
+        referer = request.headers.get("Referer", "")
+        host    = request.host_url.rstrip("/")
+        if origin and not origin.startswith(host):
+            return jsonify({"error": "CSRF validation failed"}), 403
+        if not origin and referer and not referer.startswith(host):
+            return jsonify({"error": "CSRF validation failed"}), 403
+
+
+@app.context_processor
+def inject_csrf():
+    return {"csrf_token": _get_csrf_token()}
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -738,8 +760,8 @@ def analytics():
     for bid, bt in brand_traffic.items():
         if bt.get("configured"):
             ga_brand_series[bid] = {
-                "name":    bt["name"],
-                "color":   bt["color"],
+                "name":    bt.get("name", bid),
+                "color":   bt.get("color", "#c9a227"),
                 "series":  bt.get("series", {"dates": [], "sessions": []}),
             }
 
@@ -1133,7 +1155,7 @@ def api_ceo_status():
 @app.route("/api/leads/stage", methods=["POST"])
 def api_lead_stage():
     """カンバンのドラッグ&ドロップ後のステージ更新"""
-    d        = request.get_json()
+    d        = request.get_json() or {}
     lead_id  = d.get("lead_id","")
     new_stage= d.get("stage","")
     lead = db.get_lead(lead_id)
@@ -1158,7 +1180,7 @@ def api_generate_post():
     if not ai_available():
         return jsonify({"error":"ANTHROPIC_API_KEY未設定"}), 400
     from dashboard.ai import generate_instagram_post
-    d = request.get_json()
+    d = request.get_json() or {}
     try:
         result = generate_instagram_post(
             topic =d.get("topic",""),
@@ -1177,7 +1199,7 @@ def api_generate_line():
     if not ai_available():
         return jsonify({"error":"ANTHROPIC_API_KEY未設定"}), 400
     from dashboard.ai import generate_line_message
-    d = request.get_json()
+    d = request.get_json() or {}
     try:
         msg = generate_line_message(
             topic  =d.get("topic",""),
@@ -1232,9 +1254,12 @@ JSONのみ返す。"""
             messages=[{"role":"user","content":prompt}]
         )
         import json as _json
+        if not resp.content:
+            return jsonify({"error": "AIレスポンスが空でした"}), 500
         raw = resp.content[0].text.strip()
-        if "```" in raw:
-            raw = raw.split("```")[1].lstrip("json").strip()
+        parts = raw.split("```")
+        if len(parts) >= 2:
+            raw = parts[1].lstrip("json").strip()
         data = _json.loads(raw)
         return jsonify(data)
     except Exception as e:
@@ -1247,7 +1272,7 @@ def api_generate_all(brand_id):
     if not ai_available():
         return jsonify({"error": "ANTHROPIC_API_KEY未設定"}), 400
     from dashboard.ai import generate_all_platforms
-    d = request.get_json()
+    d = request.get_json() or {}
     topic = d.get("topic", "")
     extra = d.get("extra", "")
     if not topic:
@@ -1273,7 +1298,7 @@ def api_generate_reel(brand_id):
     brand_color = brand.get("color", "#5b8af5")
     brand_name  = brand.get("name_short", brand_id)
 
-    d     = request.get_json()
+    d     = request.get_json() or {}
     topic = d.get("topic", "")
     reel_data = d.get("reel")  # AI生成済みのreel dictがあれば使う
 
@@ -1317,7 +1342,7 @@ def api_save_all_to_queue(brand_id):
     if not brand:
         return jsonify({"error": "Brand not found"}), 404
 
-    d        = request.get_json()
+    d        = request.get_json() or {}
     content  = d.get("content", {})
     ts       = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     saved    = []
@@ -2377,6 +2402,8 @@ def webhook():
     if not messenger.verify_signature(body, signature):
         abort(400)
     data = request.get_json()
+    if data is None:
+        abort(400)
     scenarios = _yaml.safe_load(scenarios_path.read_text(encoding="utf-8")) if scenarios_path.exists() else {}
     for event in data.get("events", []):
         event_type = event.get("type")
