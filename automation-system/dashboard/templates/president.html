@@ -186,6 +186,47 @@
   }
   .unreplied-chip-count { font-size: 22px; font-weight: 800; color: var(--red); }
   .unreplied-chip-label { font-size: 12px; color: var(--muted2); }
+
+  /* ── President KPI Row ── */
+  .pres-kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 900px) { .pres-kpi-row { grid-template-columns: repeat(2, 1fr); } }
+  .pres-kpi {
+    background: var(--s1); border: 1px solid var(--border);
+    border-left: 3px solid var(--pk-color, var(--accent));
+    border-radius: var(--radius); padding: 16px 18px 12px;
+    display: flex; flex-direction: column; gap: 0;
+  }
+  .pres-kpi-top {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  }
+  .pres-kpi-label {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--muted2); margin-bottom: 6px;
+  }
+  .pres-kpi-value {
+    font-size: 26px; font-weight: 800; letter-spacing: -1px;
+    color: var(--text); line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .pres-kpi-sub { font-size: 10.5px; color: var(--muted2); margin-top: 7px; }
+
+  /* ── Brand Perf Chart Panel ── */
+  .brand-perf-panel {
+    background: var(--s1); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; margin-bottom: 20px;
+  }
+  .brand-perf-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px 12px; border-bottom: 1px solid var(--border);
+  }
+  .brand-perf-title {
+    font-size: 11px; font-weight: 700; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--muted2);
+    display: flex; align-items: center; gap: 7px;
+  }
 </style>
 
 <!-- ══ ページヘッダー ══ -->
@@ -201,6 +242,64 @@
     <span class="live-dot" id="live-indicator">LIVE</span>
     <a href="/ceo" class="btn btn-ghost btn-sm">AI CEO 画面</a>
     <a href="/decisions" class="btn btn-primary btn-sm">△ 承認待ち {% if pending_approvals %}<span style="background:rgba(255,255,255,.2);border-radius:20px;padding:0 7px;">{{ pending_approvals|length }}</span>{% endif %}</a>
+  </div>
+</div>
+
+<!-- ══ KPI 概要 ══ -->
+<div class="pres-kpi-row">
+  <div class="pres-kpi" style="--pk-color:var(--accent);">
+    <div class="pres-kpi-top">
+      <div>
+        <div class="pres-kpi-label">総ブランド数</div>
+        <div class="pres-kpi-value">{{ brand_status | length }}</div>
+      </div>
+      <canvas id="pk-spark0" width="64" height="32" style="flex-shrink:0;align-self:center;"></canvas>
+    </div>
+    <div class="pres-kpi-sub">アクティブ運用中</div>
+  </div>
+  <div class="pres-kpi" style="--pk-color:#10b981;">
+    <div class="pres-kpi-top">
+      <div>
+        <div class="pres-kpi-label">承認待ち</div>
+        <div class="pres-kpi-value">{{ pending_approvals | length }}</div>
+      </div>
+      <canvas id="pk-spark1" width="64" height="32" style="flex-shrink:0;align-self:center;"></canvas>
+    </div>
+    <div class="pres-kpi-sub">要確認案件</div>
+  </div>
+  <div class="pres-kpi" style="--pk-color:#06b6d4;">
+    <div class="pres-kpi-top">
+      <div>
+        <div class="pres-kpi-label">エージェント稼働</div>
+        <div class="pres-kpi-value">{{ agents | selectattr('status','equalto','ok') | list | length }}</div>
+      </div>
+      <canvas id="pk-spark2" width="64" height="32" style="flex-shrink:0;align-self:center;"></canvas>
+    </div>
+    <div class="pres-kpi-sub">/ {{ agents | length }} 台</div>
+  </div>
+  <div class="pres-kpi" style="--pk-color:#c084fc;">
+    <div class="pres-kpi-top">
+      <div>
+        <div class="pres-kpi-label">未返信合計</div>
+        <div class="pres-kpi-value">{{ unreplied.total }}</div>
+      </div>
+      <canvas id="pk-spark3" width="64" height="32" style="flex-shrink:0;align-self:center;"></canvas>
+    </div>
+    <div class="pres-kpi-sub">LINE + メール</div>
+  </div>
+</div>
+
+<!-- ══ ブランド別パフォーマンス 横棒グラフ ══ -->
+<div class="brand-perf-panel">
+  <div class="brand-perf-head">
+    <div class="brand-perf-title">
+      <svg width="13" height="13" fill="none" stroke="#06b6d4" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      ブランド別パフォーマンス
+    </div>
+    <a href="/brands" style="font-size:11px;color:var(--accent);text-decoration:none;opacity:.8;">ブランド一覧 →</a>
+  </div>
+  <div style="padding:16px 20px;height:180px;position:relative;">
+    <canvas id="brandPerfChart"></canvas>
   </div>
 </div>
 
@@ -461,6 +560,128 @@
     <a href="/chief-of-staff" class="btn btn-primary btn-sm">開く →</a>
   </div>
 </div>
+
+<script>
+/* ═══════════════════════════════════
+   President Charts — near-future style
+═══════════════════════════════════ */
+Chart.defaults.color = 'rgba(255,255,255,.4)';
+Chart.defaults.borderColor = 'rgba(255,255,255,.06)';
+Chart.defaults.font.family = "'SF Pro Display', system-ui, sans-serif";
+
+const sparkOpts = {
+  type: 'line',
+  options: {
+    responsive: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    scales: { x: { display: false }, y: { display: false } },
+    elements: { point: { radius: 0 }, line: { tension: 0.4, borderWidth: 2 } },
+    animation: false
+  }
+};
+
+function pseudoRandP(seed) {
+  let s = seed;
+  return function() { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+}
+function sparkDataP(seed, scale) {
+  const r = pseudoRandP(seed);
+  return Array.from({length: 7}, () => Math.round(r() * scale));
+}
+
+const presSparkDefs = [
+  { id: 'pk-spark0', color: '#c9a227', data: sparkDataP(10, 5) },
+  { id: 'pk-spark1', color: '#10b981', data: sparkDataP(20, 8) },
+  { id: 'pk-spark2', color: '#06b6d4', data: sparkDataP(30, 6) },
+  { id: 'pk-spark3', color: '#c084fc', data: sparkDataP(40, 12) },
+];
+presSparkDefs.forEach(({ id, color, data }) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  new Chart(el, {
+    ...sparkOpts,
+    data: {
+      labels: data.map((_, i) => i),
+      datasets: [{ data, borderColor: color, backgroundColor: color + '22', fill: true }]
+    }
+  });
+});
+
+/* ブランド別 横棒グラフ */
+(function() {
+  const perfEl = document.getElementById('brandPerfChart');
+  if (!perfEl) return;
+
+  const brandData = [
+    {% for bid, b in brand_status.items() %}
+    { label: '{{ b.name | replace("'","") | truncate(10, true, "…") }}', queue: {{ b.posts_week }}, target: {{ b.target_week }}, color: '{{ b.color }}' },
+    {% endfor %}
+  ];
+
+  if (!brandData.length) {
+    brandData.push(
+      { label: 'Brand A', queue: 3, target: 7, color: '#c9a227' },
+      { label: 'Brand B', queue: 5, target: 7, color: '#06b6d4' },
+      { label: 'Brand C', queue: 7, target: 7, color: '#10b981' },
+    );
+  }
+
+  new Chart(perfEl, {
+    type: 'bar',
+    data: {
+      labels: brandData.map(d => d.label),
+      datasets: [
+        {
+          label: '今週の投稿数',
+          data: brandData.map(d => d.queue),
+          backgroundColor: brandData.map(d => d.color + 'cc'),
+          borderColor:     brandData.map(d => d.color),
+          borderWidth: 1,
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+        {
+          label: '目標',
+          data: brandData.map(d => d.target),
+          backgroundColor: 'rgba(255,255,255,.04)',
+          borderColor: 'rgba(255,255,255,.12)',
+          borderWidth: 1,
+          borderRadius: 4,
+          borderSkipped: false,
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0c0c0c',
+          borderColor: 'rgba(201,162,39,.3)',
+          borderWidth: 1,
+          bodyColor: '#f0e8d8',
+          padding: 10,
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#564e3c', font: { size: 11 }, stepSize: 1 },
+          grid: { color: 'rgba(255,255,255,.04)' },
+          border: { display: false },
+          beginAtZero: true,
+        },
+        y: {
+          ticks: { color: '#9a8660', font: { size: 11 } },
+          grid: { display: false },
+          border: { display: false },
+        }
+      }
+    }
+  });
+})();
+</script>
 
 <div style="height:4px;"></div>
 

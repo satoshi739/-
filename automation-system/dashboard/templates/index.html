@@ -41,31 +41,36 @@
 .kpi-card {
   background: var(--s1);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--kpi-color, var(--accent));
   border-radius: var(--radius);
-  padding: 20px 22px 18px;
+  padding: 18px 20px 14px;
   position: relative; overflow: hidden;
-  transition: transform .18s, box-shadow .18s, border-color .18s;
+  transition: border-color .18s;
+  display: flex; flex-direction: column; gap: 0;
 }
 .kpi-card:hover {
-  border-color: var(--border2);
+  border-color: var(--kpi-color, var(--accent));
+  border-left-color: var(--kpi-color, var(--accent));
 }
-.kpi-card::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: var(--kpi-color, var(--accent));
-  opacity: .7;
+.kpi-card-top {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
 }
+.kpi-card-left { flex: 1; min-width: 0; }
 .kpi-label {
   font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
-  text-transform: uppercase; color: var(--muted2); margin-bottom: 10px;
+  text-transform: uppercase; color: var(--muted2); margin-bottom: 8px;
 }
 .kpi-value {
-  font-size: 32px; font-weight: 800; letter-spacing: -1px;
+  font-size: 30px; font-weight: 800; letter-spacing: -1px;
   color: var(--text); line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 .kpi-sub {
   font-size: 11px; color: var(--muted2); margin-top: 8px;
   display: flex; align-items: center; gap: 5px;
+}
+.kpi-spark {
+  flex-shrink: 0; align-self: center;
 }
 .kpi-icon {
   position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
@@ -302,28 +307,48 @@
 <!-- ══ KPI CARDS ══ -->
 <div class="kpi-row">
   <div class="kpi-card" style="--kpi-color:var(--accent);">
-    <div class="kpi-label">アクティブリード</div>
-    <div class="kpi-value">{{ stats.leads_active }}</div>
+    <div class="kpi-card-top">
+      <div class="kpi-card-left">
+        <div class="kpi-label">アクティブリード</div>
+        <div class="kpi-value">{{ stats.leads_active }}</div>
+      </div>
+      <div class="kpi-spark"><canvas id="spark0" width="72" height="36"></canvas></div>
+    </div>
     <div class="kpi-sub">
       <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
       <span>今月 +{{ stats.leads_new_month }} 件</span>
     </div>
   </div>
   <div class="kpi-card" style="--kpi-color:var(--green2);">
-    <div class="kpi-label">契約済み</div>
-    <div class="kpi-value">{{ stats.leads_contracted }}</div>
+    <div class="kpi-card-top">
+      <div class="kpi-card-left">
+        <div class="kpi-label">契約済み</div>
+        <div class="kpi-value">{{ stats.leads_contracted }}</div>
+      </div>
+      <div class="kpi-spark"><canvas id="spark1" width="72" height="36"></canvas></div>
+    </div>
     <div class="kpi-sub">CVR
       <strong style="color:var(--green2);">{{ stats.cvr }}%</strong>
     </div>
   </div>
   <div class="kpi-card" style="--kpi-color:#c084fc;">
-    <div class="kpi-label">投稿キュー (IG)</div>
-    <div class="kpi-value">{{ stats.ig_pending }}</div>
+    <div class="kpi-card-top">
+      <div class="kpi-card-left">
+        <div class="kpi-label">投稿キュー (IG)</div>
+        <div class="kpi-value">{{ stats.ig_pending }}</div>
+      </div>
+      <div class="kpi-spark"><canvas id="spark2" width="72" height="36"></canvas></div>
+    </div>
     <div class="kpi-sub">LINE: {{ stats.line_pending }} 件待機</div>
   </div>
   <div class="kpi-card" style="--kpi-color:{% if stats.decisions_open > 0 %}var(--red){% else %}var(--green2){% endif %};">
-    <div class="kpi-label">未解決アクション</div>
-    <div class="kpi-value">{{ stats.decisions_open }}</div>
+    <div class="kpi-card-top">
+      <div class="kpi-card-left">
+        <div class="kpi-label">未解決アクション</div>
+        <div class="kpi-value">{{ stats.decisions_open }}</div>
+      </div>
+      <div class="kpi-spark"><canvas id="spark3" width="72" height="36"></canvas></div>
+    </div>
     <div class="kpi-sub">
       {% if stats.decisions_open == 0 %}
       <svg width="11" height="11" fill="none" stroke="var(--green2)" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -334,8 +359,13 @@
     </div>
   </div>
   <div class="kpi-card" style="--kpi-color:var(--yellow2);">
-    <div class="kpi-label">MRR</div>
-    <div class="kpi-value mrr">{% if stats.mrr > 0 %}¥{{ '{:,}'.format(stats.mrr) }}{% else %}—{% endif %}</div>
+    <div class="kpi-card-top">
+      <div class="kpi-card-left">
+        <div class="kpi-label">MRR</div>
+        <div class="kpi-value mrr">{% if stats.mrr > 0 %}¥{{ '{:,}'.format(stats.mrr) }}{% else %}—{% endif %}</div>
+      </div>
+      <div class="kpi-spark"><canvas id="spark4" width="72" height="36"></canvas></div>
+    </div>
     <div class="kpi-sub">月次定期収益</div>
   </div>
 </div>
@@ -491,8 +521,38 @@
       </div>
       <a href="/logs" class="cc-panel-link">すべて →</a>
     </div>
-    <div class="cc-panel-body" style="padding-top:8px;">
+    <!-- 今日のアクティビティ ドーナツ -->
+    <div style="display:flex;align-items:center;gap:16px;padding:12px 20px 0;">
+      <canvas id="activityDonut" width="72" height="72" style="flex-shrink:0;"></canvas>
+      <div style="flex:1;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;">今日の状況</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;align-items:center;gap:7px;font-size:11px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--green2);flex-shrink:0;"></span>
+            <span style="color:var(--muted2);">投稿済み</span>
+            <span style="font-weight:700;color:var(--text);margin-left:auto;font-variant-numeric:tabular-nums;" id="donut-ok">—</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;font-size:11px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;"></span>
+            <span style="color:var(--muted2);">待機中</span>
+            <span style="font-weight:700;color:var(--text);margin-left:auto;font-variant-numeric:tabular-nums;" id="donut-wait">—</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;font-size:11px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;"></span>
+            <span style="color:var(--muted2);">エラー</span>
+            <span style="font-weight:700;color:var(--text);margin-left:auto;font-variant-numeric:tabular-nums;" id="donut-err">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cc-panel-body" style="padding-top:10px;">
       {% if activities %}
+        {% set ok_count  = activities | selectattr('status','equalto','ok')    | list | length %}
+        {% set err_count = activities | selectattr('status','equalto','error')  | list | length %}
+        {% set wait_count = (activities | length) - ok_count - err_count %}
+        <script>
+          window._activityCounts = { ok: {{ ok_count }}, wait: {{ [wait_count,0]|max }}, err: {{ err_count }} };
+        </script>
         {% for a in activities[:8] %}
         <div class="activity-item">
           <div class="activity-dot {% if a.status == 'ok' %}ok{% elif a.status == 'warn' %}warn{% elif a.status == 'error' %}err{% endif %}"></div>
@@ -507,6 +567,7 @@
         </div>
         {% endfor %}
       {% else %}
+        <script>window._activityCounts = { ok: 0, wait: 0, err: 0 };</script>
         <div class="empty-state">
           <div class="empty-icon"><svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
           <div class="empty-title">アクティビティなし</div>
@@ -574,8 +635,94 @@
 
 <script>
 /* ═══════════════════════════════════
-   Charts — Black × Gold palette
+   Charts — Black × Gold + Cyan palette
 ═══════════════════════════════════ */
+
+/* Chart.js グローバルデフォルト */
+Chart.defaults.color = 'rgba(255,255,255,.4)';
+Chart.defaults.borderColor = 'rgba(255,255,255,.06)';
+Chart.defaults.font.family = "'SF Pro Display', system-ui, sans-serif";
+
+/* スパークライン共通オプション */
+const sparkOpts = {
+  type: 'line',
+  options: {
+    responsive: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    scales: { x: { display: false }, y: { display: false } },
+    elements: { point: { radius: 0 }, line: { tension: 0.4, borderWidth: 2 } },
+    animation: false
+  }
+};
+
+/* 7日分ダミーデータ生成（シード付き乱数で毎回同じ形状） */
+function pseudoRand(seed) {
+  let s = seed;
+  return function() { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+}
+function sparkData(seed, scale) {
+  const r = pseudoRand(seed);
+  return Array.from({length: 7}, () => Math.round(r() * scale));
+}
+
+const SPARK_DEFS = [
+  { id: 'spark0', color: '#c9a227', data: sparkData(11, 20) },
+  { id: 'spark1', color: '#10b981', data: sparkData(22, 10) },
+  { id: 'spark2', color: '#c084fc', data: sparkData(33, 15) },
+  { id: 'spark3', color: '#ef4444', data: sparkData(44, 5)  },
+  { id: 'spark4', color: '#fbbf24', data: sparkData(55, 30) },
+];
+
+SPARK_DEFS.forEach(({ id, color, data }) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  new Chart(el, {
+    ...sparkOpts,
+    data: {
+      labels: data.map((_, i) => i),
+      datasets: [{
+        data,
+        borderColor: color,
+        backgroundColor: color + '22',
+        fill: true,
+      }]
+    }
+  });
+});
+
+/* アクティビティ ドーナツ */
+(function() {
+  const counts = window._activityCounts || { ok: 0, wait: 0, err: 0 };
+  const total = counts.ok + counts.wait + counts.err;
+  document.getElementById('donut-ok').textContent   = counts.ok;
+  document.getElementById('donut-wait').textContent = counts.wait;
+  document.getElementById('donut-err').textContent  = counts.err;
+  const donutEl = document.getElementById('activityDonut');
+  if (!donutEl) return;
+  const donutData = total > 0
+    ? [counts.ok, counts.wait, counts.err]
+    : [1, 1, 1];
+  new Chart(donutEl, {
+    type: 'doughnut',
+    data: {
+      labels: ['投稿済み', '待機中', 'エラー'],
+      datasets: [{
+        data: donutData,
+        backgroundColor: ['rgba(16,185,129,.8)', 'rgba(201,162,39,.8)', 'rgba(239,68,68,.8)'],
+        borderColor: ['rgba(16,185,129,1)', 'rgba(201,162,39,1)', 'rgba(239,68,68,1)'],
+        borderWidth: 1,
+        hoverOffset: 3,
+      }]
+    },
+    options: {
+      responsive: false,
+      cutout: '62%',
+      plugins: { legend: { display: false }, tooltip: { enabled: total > 0 } },
+      animation: false,
+    }
+  });
+})();
+
 const GOLD_PALETTE = [
   'rgba(201,162,39,.85)',
   'rgba(232,200,74,.75)',
