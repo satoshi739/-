@@ -145,7 +145,7 @@
       </div>
     </div>
 
-    <div class="agent-desc">{{ ag.description or '' }}</div>
+    <div class="agent-desc">{{ (ag.description or '') | striptags }}</div>
 
     <div class="agent-footer">
       <span class="agent-brand-dot" style="background:{{ ag.brand_color }};"></span>
@@ -166,7 +166,7 @@
     {% endif %}
 
     {% if ag.last_result %}
-    <div class="agent-last-result">{{ ag.last_result }}</div>
+    <div class="agent-last-result">{{ ag.last_result | striptags | truncate(120) }}</div>
     {% endif %}
   </div>
   {% endfor %}

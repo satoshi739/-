@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}スケジューラー — Brand OS{% endblock %}
+{% block content %}
+
+<style>
+  .sched-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .sched-job {
+    background: var(--s1);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .sched-job-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: var(--s2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 15px; color: var(--accent);
+  }
+  .sched-job-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .sched-job-meta { font-size: 10.5px; color: var(--muted2); }
+  .sched-job-time { font-size: 11px; color: var(--accent); font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+  .log-wrap {
+    background: var(--s1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .log-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .log-body {
+    padding: 12px 16px;
+    max-height: 380px;
+    overflow-y: auto;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--muted2);
+  }
+  .log-line { white-space: pre-wrap; word-break: break-all; }
+  .log-line.is-error  { color: var(--red); }
+  .log-line.is-warn   { color: var(--yellow2); }
+  .log-line.is-info   { color: var(--muted2); }
+  .log-line.is-ok     { color: var(--green2); }
+
+  .queue-bar {
+    display: flex; align-items: center; gap: 0;
+    background: var(--s1); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; margin-bottom: 20px;
+  }
+  .queue-bar-item {
+    flex: 1; padding: 12px 16px; text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .queue-bar-item:last-child { border-right: none; }
+  .queue-bar-label { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 3px; }
+  .queue-bar-val   { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+</style>
+
+<div class="page-header">
+  <div>
+    <div class="page-title"><span style="display:inline-flex;align-items:center;"><i data-lucide="clock"></i></span> スケジューラー</div>
+    <div class="page-sub">自動実行ジョブの管理・ログ確認</div>
+  </div>
+  <div class="header-actions">
+    <a href="/logs" class="btn btn-ghost btn-sm">全ログ</a>
+    <a href="/agents" class="btn btn-ghost btn-sm">Agents</a>
+  </div>
+</div>
+
+<!-- ステータスバー -->
+<div style="background:var(--s1); border:1px solid var(--border); border-left:3px solid {% if hb_ok %}var(--green2){% else %}var(--red){% endif %}; border-radius:10px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; gap:14px;">
+  <div style="width:10px; height:10px; border-radius:50%; background:{% if hb_ok %}var(--green2){% else %}var(--red){% endif %}; flex-shrink:0;"></div>
+  <div style="flex:1;">
+    <div style="font-size:13px; font-weight:700;">スケジューラー: {% if hb_ok %}稼働中{% else %}停止 / 未検出{% endif %}</div>
+    <div style="font-size:11px; color:var(--muted); margin-top:2px;">
+      {% if hb_age is not none %}最終heartbeat: {{ hb_age }}秒前{% else %}heartbeatファイルなし（起動直後または停止中）{% endif %}
+    </div>
+  </div>
+  <div style="font-size:11px; color:var(--muted);">毎分更新</div>
+</div>
+
+<!-- コンテンツキュー -->
+<div class="queue-bar">
+  <div class="queue-bar-item">
+    <div class="queue-bar-label">キュー総数</div>
+    <div class="queue-bar-val" style="color:var(--text);">{{ queue_total }}</div>
+  </div>
+  <div class="queue-bar-item">
+    <div class="queue-bar-label">投稿済み</div>
+    <div class="queue-bar-val" style="color:var(--green2);">{{ queue_posted }}</div>
+  </div>
+  <div class="queue-bar-item">
+    <div class="queue-bar-label">未投稿（待機）</div>
+    <div class="queue-bar-val" style="color:var(--accent);">{{ queue_pending }}</div>
+  </div>
+  <div class="queue-bar-item">
+    <div class="queue-bar-label">消化率</div>
+    <div class="queue-bar-val" style="color:var(--accent2);">
+      {% if queue_total > 0 %}{{ ((queue_posted / queue_total) * 100) | int }}%{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ジョブ一覧 -->
+<div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:12px; letter-spacing:-.2px;">登録ジョブ（JST）</div>
+<div class="sched-grid">
+  {% for job in jobs %}
+  <div class="sched-job">
+    <div class="sched-job-icon">
+      <i data-lucide="{{ job.icon }}"></i>
+    </div>
+    <div style="flex:1; min-width:0;">
+      <div class="sched-job-name">{{ job.name }}</div>
+      <div class="sched-job-meta">{{ job.freq }}</div>
+      <div class="sched-job-time">{{ job.time }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ブログ自動投稿ステータス -->
+<div style="background:var(--s1); border:1px solid var(--border); border-left:3px solid var(--green2); border-radius:10px; padding:14px 18px; margin-bottom:24px; display:flex; align-items:center; gap:14px;">
+  <i data-lucide="rss" style="color:var(--green2); flex-shrink:0;"></i>
+  <div style="flex:1;">
+    <div style="font-size:13px; font-weight:700;">ブログ自動投稿 設定済み</div>
+    <div style="font-size:11px; color:var(--muted); margin-top:3px;">
+      08:30 / 12:30 / 18:00 JST — satoshi-blog / dsc-marketing / cashflowsupport / bangkok-peach（各3記事/日）
+    </div>
+  </div>
+  <span style="font-size:9.5px; font-weight:700; padding:3px 10px; border-radius:20px; background:rgba(16,185,129,.1); color:var(--green2); border:1px solid rgba(16,185,129,.25);">AUTO</span>
+</div>
+
+<!-- スケジューラーログ -->
+<div class="log-wrap">
+  <div class="log-header">
+    <i data-lucide="terminal" style="width:14px; height:14px;"></i>
+    scheduler.log（末尾50行）
+  </div>
+  <div class="log-body" id="logBody">
+    {% if log_lines %}
+      {% for line in log_lines %}
+      <div class="log-line {% if 'ERROR' in line or 'error' in line %}is-error{% elif 'WARNING' in line or 'WARN' in line %}is-warn{% elif '完了' in line or '成功' in line or 'OK' in line %}is-ok{% else %}is-info{% endif %}">{{ line | e }}</div>
+      {% endfor %}
+    {% else %}
+    <div style="color:var(--muted); padding:12px 0;">ログファイルが見つかりません（Railway 再起動後にリセットされます）</div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  // ログを末尾にスクロール
+  const lb = document.getElementById('logBody');
+  if (lb) lb.scrollTop = lb.scrollHeight;
+</script>
+
+{% endblock %}

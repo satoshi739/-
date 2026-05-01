@@ -1088,6 +1088,63 @@ def audit_logs_page():
         total_pages=max(1, (total + per_page - 1) // per_page))
 
 
+@app.route("/scheduler")
+def scheduler_page():
+    import time as _t
+    from datetime import datetime, timedelta
+
+    # heartbeat
+    hb_age = None
+    hb_ok  = False
+    if _HEARTBEAT.exists():
+        hb_age = int(_t.time() - _HEARTBEAT.stat().st_mtime)
+        hb_ok  = hb_age < 600
+
+    # コンテンツキュー集計（instagram/）
+    queue_dir = IG_QUEUE
+    queue_total = queue_posted = queue_pending = 0
+    if queue_dir.exists():
+        for f in queue_dir.glob("*.yaml"):
+            try:
+                d = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+                queue_total += 1
+                if d.get("posted"):
+                    queue_posted += 1
+                else:
+                    queue_pending += 1
+            except Exception:
+                pass
+
+    # スケジュール定義（JST表記）
+    jobs = [
+        {"name": "朝のオペレーター",    "time": "05:00",       "freq": "毎日",   "icon": "sunrise"},
+        {"name": "AI CEO ディスパッチ", "time": "05:30",       "freq": "毎日",   "icon": "cpu"},
+        {"name": "ブログ自動投稿",       "time": "08:30/12:30/18:00", "freq": "毎日3回", "icon": "rss"},
+        {"name": "Instagram投稿",       "time": "12:00/19:00", "freq": "毎日2回", "icon": "instagram"},
+        {"name": "インサイト取得",       "time": "06:00",       "freq": "毎日",   "icon": "trending-up"},
+        {"name": "LINE一斉配信",         "time": "10:00",       "freq": "月・木", "icon": "message-square"},
+        {"name": "フォローアップ",       "time": "—",           "freq": "2時間ごと", "icon": "mail"},
+        {"name": "週次カレンダー生成",   "time": "06:30",       "freq": "月曜",   "icon": "calendar"},
+        {"name": "エージェントtick",     "time": "—",           "freq": "5分ごと", "icon": "bot"},
+        {"name": "予約投稿チェック",     "time": "—",           "freq": "1分ごと", "icon": "clock"},
+    ]
+
+    # 最新ログ（scheduler.log 末尾50行）
+    log_lines = []
+    sched_log = LOGS_DIR / "scheduler.log"
+    if sched_log.exists():
+        try:
+            lines = sched_log.read_text(encoding="utf-8", errors="replace").splitlines()
+            log_lines = lines[-50:]
+        except Exception:
+            pass
+
+    return render_template("scheduler.html",
+        hb_ok=hb_ok, hb_age=hb_age,
+        queue_total=queue_total, queue_posted=queue_posted, queue_pending=queue_pending,
+        jobs=jobs, log_lines=log_lines)
+
+
 @app.route("/notifications")
 def notifications_page():
     notifs = db.list_notifications(limit=100)

@@ -1238,6 +1238,11 @@
       <span class="nav-icon"><i data-lucide="activity"></i></span>
       <span style="flex:1;">Agent ステータス</span>
     </a>
+    <a href="/scheduler" class="nav-item {{ 'active' if request.path=='/scheduler' else '' }}">
+      <span class="nav-icon"><i data-lucide="clock"></i></span>
+      <span style="flex:1;">スケジューラー</span>
+      {% if not scheduler_status_ok %}<span class="nav-badge" style="background:var(--red);">停止</span>{% endif %}
+    </a>
     <a href="/story-autopilot" class="nav-item {{ 'active' if request.path.startswith('/story-autopilot') else '' }}">
       <span class="nav-icon"><i data-lucide="bot"></i></span>
       <span style="flex:1;">Story Autopilot</span>
