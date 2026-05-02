@@ -1,0 +1,197 @@
+"""
+ブログ本文 → リール台本 生成モジュール。
+Claude API（既存ANTHROPIC_API_KEY）を使用。
+
+台本フォーマット（YAML/dict）:
+    title: str
+    format: str                # 使用したフォーマット名
+    target: str                # ターゲット層
+    scenes:
+      - id: int
+        duration: int          # 秒
+        narration: str         # ナレーション（TTS用）
+        telop: str             # 画面テキスト（1〜2行）
+        visual_prompt: str     # Veo用英語プロンプト
+        se: str                # 効果音タイプ（whoosh/impact/none）
+    caption: str               # Instagram/TikTokキャプション
+    hashtags: list[str]
+
+NoimosAI連携:
+    NoimosAIで台本を生成した場合、上記フォーマットのYAMLファイルを
+    generated_media/noimos_scripts/ に保存しておけば pipeline.py が自動で読み込む。
+"""
+
+import logging
+import os
+import random
+import re
+from pathlib import Path
+
+import yaml
+
+log = logging.getLogger(__name__)
+
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+# CTAのローテーション管理（メモリ上、プロセス再起動でリセット）
+_CTA_CYCLE = ["save", "follow", "engagement"]
+_cta_index = 0
+
+
+def _load_yaml(filename: str) -> dict:
+    path = _TEMPLATES_DIR / filename
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def _next_cta() -> str:
+    global _cta_index
+    key = _CTA_CYCLE[_cta_index % len(_CTA_CYCLE)]
+    _cta_index += 1
+    return key
+
+
+def _build_system_prompt(format_key: str, target_key: str, cta_key: str) -> str:
+    formats = _load_yaml("formats.yaml")
+    targets = _load_yaml("targets.yaml")
+    ctas = _load_yaml("cta_library.yaml")
+
+    fmt = formats.get(format_key, formats.get("howto"))
+    tgt = targets.get(target_key, targets.get("beginner"))
+    cta = ctas.get(cta_key, ctas.get("save"))
+
+    structure_lines = "\n".join(f"  {s}" for s in fmt["structure"])
+    hook_lines = "\n".join(f"  - {h}" for h in fmt.get("hook_examples", []))
+    pain_lines = "\n".join(f"  - {p}" for p in tgt["pain_points"])
+    vocab_lines = "、".join(tgt["vocabulary"])
+    tone_lines = "\n".join(f"  - {t}" for t in tgt["tone"])
+    cta_text = random.choice(cta) if isinstance(cta, list) and cta else "保存しといて"
+
+    return f"""あなたはショート動画（リール・TikTok）の台本ライターです。
+ブログ記事を元に、30〜60秒の縦型ショート動画の台本を生成してください。
+
+## 今回のフォーマット: {format_key}
+{fmt['description']}
+
+### 構成（このシーン順を守る）:
+{structure_lines}
+
+### フックの例:
+{hook_lines}
+
+## ターゲット: {tgt['label']}
+### 痛み:
+{pain_lines}
+### 使う語彙: {vocab_lines}
+### トーン:
+{tone_lines}
+
+## CTA(シーン5の最後に必ず含める)
+{cta_text}
+↑この文言を、トピックに関連した前置きと組み合わせてシーン5のnarrationとtelopに配置。売り込み禁止。
+
+## 出力フォーマット（YAML）
+title: 動画タイトル
+scenes:
+  - id: 1
+    duration: 5
+    narration: ナレーションのテキスト（自然な話し言葉）
+    telop: 画面に表示するテキスト（短く・1行15文字以内）
+    visual_prompt: Scene description in English for AI video generation (cinematic, specific, vivid)
+    se: whoosh
+  - id: 2
+    ...
+caption: Instagram/TikTokに投稿するキャプション（200字程度）
+hashtags:
+  - "#副業"
+  - "#お金"
+
+## ルール
+- シーン数: 5シーン(合計15〜25秒)
+- フックは上記フォーマットのシーン1に従う
+- visual_promptは必ず英語、具体的な映像描写
+- テロップは1行15文字以内
+- 必ずYAMLのみ出力（```yaml ブロック不要、コメント不要）"""
+
+
+class ScriptGenerator:
+    def __init__(self):
+        self.api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+
+    def generate(
+        self,
+        title: str,
+        body: str,
+        format_key: str = "howto",
+        target_key: str = "beginner",
+        cta_key: str = None,
+    ) -> dict:
+        """ブログ本文から台本を生成"""
+        if not self.api_key:
+            log.warning("ANTHROPIC_API_KEY未設定。ダミー台本を使用します。")
+            return self._dummy_script(title)
+
+        resolved_cta = cta_key or _next_cta()
+        log.info(f"台本生成: format={format_key} target={target_key} cta={resolved_cta}")
+
+        system_prompt = _build_system_prompt(format_key, target_key, resolved_cta)
+        prompt = f"# タイトル\n{title}\n\n# 本文\n{body[:3000]}"
+
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=self.api_key)
+            message = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=2000,
+                system=system_prompt,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = message.content[0].text
+            result = self._parse_yaml(raw)
+            result["format"] = format_key
+            result["target"] = target_key
+            result["cta"] = resolved_cta
+            return result
+        except Exception as e:
+            log.error(f"台本生成エラー: {e}")
+            return self._dummy_script(title)
+
+    def load_from_file(self, path: str) -> dict:
+        """NoimosAI等の外部ツールが生成したYAMLファイルを読み込む"""
+        with open(path, encoding="utf-8") as f:
+            return yaml.safe_load(f)
+
+    def _parse_yaml(self, raw: str) -> dict:
+        # コードブロック・先頭末尾の空白行を除去
+        raw = re.sub(r"```ya?ml\s*", "", raw)
+        raw = re.sub(r"```", "", raw)
+        # インラインコメント（#以降）を除去してYAMLエラーを防ぐ
+        lines = []
+        for line in raw.splitlines():
+            # キー行・値行のインラインコメントを除去（URLの#は除外）
+            if re.match(r"^\s*#", line):
+                continue  # コメント行はスキップ
+            lines.append(line)
+        raw = "\n".join(lines).strip()
+        try:
+            result = yaml.safe_load(raw)
+            if not isinstance(result, dict) or "scenes" not in result:
+                raise ValueError("scenesキーが見つかりません")
+            return result
+        except Exception as e:
+            log.error(f"YAML解析エラー: {e}\n---\n{raw[:500]}")
+            return self._dummy_script("パース失敗")
+
+    def _dummy_script(self, title: str) -> dict:
+        return {
+            "title": title or "テスト動画",
+            "scenes": [
+                {"id": 1, "duration": 3, "narration": "今日はすごいことを話します", "telop": "知らないと損！", "visual_prompt": "cinematic close-up of a person looking surprised, modern office background", "se": "impact"},
+                {"id": 2, "duration": 5, "narration": "副業で月10万円稼ぐ方法があります", "telop": "月10万円の稼ぎ方", "visual_prompt": "aerial view of a city at night, money flowing, dynamic motion", "se": "whoosh"},
+                {"id": 3, "duration": 5, "narration": "まず自分のスキルを棚卸しすることが大切です", "telop": "スキルを棚卸し", "visual_prompt": "person writing notes at a minimalist desk, soft lighting, focused atmosphere", "se": "none"},
+                {"id": 4, "duration": 4, "narration": "プログラミング、デザイン、ライティングが人気です", "telop": "人気スキルTOP3", "visual_prompt": "split screen showing coding, design work, and writing, vibrant colors", "se": "none"},
+                {"id": 5, "duration": 3, "narration": "気になる人は保存しといて", "telop": "保存推奨", "visual_prompt": "smartphone screen with arrow pointing up, bright neon colors", "se": "whoosh"},
+            ],
+            "caption": f"{title}\n\n副業で稼ぐ方法を解説しています。",
+            "hashtags": ["#副業", "#在宅ワーク", "#お金の話", "#月10万"],
+        }

@@ -11,3 +11,12 @@ google-auth-oauthlib==1.2.0
 google-api-python-client==2.126.0
 # 本番サーバー
 gunicorn==22.0.0
+
+# ── 動画パイプライン（video/）──────────────────────
+# Google AI Studio SDK（Veo動画生成 + Gemini）
+google-genai>=1.0.0
+# TTS（完全無料）
+gTTS>=2.5.0
+# 画像処理（既存のimage_generator.pyも使用）
+Pillow>=10.0.0
+# ffmpegはシステムにインストール済みを使用（pip不要）
