@@ -448,6 +448,36 @@ def check_scheduled_posts():
                                 _mark_status(f, "failed")
                                 logger.error(f"Twitter投稿失敗（例外）: {f.name} / error={e}")
 
+                    elif platform == "facebook":
+                        from sns.facebook import FacebookPoster
+                        dry_run = os.environ.get("DRY_RUN", "false").lower() == "true"
+                        fb = FacebookPoster(brand=brand_key)
+                        caption = data.get("caption", data.get("content", "")).strip()
+                        image_url = data.get("image_url", "")
+                        if dry_run:
+                            logger.info(f"[DRY_RUN] Facebook投稿: {caption[:80]}...")
+                            _mark_status(f, "posted")
+                            logger.info(f"予約Facebook投稿完了（DRY_RUN）: {f.name}")
+                        else:
+                            try:
+                                if image_url:
+                                    result = fb.post_image(image_url=image_url, message=caption)
+                                else:
+                                    result = fb.post_text(message=caption)
+                                if result.get("status") == "posted":
+                                    _mark_status(f, "posted")
+                                    logger.info(f"予約Facebook投稿完了: {f.name}")
+                                else:
+                                    _mark_status(f, "failed")
+                                    logger.error(f"Facebook投稿失敗: {f.name} / result={result}")
+                            except Exception as e:
+                                _mark_status(f, "failed")
+                                logger.error(f"Facebook投稿失敗（例外）: {f.name} / error={e}")
+
+                    else:
+                        logger.warning(f"未対応プラットフォーム '{platform}' — スキップ: {f.name}")
+                        _mark_status(f, "failed")
+
                 except Exception as e:
                     logger.error(f"予約投稿エラー ({f.name}): {e}", exc_info=True)
 

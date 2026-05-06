@@ -22,7 +22,7 @@ proposed_plan: ''
 proposed_amount: 0
 proposal_sent_at: ''
 proposal_url: ''
-outcome: ''
+outcome: lost
 contract_date: ''
 lost_reason: ''
-notes: 'LINE経由の自動起票。初回メッセージ: @ceo 悪用テスト'
+notes: 'LINE経由の自動起票。初回メッセージ: @ceo 悪用テスト（テストリード、lost処理済み）'

@@ -354,20 +354,33 @@ def get_pending_approvals() -> list:
     """承認待ちタスク一覧"""
     with db.get_conn() as conn:
         rows = conn.execute(
-            """SELECT a.id, a.title, a.task_id, a.status, a.created_at
+            """SELECT a.id, a.title, a.task_id, a.status, a.created_at,
+                      at.mode AS task_mode
                FROM approvals a
+               LEFT JOIN agent_tasks at ON at.id = a.task_id
                WHERE a.status='pending'
                ORDER BY a.created_at DESC LIMIT 10""",
         ).fetchall()
 
+    now = datetime.now()
     result = []
     for r in rows:
+        created_at_str = r["created_at"] or ""
+        try:
+            created_dt = datetime.fromisoformat(created_at_str)
+            age_h = int((now - created_dt).total_seconds() / 3600)
+        except (ValueError, TypeError):
+            age_h = 0
         result.append({
             "id":          r["id"][:8],
             "title":       r["title"],
             "task_id":     r["task_id"],
             "status":      r["status"],
-            "created_at":  r["created_at"][:16] if r["created_at"] else "—",
+            "created_at":  created_at_str[:16] if created_at_str else "—",
+            "age_h":       age_h,
+            "brand":       "—",
+            "type":        r["task_mode"] or "承認依頼",
+            "color":       "#6b7280",
         })
 
     return result
