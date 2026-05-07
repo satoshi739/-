@@ -61,10 +61,10 @@ brands:
       wordpress: false
 
   satoshi-blog:
-    name: "Satoshi Life Blog"
+    name: "Blog（アフィリエイト用・未設定）"
     name_short: Blog
     color: "#a78bfa"
-    url: "https://satoshi-life.site/blog/"
+    url: ""
     channels:
       instagram: false
       threads:   false
@@ -73,7 +73,7 @@ brands:
       youtube:   false
       tiktok:    false
       line:      false
-      wordpress: true
+      wordpress: false
 
   bangkok-peach:
     name: "Bangkok Peach Group"
