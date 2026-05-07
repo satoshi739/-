@@ -87,11 +87,16 @@ class LINEMessenger:
             "replyToken": reply_token,
             "messages": [{"type": "text", "text": message}],
         }
-        resp = requests.post(
-            f"{self.BASE_URL}/message/reply",
-            headers=self._headers,
-            json=payload,
-        )
+        try:
+            resp = requests.post(
+                f"{self.BASE_URL}/message/reply",
+                headers=self._headers,
+                json=payload,
+                timeout=30,
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(f"LINE返信ネットワークエラー: {e}")
+            return False
         if resp.status_code != 200:
             logger.error(f"LINE返信エラー: {resp.text}")
             return False
@@ -117,11 +122,16 @@ class LINEMessenger:
             "to": user_id,
             "messages": [{"type": "text", "text": message}],
         }
-        resp = requests.post(
-            f"{self.BASE_URL}/message/push",
-            headers=self._headers,
-            json=payload,
-        )
+        try:
+            resp = requests.post(
+                f"{self.BASE_URL}/message/push",
+                headers=self._headers,
+                json=payload,
+                timeout=30,
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(f"LINEプッシュネットワークエラー: {e}")
+            return False
         if resp.status_code != 200:
             logger.error(f"LINEプッシュエラー: {resp.text}")
             return False
@@ -146,11 +156,16 @@ class LINEMessenger:
             return True
 
         payload = {"messages": [{"type": "text", "text": message}]}
-        resp = requests.post(
-            f"{self.BASE_URL}/message/broadcast",
-            headers=self._headers,
-            json=payload,
-        )
+        try:
+            resp = requests.post(
+                f"{self.BASE_URL}/message/broadcast",
+                headers=self._headers,
+                json=payload,
+                timeout=30,
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(f"LINE一斉配信ネットワークエラー: {e}")
+            return False
         if resp.status_code != 200:
             logger.error(f"LINE一斉配信エラー: {resp.text}")
             return False
@@ -179,11 +194,16 @@ class LINEMessenger:
                 {"type": "text", "text": message},
             ]
         }
-        resp = requests.post(
-            f"{self.BASE_URL}/message/broadcast",
-            headers=self._headers,
-            json=payload,
-        )
+        try:
+            resp = requests.post(
+                f"{self.BASE_URL}/message/broadcast",
+                headers=self._headers,
+                json=payload,
+                timeout=30,
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(f"LINE画像付き配信ネットワークエラー: {e}")
+            return False
         if resp.status_code != 200:
             logger.error(f"LINE画像付き配信エラー: {resp.text}")
             return False
@@ -194,10 +214,15 @@ class LINEMessenger:
         """ユーザープロフィール取得（名前・アイコン）"""
         if not self.enabled:
             return {}
-        resp = requests.get(
-            f"{self.BASE_URL}/profile/{user_id}",
-            headers=self._headers,
-        )
+        try:
+            resp = requests.get(
+                f"{self.BASE_URL}/profile/{user_id}",
+                headers=self._headers,
+                timeout=30,
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(f"LINEプロフィール取得ネットワークエラー: {e}")
+            return {}
         if resp.status_code != 200:
             return {}
         return resp.json()
