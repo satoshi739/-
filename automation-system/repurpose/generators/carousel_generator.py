@@ -46,7 +46,7 @@ _DUMMY = {
         },
         {
             "title": "もっと詳しく\n知りたい方へ",
-            "body": "プロフィールのリンクから無料ガイドをチェック！\nフォロー＆保存もお忘れなく🙌",
+            "body": "フォロー＆保存もお忘れなく🙌",
             "image_prompt": "Arrow pointing right with Instagram follow button, coral and white flat illustration, CTA design",
         },
     ],

@@ -4,65 +4,59 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ログイン — UPJ Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js"></script>
   <style>
     :root {
-      --bg:      #050505;
-      --s1:      #090909;
-      --s2:      #101010;
-      --border:  rgba(139,92,246,.11);
-      --border2: rgba(139,92,246,.26);
-      --accent:  #8B5CF6;
-      --accent2: #A78BFA;
-      --text:    #f0e8d8;
-      --muted:   #564e3c;
-      --muted2:  #9a8660;
-      --radius:  12px;
-      --danger:  #ef4444;
+      --bg:      #000000;
+      --s1:      #1C1C1E;
+      --s2:      #2C2C2E;
+      --border:  rgba(255,255,255,.1);
+      --border2: rgba(255,255,255,.18);
+      --accent:  #0A84FF;
+      --text:    #FFFFFF;
+      --muted:   rgba(255,255,255,.28);
+      --muted2:  rgba(255,255,255,.55);
+      --radius:  16px;
+      --danger:  #FF453A;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', -apple-system, 'Hiragino Sans', sans-serif;
+      font-family: -apple-system, 'SF Pro Display', 'Hiragino Sans', system-ui, sans-serif;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background-image:
-        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(139,92,246,.10) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 30% at 80% 80%, rgba(139,92,246,.05) 0%, transparent 50%);
+      -webkit-font-smoothing: antialiased;
     }
     .card {
       background: var(--s1);
-      border: 1px solid var(--border2);
+      border: 1px solid var(--border);
       border-radius: 20px;
-      padding: 48px 40px;
+      padding: 44px 36px;
       width: 100%;
-      max-width: 400px;
-      box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(139,92,246,.06);
+      max-width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
     }
     .logo {
       text-align: center;
       margin-bottom: 32px;
     }
     .logo-icon {
-      width: 56px;
-      height: 56px;
-      background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+      width: 52px;
+      height: 52px;
+      background: #0A84FF;
       border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
-      margin: 0 auto 16px;
-      box-shadow: 0 8px 24px rgba(139,92,246,.35);
-      color: #000;
+      font-size: 26px;
+      margin: 0 auto 14px;
+      color: #fff;
     }
     .logo h1 {
-      font-size: 20px;
+      font-size: 19px;
       font-weight: 700;
       letter-spacing: -0.3px;
       color: var(--text);
@@ -74,17 +68,16 @@
     }
     label {
       display: block;
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 600;
       color: var(--muted2);
-      margin-bottom: 8px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
+      margin-bottom: 7px;
+      letter-spacing: .3px;
     }
     input[type="text"],
     input[type="password"] {
       width: 100%;
-      padding: 12px 16px;
+      padding: 11px 14px;
       background: var(--s2);
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -92,34 +85,33 @@
       font-family: inherit;
       font-size: 15px;
       outline: none;
-      transition: border-color .2s, box-shadow .2s;
-      margin-bottom: 20px;
+      transition: border-color .15s, box-shadow .15s;
+      margin-bottom: 18px;
     }
     input[type="text"]:focus,
     input[type="password"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(139,92,246,.15);
+      border-color: rgba(10,132,255,.6);
+      box-shadow: 0 0 0 3px rgba(10,132,255,.15);
     }
     input::placeholder { color: var(--muted); }
     button[type="submit"] {
       width: 100%;
-      padding: 13px;
-      background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+      padding: 12px;
+      background: #0A84FF;
       border: none;
       border-radius: 10px;
-      color: #000;
+      color: #fff;
       font-family: inherit;
       font-size: 15px;
-      font-weight: 700;
+      font-weight: 600;
       cursor: pointer;
-      transition: opacity .2s, transform .1s;
-      letter-spacing: 0.2px;
+      transition: background .15s, transform .1s;
     }
-    button[type="submit"]:hover { opacity:.9; transform:translateY(-1px); }
+    button[type="submit"]:hover { background: #409CFF; transform:translateY(-1px); }
     button[type="submit"]:active { transform:translateY(0); }
     .error {
-      background: rgba(239,68,68,.1);
-      border: 1px solid rgba(239,68,68,.3);
+      background: rgba(255,69,58,.1);
+      border: 1px solid rgba(255,69,58,.25);
       color: var(--danger);
       border-radius: 8px;
       padding: 10px 14px;

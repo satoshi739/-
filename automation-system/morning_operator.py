@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 朝のオペレーター（Morning Operator）
 毎朝5:00に実行し、以下を全自動で処理する:

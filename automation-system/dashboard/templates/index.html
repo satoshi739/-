@@ -6,7 +6,7 @@
 
 <style>
 /* ═══════════════════════════════════════════
-   COMMAND CENTER — Black × Gold Executive UI
+   COMMAND CENTER — Apple System Dark
 ═══════════════════════════════════════════ */
 
 .cc-header {
@@ -15,16 +15,17 @@
 }
 .cc-header-left {}
 .cc-eyebrow {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-  color: var(--accent); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 7px;
+  font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted2); margin-bottom: 6px;
 }
 .cc-live-dot {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--green2);
+  animation: livePulse 2s infinite;
 }
 .cc-title {
-  font-size: 26px; font-weight: 800; letter-spacing: -.5px;
+  font-size: 24px; font-weight: 700; letter-spacing: -.4px;
   color: var(--text); line-height: 1.2;
 }
 .cc-subtitle { font-size: 12.5px; color: var(--muted2); margin-top: 4px; }
@@ -41,16 +42,16 @@
 .kpi-card {
   background: var(--s1);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--kpi-color, var(--accent));
   border-radius: var(--radius);
   padding: 18px 20px 14px;
   position: relative; overflow: hidden;
-  transition: border-color .18s;
+  transition: border-color .18s, transform .18s, box-shadow .18s;
   display: flex; flex-direction: column; gap: 0;
 }
 .kpi-card:hover {
-  border-color: var(--kpi-color, var(--accent));
-  border-left-color: var(--kpi-color, var(--accent));
+  border-color: var(--border2);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.3);
 }
 .kpi-card-top {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
@@ -61,7 +62,7 @@
   text-transform: uppercase; color: var(--muted2); margin-bottom: 8px;
 }
 .kpi-value {
-  font-size: 30px; font-weight: 800; letter-spacing: -1px;
+  font-size: 28px; font-weight: 700; letter-spacing: -.8px;
   color: var(--text); line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -106,36 +107,35 @@
 }
 .cc-panel-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px 14px;
+  padding: 15px 18px 13px;
   border-bottom: 1px solid var(--border);
 }
 .cc-panel-title {
-  font-size: 12px; font-weight: 700; letter-spacing: .8px;
-  text-transform: uppercase; color: var(--muted2);
+  font-size: 11.5px; font-weight: 600; letter-spacing: .3px;
+  color: var(--text);
   display: flex; align-items: center; gap: 7px;
 }
-.cc-panel-title svg { color: var(--accent); }
+.cc-panel-title svg { color: var(--muted2); }
 .cc-panel-link {
-  font-size: 11px; color: var(--accent); text-decoration: none; opacity: .8;
+  font-size: 11px; color: var(--accent); text-decoration: none;
   transition: opacity .15s;
 }
-.cc-panel-link:hover { opacity: 1; }
+.cc-panel-link:hover { opacity: .75; }
 .cc-panel-body { padding: 16px 20px; }
 .cc-panel-chart { padding: 16px 20px; }
 
 /* ── Activity Feed ── */
 .activity-item {
   display: flex; align-items: flex-start; gap: 11px;
-  padding: 10px 0; border-bottom: 1px solid rgba(139,92,246,.06);
+  padding: 10px 0; border-bottom: 1px solid var(--border);
 }
 .activity-item:last-child { border-bottom: none; }
 .activity-dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--accent); flex-shrink: 0; margin-top: 5px;
-  box-shadow: 0 0 5px rgba(139,92,246,.4);
 }
 .activity-dot.ok   { background: var(--green2); }
-.activity-dot.warn { background: var(--yellow2); }
+.activity-dot.warn { background: var(--yellow); }
 .activity-dot.err  { background: var(--red); }
 .activity-text { font-size: 12.5px; color: var(--text); line-height: 1.5; flex: 1; min-width: 0; }
 .activity-meta { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
@@ -143,12 +143,12 @@
 /* ── Lead Pipeline ── */
 .pipeline-stage {
   display: flex; align-items: center; gap: 12px;
-  padding: 9px 0; border-bottom: 1px solid rgba(139,92,246,.06);
+  padding: 9px 0; border-bottom: 1px solid var(--border);
 }
 .pipeline-stage:last-child { border-bottom: none; }
 .pipeline-label { font-size: 11.5px; color: var(--muted2); width: 80px; flex-shrink: 0; }
 .pipeline-bar-wrap {
-  flex: 1; height: 6px; background: rgba(255,255,255,.05);
+  flex: 1; height: 5px; background: rgba(255,255,255,.06);
   border-radius: 3px; overflow: hidden;
 }
 .pipeline-bar {
@@ -164,21 +164,21 @@
 /* ── AI Recommendations ── */
 .ai-rec-item {
   display: flex; align-items: flex-start; gap: 12px;
-  padding: 12px 0; border-bottom: 1px solid rgba(139,92,246,.06);
+  padding: 12px 0; border-bottom: 1px solid var(--border);
 }
 .ai-rec-item:last-child { border-bottom: none; }
 .ai-rec-icon {
   width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  background: var(--c-ai-bg); font-size: 14px;
+  background: var(--s2); font-size: 14px;
 }
 .ai-rec-text { flex: 1; min-width: 0; }
 .ai-rec-title { font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
 .ai-rec-desc  { font-size: 11px; color: var(--muted2); line-height: 1.5; }
 .ai-rec-badge {
-  font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
-  background: var(--c-ai-bg); color: var(--c-ai); border: 1px solid rgba(212,175,55,.2);
-  letter-spacing: .5px; white-space: nowrap; margin-top: 4px; display: inline-block;
+  font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+  background: rgba(10,132,255,.1); color: var(--accent); border: 1px solid rgba(10,132,255,.2);
+  letter-spacing: .3px; white-space: nowrap; margin-top: 4px; display: inline-block;
 }
 
 /* ── Brand Cards ── */
@@ -198,9 +198,9 @@
 .brand-name { font-size: 12.5px; font-weight: 700; flex: 1; }
 .brand-ch   { font-size: 10.5px; color: var(--muted2); }
 .brand-queue-badge {
-  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
-  background: rgba(139,92,246,.1); color: var(--accent);
-  border: 1px solid rgba(139,92,246,.2);
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+  background: rgba(10,132,255,.1); color: var(--accent);
+  border: 1px solid rgba(10,132,255,.2);
 }
 
 /* ── Empty State ── */
@@ -213,17 +213,17 @@
 .empty-title { font-size: 13px; font-weight: 600; color: var(--muted2); }
 .empty-desc  { font-size: 11px; color: var(--muted); }
 .sample-badge {
-  font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
-  padding: 2px 8px; border-radius: 4px; text-transform: uppercase;
-  background: rgba(139,92,246,.1); color: var(--accent);
-  border: 1px solid rgba(139,92,246,.25); margin-bottom: 4px;
+  font-size: 9px; font-weight: 600; letter-spacing: 1px;
+  padding: 2px 8px; border-radius: 6px; text-transform: uppercase;
+  background: rgba(10,132,255,.1); color: var(--accent);
+  border: 1px solid rgba(10,132,255,.2); margin-bottom: 4px;
   display: inline-block;
 }
 
 /* ── Decision Alert ── */
 .decision-item {
   display: flex; align-items: flex-start; gap: 10px;
-  padding: 9px 0; border-bottom: 1px solid rgba(139,92,246,.06);
+  padding: 9px 0; border-bottom: 1px solid var(--border);
 }
 .decision-item:last-child { border-bottom: none; }
 .decision-icon {
@@ -240,24 +240,24 @@
 /* ── Status Banner ── */
 .status-banner {
   display: flex; align-items: center; gap: 14px;
-  padding: 14px 20px; border-radius: var(--radius);
+  padding: 13px 18px; border-radius: var(--radius);
   margin-bottom: 24px;
   border: 1px solid;
 }
 .status-banner.ok {
-  background: rgba(16,185,129,.05);
-  border-color: rgba(16,185,129,.2);
+  background: rgba(48,209,88,.06);
+  border-color: rgba(48,209,88,.18);
 }
 .status-banner.warn {
-  background: rgba(239,68,68,.05);
-  border-color: rgba(239,68,68,.2);
+  background: rgba(255,69,58,.06);
+  border-color: rgba(255,69,58,.18);
 }
 .status-banner-icon {
   width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
 }
-.status-banner.ok   .status-banner-icon { background: rgba(16,185,129,.12); }
-.status-banner.warn .status-banner-icon { background: rgba(239,68,68,.12); }
+.status-banner.ok   .status-banner-icon { background: rgba(48,209,88,.12); }
+.status-banner.warn .status-banner-icon { background: rgba(255,69,58,.12); }
 .status-banner-text { flex: 1; }
 .status-banner-title { font-size: 13px; font-weight: 600; color: var(--text); }
 .status-banner-sub   { font-size: 11px; color: var(--muted2); margin-top: 2px; }
@@ -306,7 +306,7 @@
 
 <!-- ══ KPI CARDS ══ -->
 <div class="kpi-row">
-  <div class="kpi-card" style="--kpi-color:var(--accent);">
+  <div class="kpi-card">
     <div class="kpi-card-top">
       <div class="kpi-card-left">
         <div class="kpi-label">アクティブリード</div>
@@ -319,7 +319,7 @@
       <span>今月 +{{ stats.leads_new_month }} 件</span>
     </div>
   </div>
-  <div class="kpi-card" style="--kpi-color:var(--green2);">
+  <div class="kpi-card">
     <div class="kpi-card-top">
       <div class="kpi-card-left">
         <div class="kpi-label">契約済み</div>
@@ -331,7 +331,7 @@
       <strong style="color:var(--green2);">{{ stats.cvr }}%</strong>
     </div>
   </div>
-  <div class="kpi-card" style="--kpi-color:#c084fc;">
+  <div class="kpi-card">
     <div class="kpi-card-top">
       <div class="kpi-card-left">
         <div class="kpi-label">投稿キュー (IG)</div>
@@ -341,7 +341,7 @@
     </div>
     <div class="kpi-sub">LINE: {{ stats.line_pending }} 件待機</div>
   </div>
-  <div class="kpi-card" style="--kpi-color:{% if stats.decisions_open > 0 %}var(--red){% else %}var(--green2){% endif %};">
+  <div class="kpi-card">
     <div class="kpi-card-top">
       <div class="kpi-card-left">
         <div class="kpi-label">未解決アクション</div>
@@ -358,7 +358,7 @@
       {% endif %}
     </div>
   </div>
-  <div class="kpi-card" style="--kpi-color:var(--yellow2);">
+  <div class="kpi-card">
     <div class="kpi-card-top">
       <div class="kpi-card-left">
         <div class="kpi-label">MRR</div>
@@ -402,7 +402,7 @@
     </div>
     <div class="cc-panel-body">
       {% set stage_labels = {'L1':'初回接触','L2':'ヒアリング','L3':'提案中','L4':'クロージング','L5':'契約済み'} %}
-      {% set stage_colors = {'L1':'#8B5CF6','L2':'#A78BFA','L3':'#10b981','L4':'#34d399','L5':'#6ee7b7'} %}
+      {% set stage_colors = {'L1':'#0A84FF','L2':'#409CFF','L3':'#30D158','L4':'#34C759','L5':'#30D158'} %}
       {% set funnel_vals = [funnel.get('L1', 0), funnel.get('L2', 0), funnel.get('L3', 0), funnel.get('L4', 0), funnel.get('L5', 0)] %}
       {% set max_val = [funnel_vals | max, 1] | max %}
       <div class="pipeline-stage" style="padding-top:0;">
@@ -639,9 +639,9 @@
 ═══════════════════════════════════ */
 
 /* Chart.js グローバルデフォルト */
-Chart.defaults.color = 'rgba(255,255,255,.4)';
-Chart.defaults.borderColor = 'rgba(255,255,255,.06)';
-Chart.defaults.font.family = "'SF Pro Display', system-ui, sans-serif";
+Chart.defaults.color = 'rgba(255,255,255,.35)';
+Chart.defaults.borderColor = 'rgba(255,255,255,.07)';
+Chart.defaults.font.family = "-apple-system, 'SF Pro Text', system-ui, sans-serif";
 
 /* スパークライン共通オプション */
 const sparkOpts = {
@@ -666,11 +666,11 @@ function sparkData(seed, scale) {
 }
 
 const SPARK_DEFS = [
-  { id: 'spark0', color: '#8B5CF6', data: sparkData(11, 20) },
-  { id: 'spark1', color: '#10b981', data: sparkData(22, 10) },
-  { id: 'spark2', color: '#c084fc', data: sparkData(33, 15) },
-  { id: 'spark3', color: '#ef4444', data: sparkData(44, 5)  },
-  { id: 'spark4', color: '#fbbf24', data: sparkData(55, 30) },
+  { id: 'spark0', color: '#0A84FF', data: sparkData(11, 20) },
+  { id: 'spark1', color: '#30D158', data: sparkData(22, 10) },
+  { id: 'spark2', color: '#BF5AF2', data: sparkData(33, 15) },
+  { id: 'spark3', color: '#FF453A', data: sparkData(44, 5)  },
+  { id: 'spark4', color: '#FF9F0A', data: sparkData(55, 30) },
 ];
 
 SPARK_DEFS.forEach(({ id, color, data }) => {
@@ -708,8 +708,8 @@ SPARK_DEFS.forEach(({ id, color, data }) => {
       labels: ['投稿済み', '待機中', 'エラー'],
       datasets: [{
         data: donutData,
-        backgroundColor: ['rgba(16,185,129,.8)', 'rgba(139,92,246,.8)', 'rgba(239,68,68,.8)'],
-        borderColor: ['rgba(16,185,129,1)', 'rgba(139,92,246,1)', 'rgba(239,68,68,1)'],
+        backgroundColor: ['rgba(48,209,88,.85)', 'rgba(10,132,255,.85)', 'rgba(255,69,58,.85)'],
+        borderColor: ['rgba(48,209,88,1)', 'rgba(10,132,255,1)', 'rgba(255,69,58,1)'],
         borderWidth: 1,
         hoverOffset: 3,
       }]
@@ -724,31 +724,31 @@ SPARK_DEFS.forEach(({ id, color, data }) => {
 })();
 
 const GOLD_PALETTE = [
-  'rgba(139,92,246,.85)',
-  'rgba(232,200,74,.75)',
-  'rgba(16,185,129,.75)',
-  'rgba(52,211,153,.7)',
-  'rgba(192,132,252,.7)',
-  'rgba(251,191,36,.65)',
+  'rgba(10,132,255,.85)',
+  'rgba(48,209,88,.8)',
+  'rgba(255,159,10,.8)',
+  'rgba(191,90,242,.8)',
+  'rgba(100,210,255,.75)',
+  'rgba(255,69,58,.75)',
 ];
 const GOLD_BORDER = [
-  'rgba(139,92,246,1)',
-  'rgba(232,200,74,1)',
-  'rgba(16,185,129,1)',
-  'rgba(52,211,153,1)',
-  'rgba(192,132,252,1)',
-  'rgba(251,191,36,1)',
+  'rgba(10,132,255,1)',
+  'rgba(48,209,88,1)',
+  'rgba(255,159,10,1)',
+  'rgba(191,90,242,1)',
+  'rgba(100,210,255,1)',
+  'rgba(255,69,58,1)',
 ];
 
 const chartDefaults = {
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#0c0c0c',
-      borderColor: 'rgba(139,92,246,.3)',
+      backgroundColor: '#1C1C1E',
+      borderColor: 'rgba(255,255,255,.12)',
       borderWidth: 1,
-      titleColor: '#9a8660',
-      bodyColor: '#f0e8d8',
+      titleColor: 'rgba(255,255,255,.55)',
+      bodyColor: '#FFFFFF',
       padding: 12,
     }
   }
@@ -766,8 +766,8 @@ const leadCtx = document.getElementById('leadChart');
 if (leadCtx) {
   const ctx2d = leadCtx.getContext('2d');
   const grad = ctx2d.createLinearGradient(0, 0, 0, 160);
-  grad.addColorStop(0, 'rgba(139,92,246,.35)');
-  grad.addColorStop(1, 'rgba(139,92,246,.02)');
+  grad.addColorStop(0, 'rgba(10,132,255,.3)');
+  grad.addColorStop(1, 'rgba(10,132,255,.02)');
   new Chart(leadCtx, {
     type: 'bar',
     data: {
@@ -777,7 +777,7 @@ if (leadCtx) {
       datasets: [{
         data: displayMonthly.values,
         backgroundColor: grad,
-        borderColor: 'rgba(139,92,246,.9)',
+        borderColor: 'rgba(10,132,255,.8)',
         borderWidth: 1.5,
         borderRadius: 6,
         borderSkipped: false,
@@ -795,12 +795,12 @@ if (leadCtx) {
       },
       scales: {
         x: {
-          ticks: { color: '#564e3c', font: { size: 11 } },
+          ticks: { color: 'rgba(255,255,255,.3)', font: { size: 11 } },
           grid: { display: false }, border: { display: false }
         },
         y: {
-          ticks: { color: '#564e3c', stepSize: 1, font: { size: 11 } },
-          grid: { color: 'rgba(139,92,246,.05)', drawBorder: false },
+          ticks: { color: 'rgba(255,255,255,.3)', stepSize: 1, font: { size: 11 } },
+          grid: { color: 'rgba(255,255,255,.05)', drawBorder: false },
           border: { display: false }, beginAtZero: true
         }
       }
@@ -839,7 +839,7 @@ if (chCtx) {
           display: true,
           position: 'right',
           labels: {
-            color: '#9a8660', font: { size: 11 }, padding: 10,
+            color: 'rgba(255,255,255,.55)', font: { size: 11 }, padding: 10,
             boxWidth: 10, boxHeight: 10, borderRadius: 3,
           }
         },
