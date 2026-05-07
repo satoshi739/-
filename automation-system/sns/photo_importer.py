@@ -101,31 +101,56 @@ def _upload_to_wordpress_media(file_path: Path, brand: str) -> str:
 
 # ─── Google Drive アップロード（フォールバック）─────────────
 
+def _get_drive_service_oauth():
+    """OAuth2ユーザー認証でDriveサービスを取得（db_backup.pyと同じ方式）"""
+    import base64 as _b64
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+    from googleapiclient.discovery import build
+
+    SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+    token_path = Path(__file__).parent.parent / "drive_token.json"
+
+    creds = None
+    if token_path.exists():
+        creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
+
+    if not creds or not creds.valid:
+        b64 = os.environ.get("DRIVE_TOKEN_B64", "")
+        if b64:
+            import json as _json
+            token_data = _json.loads(_b64.b64decode(b64).decode())
+            creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+
+    if not creds:
+        raise RuntimeError(
+            "Drive OAuth 認証情報がありません。"
+            "python3 db_backup.py --auth を実行してください。"
+        )
+
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        if token_path.exists():
+            token_path.write_text(creds.to_json())
+
+    return build("drive", "v3", credentials=creds)
+
+
 def _upload_to_drive(file_path: Path, brand: str) -> str:
     """
-    ファイルをGoogle Driveにアップロードして公開URLを返す
+    ファイルをGoogle Driveにアップロードして公開URLを返す（OAuth2認証）
 
     Returns:
         公開URL（"https://drive.google.com/uc?export=download&id=..."）
     """
-    _ensure_credentials()
     folder_id = os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "")
     if not folder_id:
         raise ValueError("GOOGLE_DRIVE_FOLDER_ID が .env に設定されていません")
-    if not CREDS_PATH.exists():
-        raise FileNotFoundError(f"credentials.json が見つかりません: {CREDS_PATH}")
 
-    from google.oauth2 import service_account
-    from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
 
-    creds = service_account.Credentials.from_service_account_file(
-        str(CREDS_PATH),
-        scopes=["https://www.googleapis.com/auth/drive"],
-    )
-    service = build("drive", "v3", credentials=creds)
+    service = _get_drive_service_oauth()
 
-    # アップロード
     file_metadata = {
         "name":    file_path.name,
         "parents": [folder_id],

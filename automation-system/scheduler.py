@@ -759,6 +759,10 @@ def setup_schedule():
     schedule.every().day.at("18:00").do(db_backup_job)
     logger.info("DBバックアップ: 毎日03:00 JST (18:00 UTC)")
 
+    # 画像アップロードリトライ（毎時: image_url 空のキューを自動修復）
+    schedule.every(1).hours.do(retry_upload_job)
+    logger.info("画像アップロードリトライ: 毎時")
+
     # 週次KPIレポート（毎週月曜 08:00 JST = 日曜 23:00 UTC）
     schedule.every().sunday.at("23:00").do(weekly_kpi_report_job)
     logger.info("週次KPIレポート: 毎週月曜08:00 JST (日曜23:00 UTC)")
@@ -1088,6 +1092,25 @@ def monthly_summary_job():
     except Exception as exc:
         logger.error("月次サマリーエラー: %s", exc, exc_info=True)
         _alert_owner(f"[monthly_summary_job] 失敗: {exc}")
+
+
+def retry_upload_job():
+    """毎時: image_url が空のキューアイテムにアップロードをリトライする"""
+    logger.info("=== 画像アップロードリトライ開始 ===")
+    try:
+        import subprocess as _sp
+        result = _sp.run(
+            ["python3", str(Path(__file__).parent / "retry_image_upload.py")],
+            capture_output=True, text=True, timeout=300,
+            cwd=str(Path(__file__).parent),
+        )
+        last = result.stdout.strip().splitlines()[-1] if result.stdout.strip() else "（出力なし）"
+        logger.info("アップロードリトライ完了: %s", last)
+        if result.returncode != 0:
+            logger.warning("リトライ stderr: %s", result.stderr[:200])
+    except Exception as exc:
+        logger.error("アップロードリトライエラー: %s", exc, exc_info=True)
+        _alert_owner(f"[retry_upload_job] 失敗: {exc}")
 
 
 def db_backup_job():
