@@ -759,6 +759,14 @@ def setup_schedule():
     schedule.every().day.at("18:00").do(db_backup_job)
     logger.info("DBバックアップ: 毎日03:00 JST (18:00 UTC)")
 
+    # 週次KPIレポート（毎週月曜 08:00 JST = 日曜 23:00 UTC）
+    schedule.every().sunday.at("23:00").do(weekly_kpi_report_job)
+    logger.info("週次KPIレポート: 毎週月曜08:00 JST (日曜23:00 UTC)")
+
+    # 月次サマリー（毎月1日 09:30 JST = 00:30 UTC）
+    schedule.every().day.at("00:30").do(monthly_summary_job)
+    logger.info("月次サマリー: 毎月1日09:30 JST (00:30 UTC)")
+
 
 def video_pipeline_job():
     """毎日20:00 JST: satoshi-blog の最新記事を取得して動画生成 → 投稿キューへ追加"""
@@ -1017,6 +1025,69 @@ def story_autopilot_job():
 
     except Exception as e:
         logger.error(f"Story Autopilot ジョブエラー: {e}", exc_info=True)
+
+
+def weekly_kpi_report_job():
+    """毎週月曜 08:00 JST: 週次KPIレポートを生成してLINEに送信する"""
+    logger.info("=== 週次KPIレポート開始 ===")
+    try:
+        from agents.agent_executor import _h_generate_report
+        result = _h_generate_report({"period": "weekly"}, {})
+        if result.get("error"):
+            raise RuntimeError(result["error"])
+
+        report_text = result.get("report", "")
+        owner_id = os.environ.get("OWNER_LINE_USER_ID", "")
+        if not owner_id:
+            logger.warning("OWNER_LINE_USER_ID未設定 — LINE送信スキップ")
+            return
+
+        from sns.line_api import LINEMessenger
+        alert_token  = os.environ.get("ALERT_LINE_CHANNEL_ACCESS_TOKEN", "")
+        alert_secret = os.environ.get("ALERT_LINE_CHANNEL_SECRET", "")
+        messenger = LINEMessenger(token=alert_token, secret=alert_secret)
+        # LINE は1メッセージ5000文字制限のため分割送信
+        header = f"📊 週次KPIレポート（{datetime.now().strftime('%Y/%m/%d')}）\n\n"
+        body = header + report_text
+        for i in range(0, len(body), 4000):
+            messenger.push(owner_id, body[i:i + 4000])
+        logger.info("週次KPIレポートLINE送信完了: %s", result.get("file", ""))
+    except Exception as exc:
+        logger.error("週次KPIレポートエラー: %s", exc, exc_info=True)
+        _alert_owner(f"[weekly_kpi_report_job] 失敗: {exc}")
+
+
+def monthly_summary_job():
+    """毎月1日 09:30 JST: 月次サマリー（APIコスト + パフォーマンス）をLINEに送信する"""
+    if datetime.now().day != 1:
+        return
+    logger.info("=== 月次サマリー開始 ===")
+    try:
+        from api_cost_tracker import generate_report_text
+        cost_report = generate_report_text(days=30)
+
+        owner_id = os.environ.get("OWNER_LINE_USER_ID", "")
+        if not owner_id:
+            logger.warning("OWNER_LINE_USER_ID未設定 — LINE送信スキップ")
+            return
+
+        from sns.line_api import LINEMessenger
+        alert_token  = os.environ.get("ALERT_LINE_CHANNEL_ACCESS_TOKEN", "")
+        alert_secret = os.environ.get("ALERT_LINE_CHANNEL_SECRET", "")
+        messenger = LINEMessenger(token=alert_token, secret=alert_secret)
+        header = f"📈 月次サマリー（{datetime.now().strftime('%Y年%m月')}）\n\n"
+        # Markdownテーブルは除去して送信（LINE非対応）
+        plain = "\n".join(
+            l for l in cost_report.splitlines()
+            if not l.startswith("|") and not l.startswith("---")
+        )
+        body = header + plain
+        for i in range(0, len(body), 4000):
+            messenger.push(owner_id, body[i:i + 4000])
+        logger.info("月次サマリーLINE送信完了")
+    except Exception as exc:
+        logger.error("月次サマリーエラー: %s", exc, exc_info=True)
+        _alert_owner(f"[monthly_summary_job] 失敗: {exc}")
 
 
 def db_backup_job():
