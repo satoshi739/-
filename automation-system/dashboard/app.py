@@ -689,10 +689,12 @@ def analytics():
     brand_traffic = {}
 
     # 全ブランドのGA4/GSCデータを取得
+    # satoshi（個人）はウェブサイト無しのためブログ(SATOSHI_BLOG)のGA4を共有
     BRAND_ENV_PREFIXES = {
         "upjapan":        "UPJAPAN",
         "dsc-marketing":  "DSC_MARKETING",
         "cashflowsupport":"CASHFLOWSUPPORT",
+        "satoshi":        "SATOSHI_BLOG",
         "bangkok-peach":  "BANGKOK_PEACH",
         "satoshi-blog":   "SATOSHI_BLOG",
     }
