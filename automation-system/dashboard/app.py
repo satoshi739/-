@@ -694,7 +694,7 @@ def analytics():
         "upjapan":        "UPJAPAN",
         "dsc-marketing":  "DSC_MARKETING",
         "cashflowsupport":"CASHFLOWSUPPORT",
-        "satoshi":        "SATOSHI_BLOG",
+        "satoshi":        "SATOSHI",
         "bangkok-peach":  "BANGKOK_PEACH",
         "satoshi-blog":   "SATOSHI_BLOG",
     }
