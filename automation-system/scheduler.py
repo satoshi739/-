@@ -755,6 +755,10 @@ def setup_schedule():
     schedule.every().sunday.at("11:00").do(content_planner_job)
     logger.info("コンテンツプランナー: 毎週日曜20:00 JST (11:00 UTC)")
 
+    # DBバックアップ → Google Drive（毎日 03:00 JST = 18:00 UTC前日）
+    schedule.every().day.at("18:00").do(db_backup_job)
+    logger.info("DBバックアップ: 毎日03:00 JST (18:00 UTC)")
+
 
 def video_pipeline_job():
     """毎日20:00 JST: satoshi-blog の最新記事を取得して動画生成 → 投稿キューへ追加"""
@@ -1013,6 +1017,22 @@ def story_autopilot_job():
 
     except Exception as e:
         logger.error(f"Story Autopilot ジョブエラー: {e}", exc_info=True)
+
+
+def db_backup_job():
+    """DBバックアップ → Google Drive（毎日03:00 JST）"""
+    logger.info("=== DBバックアップ開始 ===")
+    try:
+        from db_backup import backup_and_upload
+        result = backup_and_upload()
+        if result["ok"]:
+            drive_info = f" → Drive:{result['drive_id']}" if result.get("drive_id") else " (Drive未設定)"
+            logger.info("DBバックアップ完了: %s%s", Path(result["local"]).name, drive_info)
+        else:
+            _alert_owner(f"[db_backup_job] 失敗: {result.get('error', '不明なエラー')}")
+    except Exception as exc:
+        logger.error("DBバックアップエラー: %s", exc, exc_info=True)
+        _alert_owner(f"[db_backup_job] 失敗: {exc}")
 
 
 if __name__ == "__main__":
