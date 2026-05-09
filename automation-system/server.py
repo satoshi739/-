@@ -43,7 +43,8 @@ _messenger: LINEMessenger | None = None
 _bpg_messenger: LINEMessenger | None = None
 
 SCENARIOS_PATH   = Path(__file__).parent / "config" / "line_scenarios.yaml"
-HEARTBEAT_FILE   = Path(__file__).parent / "logs" / "scheduler.heartbeat"
+HEARTBEAT_FILE        = Path(__file__).parent / "logs" / "scheduler.heartbeat"
+SERVER_HEARTBEAT_FILE = Path(__file__).parent / "logs" / "server.heartbeat"
 ALERTS_LOG       = Path(__file__).parent / "logs" / "alerts.log"
 _DEDUP_FLAG      = Path(__file__).parent / "logs" / ".server_alert_scheduler_dead.sent"
 _HEARTBEAT_THRESHOLD = 600   # 10分を超えたら異常
@@ -116,15 +117,28 @@ def _heartbeat_monitor_loop() -> None:
         time.sleep(_MONITOR_INTERVAL)
 
 
+def _server_heartbeat_loop() -> None:
+    """server.heartbeat を5分ごとに更新し続けるループ（daemon thread）。"""
+    while True:
+        try:
+            SERVER_HEARTBEAT_FILE.parent.mkdir(parents=True, exist_ok=True)
+            SERVER_HEARTBEAT_FILE.write_text(
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"), encoding="utf-8"
+            )
+        except Exception as exc:
+            logger.error("server.heartbeat 書き込み失敗: %s", exc)
+        time.sleep(_MONITOR_INTERVAL)
+
+
 # Railway本番では dashboard/app.py の startup() が同等の監視を担う。
 # このserver.pyはローカル直接起動（python server.py）専用。
 def _start_heartbeat_monitor() -> None:
-    t = threading.Thread(
-        target=_heartbeat_monitor_loop,
-        name="heartbeat-monitor",
-        daemon=True,
-    )
-    t.start()
+    for target, name in [
+        (_heartbeat_monitor_loop, "heartbeat-monitor"),
+        (_server_heartbeat_loop, "server-heartbeat-writer"),
+    ]:
+        t = threading.Thread(target=target, name=name, daemon=True)
+        t.start()
     logger.info(
         "heartbeat監視を開始しました (threshold=%ds, interval=%ds)",
         _HEARTBEAT_THRESHOLD, _MONITOR_INTERVAL,
@@ -1433,7 +1447,14 @@ def review_reject(filename: str):
 
 @app.route("/health", methods=["GET"])
 def health():
-    return {"status": "ok"}
+    sched_age = None
+    if HEARTBEAT_FILE.exists():
+        sched_age = int(time.time() - HEARTBEAT_FILE.stat().st_mtime)
+    return {
+        "status": "ok",
+        "scheduler": "ok" if (sched_age is not None and sched_age < _HEARTBEAT_THRESHOLD) else "dead",
+        "scheduler_heartbeat_age_sec": sched_age,
+    }
 
 
 # ═══════════════════════════════════════════════════
