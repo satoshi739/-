@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["tzdata", "ffmpeg", "python311", "python311Packages.pip"]
+nixPkgs = ["tzdata", "ffmpeg", "python311"]
 
 [phases.install]
-cmds = ["python3 -m pip install --no-cache-dir -r /app/requirements.txt"]
+cmds = ["python3 -m ensurepip --upgrade", "python3 -m pip install --no-cache-dir -r /app/requirements.txt"]
 
 [variables]
 TZ = "Asia/Tokyo"
